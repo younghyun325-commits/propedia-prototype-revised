@@ -1,0 +1,293 @@
+/* 주소 조회 화면 (agents.md §12-3) */
+'use strict';
+
+let demoList = [];
+
+function itemCard(it) {
+  return `<div class="item">
+    <div class="row">
+      <span class="item-title">${esc(it.title)}</span>
+      ${badge(it.scope_label, 'info')}
+      ${it.needs_review ? badge('검수 필요', 'warn') : ''}
+      ${it.evidence_ok ? '' : badge('근거 확인 필요', 'warn')}
+      ${it.edited ? badge('검수에서 수정됨', 'muted') : ''}
+    </div>
+    <p>${esc(it.summary)}</p>
+    <div class="src">출처 · ${esc(sourceLine(it.source))}</div>
+    <div class="actions">
+      ${pageButton(it.source, it.evidence)}
+      <details><summary>근거 보기</summary>
+        <div class="evidence">${esc(it.evidence)}</div>
+        ${it.scope_note ? `<div class="small muted">적용 범위 메모: ${esc(it.scope_note)}</div>` : ''}
+      </details>
+    </div>
+  </div>`;
+}
+
+function itemsHtml(items) {
+  if (!items || !items.length) return '<div class="empty">이 층에 해당하는 항목이 없습니다</div>';
+  return items.map(itemCard).join('');
+}
+
+function layer(title, code, count, body, id) {
+  return `<section class="layer" id="${id}">
+    <div class="layer-head"><h2>${esc(title)}</h2>${badge(`${count}건`, count ? 'info' : 'muted')}
+      <span class="layer-code">${esc(code)}</span></div>
+    <div class="layer-body">${body}</div>
+  </section>`;
+}
+
+function stageTable(byStage) {
+  const rows = Object.entries(byStage || {});
+  if (!rows.length) return '';
+  return `<h3 style="margin-top:14px">강남구 진행 사업 단계 분포</h3>
+    <table><thead><tr><th>단계 코드</th><th>단계</th><th>사업 수</th></tr></thead><tbody>
+    ${rows.map(([code, v]) => `<tr><td class="mono">${esc(code)}</td><td>${esc(v.title)}</td><td>${v.count}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="small muted">프리토타입에 반영된 사업(고시 기준)만 셉니다.</p>`;
+}
+
+function deadlineTable(rows, withProject) {
+  if (!rows || !rows.length) return '<div class="empty">진행 중인 기한이 없습니다</div>';
+  return `<div class="table-wrap"><table><thead><tr>
+      ${withProject ? '<th>사업</th>' : ''}<th>기한</th><th>기간</th><th>남은 날</th><th>제출 방법</th><th>장소</th><th>출처</th>
+    </tr></thead><tbody>
+    ${rows.map((d) => `<tr>
+      ${withProject ? `<td>${esc(d.project_name)}</td>` : ''}
+      <td><b>${esc(d.title)}</b></td>
+      <td>${fmtDate(d.starts_on)} ~ ${fmtDate(d.due_on)}</td>
+      <td class="dday">${badge(d.d_day_label, d.status === 'closed' ? 'muted' : (d.d_day <= 7 ? 'warn' : 'info'))}</td>
+      <td>${esc(d.how_to_submit || '')}</td>
+      <td>${esc((d.places || []).join(', '))}</td>
+      <td class="small">${esc(sourceLine(d.source))}<br>${pageButton(d.source, null)}</td>
+    </tr>`).join('')}
+    </tbody></table></div>`;
+}
+
+function progressCard(p) {
+  const stagebar = p.stages.map((s) => `<div class="${s.status}" title="${esc(`${s.seq}. ${s.title}`)}"></div>`).join('');
+  const chips = p.stages.map((s) => {
+    const cls = `stage-chip ${s.status}${s.status === 'done' && !s.verified ? ' unverified' : ''}`;
+    const tip = s.status === 'done' && !s.verified ? (s.note || '확인된 고시 없음') : s.title;
+    return `<span class="${cls}" title="${esc(tip)}">${s.seq}. ${esc(s.title)}</span>`;
+  }).join('');
+  const c = p.current;
+  const facts = (p.facts || []).length ? `
+    <h3 style="margin-top:16px">고시에 적힌 수치</h3>
+    <table><thead><tr><th>항목</th><th>값</th><th>근거</th></tr></thead><tbody>
+    ${p.facts.map((f) => `<tr><td>${esc(f.label)}</td>
+      <td><b>${Array.isArray(f.value) ? esc(f.value.join(', ')) : fmtNum(f.value)}</b> ${esc(f.unit || '')}</td>
+      <td class="small">${esc(sourceLine(f.source))} ${pageButton(f.source, f.evidence, '원문')}</td></tr>`).join('')}
+    </tbody></table>
+    <p class="small muted">${esc(p.facts_note || '')}</p>` : '';
+  const hist = (p.related_history || []).map((h) => `<li>${fmtDate(h.date)} · ${esc(h.label)}
+      <span class="muted">(${esc(h.gosi_no || '')})</span> ${pageButton(h.source, null, '원문')}</li>`).join('');
+  return `<div class="project-card">
+    <div class="project-head">
+      <h3>${esc(p.name)}</h3>${badge(p.project_type_label, 'info')}
+      <span class="small muted">추진 방식 ${esc(p.track_label)} · 기준일 ${fmtDate(p.as_of)}</span>
+    </div>
+    ${(p.aliases || []).length ? `<div class="small muted">다른 이름: ${esc(p.aliases.join(', '))}</div>` : ''}
+    <div class="stagebar" aria-label="단계 막대">${stagebar}</div>
+    <div class="row"><b>${esc(p.position_label)}</b><span class="small muted">초록=지난 단계(점선=확인된 고시 없음), 파랑=지금 단계, 회색=다음 단계들</span></div>
+    <div class="stage-chips">${chips}</div>
+
+    <div class="grid cols-2">
+      <div class="card soft">
+        <div class="row"><h3 style="margin:0">지금 단계 · ${esc(c.title)}</h3>${badge(c.template_status, 'warn')}</div>
+        <dl class="kv" style="margin-top:8px">
+          <dt>발행처</dt><dd>${esc(c.issuer || '—')}</dd>
+          <dt>설명</dt><dd>${c.what_happens ? esc(c.what_happens) : `<span class="muted">${esc(c.what_happens_note)}</span>`}</dd>
+          <dt>소유자가 챙길 것</dt><dd>${esc(c.owner_actions || '—')}</dd>
+          <dt>단계 근거</dt><dd class="small">${esc(sourceLine(p.stage_basis.source))} (규칙 ${esc(p.stage_basis.rule_id)})
+            ${pageButton(p.stage_basis.source, p.stage_basis.evidence, '원문')}</dd>
+        </dl>
+      </div>
+      <div class="card soft">
+        <h3>다음 단계${p.next ? ` · ${esc(p.next.title)}` : ''}</h3>
+        ${p.next ? `<dl class="kv"><dt>소유자가 챙길 것</dt><dd>${esc(p.next.owner_actions || '—')}</dd></dl>` : '<div class="empty">마지막 단계입니다</div>'}
+        <h3 style="margin-top:12px">남은 기간</h3>
+        <div>${esc(p.remaining.note)}</div>
+        <details><summary>계산 방법 참고</summary><div class="small">${esc(p.remaining.method_note)}</div></details>
+      </div>
+    </div>
+
+    <h3 style="margin-top:16px">진행 중인 기한</h3>
+    ${deadlineTable(p.deadlines, false)}
+    ${facts}
+    <h3 style="margin-top:16px">관련 고시 이력</h3>
+    <ul class="small">${hist || '<li class="muted">없음</li>'}</ul>
+    <p class="small muted">${esc(p.disclaimer)}</p>
+    ${apiViewer(p._method, p._url, p._body, Object.fromEntries(Object.entries(p).filter(([k]) => !k.startsWith('_'))))}
+  </div>`;
+}
+
+async function loadProgress(projectId) {
+  const decisions = getDecisions();
+  const url = `/api/v1/projects/${projectId}/progress`;
+  let p;
+  if (decisions.length) {
+    p = await api(url, { body: { decisions } });
+    Object.assign(p, { _method: 'POST', _url: url, _body: { decisions } });
+  } else {
+    p = await api(url);
+    Object.assign(p, { _method: 'GET', _url: url, _body: null });
+  }
+  return p;
+}
+
+function parcelHtml(P, normalized) {
+  let html = '';
+  html += P.land_use
+    ? `<div class="item"><b>용도지역</b> ${esc(P.land_use.value)} <span class="small muted">— ${esc(P.land_use.basis)}</span>
+         ${pageButton(P.land_use.source, null, '원문')}</div>`
+    : `<div class="item"><b>용도지역</b> <span class="muted">${esc(P.land_use_note)}</span></div>`;
+  html += itemsHtml(P.items).replace('<div class="empty">이 층에 해당하는 항목이 없습니다</div>', '');
+  if (P.included_projects.length) {
+    P.included_projects.forEach((p) => {
+      const kind = p.inclusion === 'included' ? 'ok' : 'warn';
+      html += `<div class="item">
+        <div class="row">${badge(p.inclusion_label, kind)}<span class="item-title">${esc(p.message)}</span></div>
+        <p class="small">판정 근거: ${esc(p.basis_label)}</p>
+        <div class="src">출처 · ${esc(sourceLine(p.source))}</div>
+        <div class="actions">${pageButton(p.source, null)}
+          ${p.review_id ? `<a class="btn small" href="review.html?id=${p.review_id}">검수 화면에서 확인</a>` : ''}</div>
+      </div>
+      <div id="progress-${p.project_id}"><div class="empty">사업 진행 카드를 불러오는 중…</div></div>`;
+    });
+  } else if (P.no_project_message) {
+    html += `<div class="box info">${esc(P.no_project_message)}</div>`;
+  }
+  html += '<h3 style="margin-top:14px">주변 500m 사업</h3>';
+  if (P.nearby_projects.length) {
+    html += P.nearby_projects.map((n) => `<div class="item row">${badge('주변', 'muted')}
+      <b>${esc(n.name)}</b><span>${n.distance_m}m</span>
+      <button class="btn small" type="button" data-progress="${n.project_id}">진행상황 보기</button>
+      <div id="progress-${n.project_id}" style="width:100%"></div></div>`).join('');
+  } else {
+    html += `<div class="empty">${esc(P.nearby_note || '주변 500m 안에서 진행 중인 사업이 없습니다')}</div>`;
+  }
+  return html;
+}
+
+function dongExtras(D) {
+  let html = '';
+  if (D.projects.length) {
+    html += '<h3 style="margin-top:14px">같은 법정동의 사업</h3>';
+    html += D.projects.map((p) => `<div class="item">
+      <div class="row"><span class="item-title">${esc(p.name)}</span>${badge(`${p.stage.code} ${p.stage.title}`, 'info')}</div>
+      <p class="small">${esc(p.message)}${p.location_text ? ` · 위치: ${esc(p.location_text)}` : ''}</p>
+      <div class="src">출처 · ${esc(sourceLine(p.source))}</div>
+      <div class="actions"><button class="btn small" type="button" data-progress="${p.project_id}">진행상황 보기</button></div>
+      <div id="progress-${p.project_id}"></div></div>`).join('');
+    html += '<h3 style="margin-top:14px">진행 중인 기한</h3>' + deadlineTable(D.deadlines, true);
+  }
+  return html;
+}
+
+function normLine(n) {
+  const parts = [
+    ['지번', n.jibun_address || '—'],
+    ['도로명', n.road_address || '— (도로명주소 API 키 재발급 후 추가)'],
+    ['PNU', n.pnu ? `<span class="mono">${esc(n.pnu)}</span>` : '—'],
+    ['법정동', n.dong_name ? `${esc(n.dong_name)} <span class="mono small">${esc(n.bjd_code)}</span>` : '—'],
+    ['지역생활권', n.saenghwal || '—'],
+    ['좌표', n.coord_source ? `${n.lat.toFixed(5)}, ${n.lon.toFixed(5)} (${esc(n.coord_source)})` : '없음'],
+  ];
+  return `<div class="card soft norm-line">${parts.map(([k, v]) =>
+    `<span><b>${k}</b>${k === 'PNU' || k === '법정동' || k === '좌표' ? v : esc(v)}</span>`).join('')}</div>`;
+}
+
+async function run(text) {
+  const decisions = getDecisions();
+  const url = `/api/v1/lookup?address=${encodeURIComponent(text)}`;
+  let r;
+  let method = 'GET';
+  let body = null;
+  if (decisions.length) {
+    method = 'POST';
+    body = { address: text, decisions };
+    r = await api('/api/v1/lookup', { body });
+  } else {
+    r = await api(url);
+  }
+  const shownUrl = method === 'POST' ? '/api/v1/lookup' : url;
+  // 알림: 검수 결정 반영
+  const notes = [];
+  (r.events || []).forEach((e) => notes.push(`검수 결정 반영: ${e.title} → ${e.action_label}`));
+  (r.review_applied || []).filter((a) => a.ignored).forEach((a) => notes.push(`반영하지 않은 결정 #${a.review_id}: ${a.ignored}`));
+  el('notices').innerHTML = notes.length ? `<div class="box warn">${notes.map(esc).join('<br>')}</div>` : '';
+
+  document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.text === text));
+  let html = normLine(r.normalized);
+  if (r.status !== 'ok') {
+    html += `<div class="box info"><b>${esc(r.message)}</b></div>`;
+  } else {
+    const L = r.layers;
+    const n = r.normalized;
+    const counts = {
+      city: L.city.length,
+      gu: L.gu.items.length,
+      dong: L.dong.items.length + L.dong.projects.length,
+      parcel: L.parcel.items.length + L.parcel.included_projects.length + L.parcel.nearby_projects.length,
+    };
+    html += `<div class="row small" style="margin:8px 0">바로가기
+      <a href="#layer-city">서울 전역 ${counts.city}</a> · <a href="#layer-gu">자치구 ${counts.gu}</a> ·
+      <a href="#layer-dong">법정동 ${counts.dong}</a> · <a href="#layer-parcel">필지 ${counts.parcel}${L.parcel.included_projects.length ? ' (사업 카드)' : ''}</a></div>`;
+    html += layer('서울 전역', '시도 11', counts.city, itemsHtml(L.city), 'layer-city');
+    html += layer(`자치구 · 강남구`, `시군구 ${n.sgg_code}`, counts.gu, itemsHtml(L.gu.items) + stageTable(L.gu.projects_by_stage), 'layer-gu');
+    html += layer(`법정동 · ${n.dong_name}`, `법정동 ${n.bjd_code} · 지역생활권 ${n.saenghwal || '—'}`,
+      counts.dong, itemsHtml(L.dong.items) + dongExtras(L.dong), 'layer-dong');
+    html += layer('필지', `PNU ${n.pnu}`, counts.parcel, parcelHtml(L.parcel, n), 'layer-parcel');
+  }
+  html += `<p class="small muted">${esc(r.coverage_note || '')}</p><p class="small muted">${esc(r.disclaimer)}</p>`;
+  html += apiViewer(method, shownUrl, body, r);
+  el('result').innerHTML = html;
+
+  if (r.status === 'ok') {
+    for (const p of r.layers.parcel.included_projects) {
+      const box = el(`progress-${p.project_id}`);
+      try { box.innerHTML = progressCard(await loadProgress(p.project_id)); } catch (e) { box.innerHTML = ''; }
+    }
+  }
+}
+
+document.addEventListener('click', async (e) => {
+  const b = e.target.closest('[data-progress]');
+  if (!b) return;
+  const box = el(`progress-${b.dataset.progress}`);
+  if (box.innerHTML.trim()) { box.innerHTML = ''; return; }
+  box.innerHTML = progressCard(await loadProgress(Number(b.dataset.progress)));
+});
+
+function search(text, addrId) {
+  el('q').value = text;
+  const params = addrId ? `?addr=${encodeURIComponent(addrId)}` : `?q=${encodeURIComponent(text)}`;
+  window.history.replaceState(null, '', `lookup.html${params}`);
+  run(text);
+}
+
+(async () => {
+  await initShell('lookup');
+  demoList = await api('/api/v1/demo-addresses');
+  el('chips').innerHTML = demoList.map((d) => `<button class="chip" type="button" data-addr="${esc(d.addr_id)}"
+      data-text="${esc(d.input_text)}" ${d.available ? '' : 'disabled title="도로명주소 API 키 재발급 후 확정"'}>${esc(d.label)}</button>`).join('');
+  el('chips').addEventListener('click', (e) => {
+    const c = e.target.closest('.chip');
+    if (c && !c.disabled) search(c.dataset.text, c.dataset.addr);
+  });
+  el('search-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const t = el('q').value.trim();
+    const hit = demoList.find((d) => d.input_text === t);
+    search(t, hit ? hit.addr_id : null);
+  });
+  const addr = qs('addr');
+  const q = qs('q');
+  if (addr) {
+    const d = demoList.find((x) => x.addr_id === addr && x.available);
+    if (d) search(d.input_text, d.addr_id);
+  } else if (q) {
+    search(q, null);
+  }
+})();

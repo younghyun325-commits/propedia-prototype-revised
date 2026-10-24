@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P5 (시작 전)
+현재 단계: P6 (시작 전)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -61,3 +61,18 @@
   - `pytest -q` → 66 passed
   - `python -m uvicorn api.index:app --port 8000` 실행 후 A1 조회 → status ok, PNU 1168011000105270000, 서울 전역 13·자치구 7·법정동 13 항목, 필지에 한양7차 `possible`(review_id 1), 승인 결정 POST 시 `included`
 - 남은 문제: 시연 화면(`public/`)은 P5
+
+## P5 화면 — 완료 (2026-10-25)
+- [x] `public/` 화면 5개(index·lookup·docs·review·eval) + `assets/style.css`, `app.js`(공통), 화면별 JS. 외부 CDN·글꼴 없음
+  - health 응답에 `coverage_note` 추가(시작 화면 반영 범위 문구), 주소 조회 결과 위에 층별 바로가기 줄 추가, 빈 favicon 지정(브라우저 404 방지)
+- [x] 수동 점검 → `tests/ui_check.py`(Playwright + 설치된 Edge)로 자동화, 28/28 통과
+  - ① 시작 화면 링크 5개·대상 주소 일치, 반영 범위 4행
+  - ② A1 조회: 4개 층(13·7·13·1건), 사업 카드 "재건축 13단계 중 2번째", "포함될 수 있음", D-12, "비교할 사례가 부족합니다", 원문 보기 모달(쪽 이미지 로드·Esc 닫힘), API 응답 보기(GET /api/v1/lookup, status ok)
+  - ③ A8: "역삼·논현 지역생활권 장은 프리토타입 범위 밖입니다", 사업 없음 문구 / A10: "시연 범위(강남구) 밖입니다"
+  - ④ 문서 DB D1 1쪽 근거 하이라이트 14곳, 필드 표 19행, 투입 1단계 "사업 상태 변화 없음", 4단계 변경 2건
+  - ⑤ 검수 승인 → A1 "포함"·"이 필지는 …"·검수 결정 반영 알림·머리글 "검수 결정 1건 반영 중" → [초기화] → "포함될 수 있음"
+  - ⑥ 평가 화면: "평가 전입니다…" 안내 (P6 전)
+  - 모바일 390px 가로 넘침 없음, 콘솔 오류 없음
+- [x] 스크린샷 10장 `docs/screens/` (Playwright 설치 성공 — 수동 캡처 불필요)
+- 완료 확인: `pytest -q` → 66 passed (test_wording이 public/*.html·assets/*.js 포함 검사)
+- 남은 문제: 없음

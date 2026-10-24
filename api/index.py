@@ -31,7 +31,7 @@ def health():
     try:
         m = meta(con)
         return {"status": "ok", "build_at": m.get("build_at"), "as_of": m.get("as_of"),
-                "schema_version": m.get("schema_version")}
+                "schema_version": m.get("schema_version"), "coverage_note": m.get("coverage_note")}
     finally:
         con.close()
 

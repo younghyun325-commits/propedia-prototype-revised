@@ -1,0 +1,183 @@
+"""화면 점검 + 스크린샷 (agents.md §18 P5). pytest 수집 대상이 아니다. 빌드 PC에서 수동 실행:
+
+  python tests/ui_check.py            # 로컬 서버를 띄워 점검 (Playwright + 설치된 Edge 사용)
+  python tests/ui_check.py --base https://xxx.vercel.app   # 배포 주소 점검
+
+점검: ① 시작 화면 링크 5개 ② A1 조회 4개 층·사업 카드·D-day·원문 보기 모달·API 응답 보기 ③ A8·A10 안내
+     ④ 문서 DB D1 1쪽 근거 하이라이트·투입 순서 1~4 ⑤ 검수 승인 → A1 "포함" → 초기화 → "포함될 수 있음" ⑥ 평가 화면
+"""
+import argparse
+import os
+import re
+import subprocess
+import sys
+import time
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SHOTS = ROOT / "docs" / "screens"
+
+
+def wait_server(base: str) -> None:
+    for _ in range(60):
+        try:
+            urllib.request.urlopen(f"{base}/api/v1/health", timeout=1)
+            return
+        except Exception:
+            time.sleep(0.25)
+    raise RuntimeError("서버가 뜨지 않았습니다")
+
+
+def main() -> int:
+    sys.stdout.reconfigure(encoding="utf-8")
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--base", default=None)
+    ap.add_argument("--channel", default="msedge")
+    ap.add_argument("--no-shots", action="store_true")
+    args = ap.parse_args()
+    from playwright.sync_api import sync_playwright
+
+    proc = None
+    base = args.base
+    if not base:
+        base = "http://127.0.0.1:8765"
+        proc = subprocess.Popen([sys.executable, "-m", "uvicorn", "api.index:app", "--port", "8765"], cwd=ROOT,
+                                env=dict(os.environ, PYTHONUTF8="1"), stdout=subprocess.DEVNULL,
+                                stderr=subprocess.DEVNULL)
+    results: list[tuple[str, bool, str]] = []
+
+    def check(name, ok, detail=""):
+        results.append((name, bool(ok), detail))
+
+    try:
+        wait_server(base)
+        SHOTS.mkdir(parents=True, exist_ok=True)
+        with sync_playwright() as p:
+            browser = p.chromium.launch(channel=args.channel)
+            page = browser.new_page(viewport={"width": 1280, "height": 900}, locale="ko-KR")
+            errors = []
+            page.on("pageerror", lambda e: errors.append(str(e)))
+            page.on("console", lambda m: errors.append(m.text) if m.type == "error" and "Failed to load resource"
+                    not in m.text else None)
+            page.on("response", lambda r: errors.append(f"HTTP {r.status} {r.url}") if r.status >= 400 else None)
+
+            def shot(name):
+                if not args.no_shots:
+                    # 전체 캡처에서 고정 머리글이 가운데 찍히지 않도록 캡처할 때만 풀어 둔다
+                    page.add_style_tag(content=".site-header{position:static !important}")
+                    page.screenshot(path=str(SHOTS / name), full_page=True)
+
+            # ① 시작 화면
+            page.goto(f"{base}/index.html")
+            page.wait_for_selector("#coverage-body tr td b")
+            check("① 시작 화면 링크 5개", page.locator("#steps a").count() == 5)
+            check("① 반영 범위 4행", page.locator("#coverage-body tr").count() == 4)
+            hrefs = [page.locator("#steps a").nth(i).get_attribute("href") for i in range(5)]
+            check("① 링크 대상", hrefs == ["lookup.html?addr=A1", "docs.html?doc=D1", "docs.html#steps", "review.html",
+                                         "eval.html"], str(hrefs))
+            shot("01_index.png")
+
+            # ② A1 조회
+            page.goto(f"{base}/lookup.html?addr=A1")
+            page.wait_for_selector(".project-card", timeout=15000)
+            check("② 4개 층", page.locator("section.layer").count() == 4)
+            counts = [page.locator("section.layer").nth(i).locator(".layer-head .badge").inner_text() for i in range(4)]
+            check("② 층마다 1건 이상", all(not c.startswith("0") for c in counts), str(counts))
+            card = page.locator(".project-card").inner_text()
+            check("② 사업 카드 13단계 중 2번째", "재건축 13단계 중 2번째" in card)
+            check("② 포함될 수 있음 배지", page.locator(".badge.warn", has_text="포함될 수 있음").count() >= 1)
+            dday = re.search(r"D-\d+|D-day|마감\(", card)
+            check("② D-day 표시", bool(dday), dday.group(0) if dday else "")
+            check("② 남은 기간 문구", "비교할 사례가 부족합니다" in card)
+            page.locator("[data-page-ref]").first.click()
+            page.wait_for_selector("#page-modal.open")
+            page.wait_for_function("document.getElementById('page-modal-img').naturalWidth > 0")
+            check("② 원문 보기 모달·쪽 이미지", True)
+            shot("02b_lookup_modal.png")
+            page.keyboard.press("Escape")
+            check("② Esc로 닫힘", page.locator("#page-modal.open").count() == 0)
+            viewer = page.locator("#result > details").last      # 조회 응답 (사업 카드 안의 것은 진행상황 응답)
+            viewer.locator("summary").click()
+            pres = viewer.locator("pre")
+            check("② API 응답 보기", "GET /api/v1/lookup" in pres.nth(0).inner_text()
+                  and '"status": "ok"' in pres.nth(1).inner_text())
+            shot("02_lookup_A1.png")
+
+            # ③ A8·A10
+            page.goto(f"{base}/lookup.html?addr=A8")
+            page.wait_for_selector("section.layer")
+            body = page.inner_text("#result")
+            check("③ A8 범위 밖 안내", "역삼·논현 지역생활권 장은 프리토타입 범위 밖입니다" in body)
+            check("③ A8 사업 없음 문구", "진행 중인 사업이 없습니다" in body)
+            shot("03_lookup_A8.png")
+            page.goto(f"{base}/lookup.html?addr=A10")
+            page.wait_for_selector("#result .box.info")
+            check("③ A10 시연 범위 밖", "시연 범위(강남구) 밖입니다" in page.inner_text("#result"))
+
+            # ④ 문서 DB
+            page.goto(f"{base}/docs.html?doc=D1&page=1")
+            page.wait_for_selector(".page-text mark", timeout=15000)
+            marks = page.locator(".page-text mark").count()
+            check("④ D1 1쪽 근거 하이라이트", marks >= 3, f"mark {marks}개")
+            check("④ D1 필드 표 19행", page.locator("table").first.locator("tbody tr").count() == 19)
+            shot("04_docs_D1.png")
+            page.locator('[data-step="1"]').click()
+            check("④ 투입 1단계 변화 없음", "사업 상태 변화 없음" in page.inner_text("#step-detail"))
+            page.locator('[data-step="4"]').click()
+            check("④ 투입 4단계 변경 2건", page.locator("#step-detail tbody tr").count() == 2)
+            page.locator("#steps").scroll_into_view_if_needed()
+            shot("04b_docs_steps.png")
+
+            # ⑤ 검수 → 조회 → 초기화
+            page.goto(f"{base}/review.html")
+            page.wait_for_selector("#detail [data-act='approve']")
+            check("⑤ 첫 항목이 포함 판정", "포함 판정" in page.inner_text("#queue-body tr:first-child"))
+            page.locator("#detail [data-act='approve']").click()
+            check("⑤ 결정 저장 안내", "결정이 저장되었습니다" in page.inner_text("#decided"))
+            shot("05_review.png")
+            page.goto(f"{base}/lookup.html?addr=A1")
+            page.wait_for_selector(".project-card", timeout=15000)
+            res = page.inner_text("#result")
+            check("⑤ 승인 후 '포함'", page.locator(".badge.ok", has_text="포함").count() >= 1 and "이 필지는" in res)
+            check("⑤ 검수 결정 반영 알림", "검수 결정 반영" in page.inner_text("#notices"))
+            check("⑤ 머리글 결정 1건 표시", "검수 결정 1건 반영 중" in page.inner_text("#site-header"))
+            shot("06_lookup_after_review.png")
+            page.locator("#reset-decisions").click()
+            page.wait_for_selector(".project-card", timeout=15000)
+            check("⑤ 초기화 후 '포함될 수 있음'", page.locator(".badge.warn", has_text="포함될 수 있음").count() >= 1
+                  and "이 필지는" not in page.inner_text("#result"))
+
+            # ⑥ 평가
+            page.goto(f"{base}/eval.html")
+            page.wait_for_function("!document.getElementById('eval-body').innerText.includes('불러오는 중')")
+            ev = page.inner_text("#eval-body")
+            check("⑥ 평가 화면 표시", ("평가 전" in ev) or ("지표" in ev), ev[:40].replace("\n", " "))
+            if "지표" in ev:
+                check("⑥ 지표 카드 12개", page.locator(".metric").count() == 12, str(page.locator(".metric").count()))
+            shot("07_eval.png")
+
+            # 좁은 화면(390px)에서 가로 스크롤 없음
+            m = browser.new_page(viewport={"width": 390, "height": 844})
+            m.goto(f"{base}/lookup.html?addr=A1")
+            m.wait_for_selector(".project-card", timeout=15000)
+            sw = m.evaluate("document.documentElement.scrollWidth")
+            check("모바일 390px 가로 넘침 없음", sw <= 392, f"scrollWidth {sw}")
+            if not args.no_shots:
+                m.screenshot(path=str(SHOTS / "08_lookup_mobile.png"), full_page=False)
+            check("콘솔 오류 없음", not errors, "; ".join(errors[:3]))
+            browser.close()
+    finally:
+        if proc:
+            proc.terminate()
+            proc.wait(5)
+    w = max(len(n) for n, _, _ in results)
+    for n, ok, d in results:
+        print(f"{'통과' if ok else '실패'} | {n.ljust(w)} | {d}")
+    bad = sum(1 for _, ok, _ in results if not ok)
+    print(f"→ {len(results) - bad}/{len(results)} 통과")
+    return 1 if bad else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

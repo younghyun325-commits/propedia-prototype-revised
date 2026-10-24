@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>문서 DB · Propedia 프리토타입</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<div class="band">강남구 · 공개 문서 4종으로 만든 시연용 프리토타입입니다.</div>
+<main>
+  <h1>문서 DB</h1>
+  <p class="lead">원문 PDF에서 쓰는 쪽만 골라 텍스트로 바꾸고(이미지 쪽은 전사), 항목마다 근거 문장과 쪽을 붙여 저장했습니다. 문서를 고르면 쪽 이미지와 텍스트, 근거 위치를 볼 수 있습니다.</p>
+  <div class="grid cols-4" id="doc-cards"></div>
+  <div id="doc-detail"></div>
+
+  <h2 id="steps">문서 투입 순서</h2>
+  <p class="muted">문서가 들어와도 사업의 단계·기한이 바뀔 때만 변경 기록(change_events)이 생깁니다.</p>
+  <div class="steps" id="step-buttons"></div>
+  <div id="step-detail"></div>
+</main>
+<script src="assets/app.js"></script>
+<script src="assets/docs.js"></script>
+</body>
+</html>

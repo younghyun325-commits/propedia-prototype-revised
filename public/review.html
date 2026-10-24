@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>검수 · Propedia 프리토타입</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<div class="band">강남구 · 공개 문서 4종으로 만든 시연용 프리토타입입니다.</div>
+<main>
+  <h1>검수 도구</h1>
+  <div class="box info row">
+    <span>시연용 검수 결정은 이 브라우저에만 저장되고, 조회할 때 서버에 함께 보내져 결과에 반영됩니다.</span>
+    <span class="spacer"></span>
+    <button class="btn warn" type="button" id="reset-all">시연 초기화</button>
+  </div>
+  <div id="decided"></div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>유형</th><th>제목</th><th>사유</th><th>상태</th></tr></thead>
+      <tbody id="queue-body"><tr><td colspan="5" class="muted">불러오는 중…</td></tr></tbody>
+    </table>
+  </div>
+  <div id="detail" style="margin-top:16px"></div>
+</main>
+<script src="assets/app.js"></script>
+<script src="assets/review.js"></script>
+</body>
+</html>

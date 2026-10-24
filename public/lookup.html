@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>주소 조회 · Propedia 프리토타입</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<div class="band">강남구 · 공개 문서 4종으로 만든 시연용 프리토타입입니다.</div>
+<main>
+  <h1>주소 조회</h1>
+  <form class="search" id="search-form" autocomplete="off">
+    <input type="text" id="q" placeholder="예: 강남구 압구정동 527" aria-label="주소">
+    <button class="btn primary" type="submit">조회</button>
+  </form>
+  <div class="chips" id="chips"></div>
+  <p class="small muted">지번 주소(예: 강남구 압구정동 527)를 입력하거나 시연 주소를 고르세요.</p>
+  <div id="notices"></div>
+  <div id="result"></div>
+</main>
+<script src="assets/app.js"></script>
+<script src="assets/lookup.js"></script>
+</body>
+</html>

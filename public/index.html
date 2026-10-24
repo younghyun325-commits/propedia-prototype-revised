@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Propedia 프리토타입</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header id="site-header"></header>
+<div class="band">강남구 · 공개 문서 4종으로 만든 시연용 프리토타입입니다.</div>
+<main>
+  <h1>주소 하나로, 그 땅에 걸린 공공 문서와 사업 진행상황을</h1>
+  <p class="lead">
+    서울 주소 하나를 넣으면 그 땅에 해당하는 고시·공고·계획 문서를 <b>서울 전역 · 자치구 · 법정동 · 필지</b>의 4개 층으로 모아 한 번에 보여줍니다.
+    그 땅이 재건축 같은 정비사업 구역에 걸려 있으면 지금 단계, 다음 단계, 의견 제출 기한을 기준일과 원문 쪽을 붙여 보여줍니다.
+    이 시연판은 강남구 공개 문서 4종으로 만들었습니다.
+  </p>
+
+  <h2>시연 순서</h2>
+  <div class="grid cols-5" id="steps">
+    <div class="card step-card">
+      <span class="step-num">1</span><h3>주소 조회</h3>
+      <p>압구정동 527을 조회해 4개 층과 사업 카드를 봅니다</p>
+      <a class="btn primary" href="lookup.html?addr=A1">주소 조회 열기</a>
+    </div>
+    <div class="card step-card">
+      <span class="step-num">2</span><h3>원문과 근거</h3>
+      <p>결과의 근거 문장이 원문 어느 쪽에서 왔는지 확인합니다</p>
+      <a class="btn" href="docs.html?doc=D1">문서 DB 열기</a>
+    </div>
+    <div class="card step-card">
+      <span class="step-num">3</span><h3>문서 투입 순서</h3>
+      <p>문서가 들어올 때 사업 상태가 바뀌는 경우만 기록됩니다</p>
+      <a class="btn" href="docs.html#steps">투입 순서 보기</a>
+    </div>
+    <div class="card step-card">
+      <span class="step-num">4</span><h3>사람 검수</h3>
+      <p>애매한 판정을 사람이 확정하면 결과가 바뀝니다</p>
+      <a class="btn" href="review.html">검수 열기</a>
+    </div>
+    <div class="card step-card">
+      <span class="step-num">5</span><h3>평가</h3>
+      <p>정답셋과 비교한 정확도</p>
+      <a class="btn" href="eval.html">평가 열기</a>
+    </div>
+  </div>
+
+  <h2>반영 범위</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>문서</th><th>담당 층</th><th>쓴 쪽 (PDF 기준)</th><th>발행일</th></tr></thead>
+      <tbody id="coverage-body"><tr><td colspan="5" class="muted">불러오는 중…</td></tr></tbody>
+    </table>
+  </div>
+  <p class="small muted" id="coverage-note"></p>
+
+  <h2>원칙</h2>
+  <ul class="principles">
+    <li><b>사실만</b> 보여줍니다. 점수·등급·판단은 하지 않습니다.</li>
+    <li>모든 항목에 <b>근거 문장과 원문 쪽</b>, 기준일을 붙입니다.</li>
+    <li>사업 단계는 <b>고시 문서로만</b> 정합니다.</li>
+    <li>단계 설명·소유자 안내 문구는 <b>사람이 작성한 템플릿</b>에서만 나옵니다.</li>
+    <li>남은 기간은 <b>짐작해서 채우지 않습니다</b>. 비교 사례가 부족하면 그렇다고 적습니다.</li>
+  </ul>
+</main>
+<script src="assets/app.js"></script>
+<script>
+  const LAYERS = {
+    D1: '법정동 · 필지 · 사업 카드',
+    D2: '자치구 · 지역생활권(압구정·청담)',
+    D3: '서울 전역 (+ 자치구 통계)',
+    D4: '서울 전역 · 동남권',
+  };
+  (async () => {
+    await initShell('index');
+    try {
+      const docs = await api('/api/v1/documents');
+      docs.sort((a, b) => a.doc_id.localeCompare(b.doc_id));
+      el('coverage-body').innerHTML = docs.map((d) => `
+        <tr>
+          <td><b>${esc(d.doc_id)}</b></td>
+          <td>${esc(d.short_title)}<div class="small muted">${esc(d.source.source_note || '')}</div></td>
+          <td>${esc(LAYERS[d.doc_id] || '')}</td>
+          <td class="mono">${esc(d.page_ranges)}</td>
+          <td>${fmtDate(d.published_at)}</td>
+        </tr>`).join('');
+      const h = await health();
+      el('coverage-note').textContent = h.coverage_note || '';
+    } catch (e) { /* 오류 상자 표시됨 */ }
+  })();
+</script>
+</body>
+</html>
