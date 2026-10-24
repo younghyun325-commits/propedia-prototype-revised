@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P6 (시작 전)
+현재 단계: P7 (시작 전)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -76,3 +76,11 @@
 - [x] 스크린샷 10장 `docs/screens/` (Playwright 설치 성공 — 수동 캡처 불필요)
 - 완료 확인: `pytest -q` → 66 passed (test_wording이 public/*.html·assets/*.js 포함 검사)
 - 남은 문제: 없음
+
+## P6 평가 — 완료 (2026-10-25)
+- [x] `evals/run_eval.py` (§13): M1~M12 계산 → `evals/report.md` + `meta.eval_report` 저장. 층별 기대 항목(M6·M7)은 `core/lookup.py`를 쓰지 않고 정답셋(addresses + scope_labels)으로 따로 배치
+- [x] `python -m evals.run_eval` → 12개 지표 모두 목표 달성 (텍스트화 61/61, 근거 63/63, D1 필드 19/19, 범위 33/33, 주소 7/7, 층별 재현율·정밀도 100%, 포함 판정 3/3, 원문 링크 169/169, p95 23ms, 금지어 0, 단계 RB02)
+  - 주의: 정답셋 3개 모두 추출자와 같은 작성자의 초안이라 수치가 낙관적임 (화면·리포트에 "정답셋 초안" 배지) → HUMAN_TODO 1
+  - 채점기 검증: 정답 3곳을 메모리에서 일부러 바꿔 돌리니 오류 6건·M6/M8 미달로 잡아냄 (채점이 형식적으로 통과하는 구조가 아님을 확인)
+- 완료 확인: 종료 코드 0, `evals/report.md` 생성, `tests/ui_check.py` → 평가 화면 지표 카드 12개 표시 (29/29 통과)
+- 남은 문제: 정답셋 사람 확정(HUMAN_TODO 1), 키 재발급 후 A2·A5·A6 정답 추가
