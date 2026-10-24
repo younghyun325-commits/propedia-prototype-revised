@@ -1,0 +1,8 @@
+pdfplumber
+pypdf
+pypdfium2
+Pillow
+PyYAML
+httpx
+python-dotenv
+pytest
