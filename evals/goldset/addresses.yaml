@@ -1,0 +1,26 @@
+draft: true
+author: "claude-code (초안)"
+note: >
+  P1 resolve_addresses 결과(대체 모드)로 작성. 도로명주소 API 키 만료(E0014)로 A2·A5·A6은 '키 재발급 후 확정' 상태라 제외.
+  A4·A7·A8·A9는 '예시·지번 미확인' 지번. 기대값은 규칙(§1-4, §10-4)으로 정함. 사람 확인 필요.
+written_at: "2026-10-25"
+# inclusion: included | possible | nearby | same_dong(필지 밖, 같은 법정동 층에 표시) | none
+# A1 좌표가 없어 500m 판정(nearby)은 어떤 주소에도 넣지 않는다.
+excluded: [A2, A5, A6]
+addresses:
+  - {addr_id: A1, input: "강남구 압구정동 527", status: ok, pnu: "1168011000105270000",
+     bjd_code: "1168011000", sgg_code: "11680", saenghwal: "압구정·청담",
+     projects: [{project_key: apgujeong-6-1-hanyang7, inclusion: possible}]}
+  - {addr_id: A3, input: "서울특별시 강남구 압구정동 527번지", status: ok, pnu: "1168011000105270000",
+     bjd_code: "1168011000", sgg_code: "11680", saenghwal: "압구정·청담",
+     projects: [{project_key: apgujeong-6-1-hanyang7, inclusion: possible}]}
+  - {addr_id: A4, input: "강남구 압구정동 429", status: ok, pnu: "1168011000104290000",
+     bjd_code: "1168011000", sgg_code: "11680", saenghwal: "압구정·청담",
+     projects: [{project_key: apgujeong-6-1-hanyang7, inclusion: same_dong}]}
+  - {addr_id: A7, input: "강남구 신사동 649-9", status: ok, pnu: "1168010700106490009",
+     bjd_code: "1168010700", sgg_code: "11680", saenghwal: "압구정·청담", projects: []}
+  - {addr_id: A8, input: "강남구 역삼동 737", status: ok, pnu: "1168010100107370000",
+     bjd_code: "1168010100", sgg_code: "11680", saenghwal: "역삼·논현", projects: []}
+  - {addr_id: A9, input: "강남구 대치동 316", status: ok, pnu: "1168010600103160000",
+     bjd_code: "1168010600", sgg_code: "11680", saenghwal: "대치·도곡", projects: []}
+  - {addr_id: A10, input: "서초구 방배동 818-14", status: out_of_scope}

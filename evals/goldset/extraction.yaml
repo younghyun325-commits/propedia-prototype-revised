@@ -1,0 +1,35 @@
+draft: true
+author: "claude-code (초안)"
+note: "추출 전에 원문 텍스트(build/text/D1)와 agents.md §3-5만 보고 작성. 사람 확인 필요"
+written_at: "2026-10-25"
+doc_id: D1
+# match: text(norm 후 같음 또는 accept 중 하나) | number(float 같음) | date(ISO 같음) | set(norm 후 집합 같음)
+# text·set 비교의 norm: core.text.norm + 낫표(「」) 제거
+fields:
+  gosi_no:              {value: "강남구 공고 제2026-2347호", match: text, accept: ["서울특별시 강남구 공고 제2026-2347호"]}
+  published_at:         {value: "2026-10-06", match: date}
+  gazette_no:           {value: "제1871호", match: text, accept: ["구보 제1871호", "강남구보 제1871호"]}
+  gazette_date:         {value: "2026-10-08", match: date}
+  issuer:               {value: "강남구청장", match: text}
+  legal_basis:
+    value:
+      - "국토의 계획 및 이용에 관한 법률 제28조"
+      - "도시 및 주거환경정비법 제15조 제1항"
+      - "도시 및 주거환경정비법 시행령 제13조"
+    match: set
+  project_name:         {value: "압구정아파트지구 특별계획구역6-1 재건축 정비구역", match: text,
+                         accept: ["압구정아파트지구 특별계획구역⑥-1 재건축 정비구역"]}
+  location_text:        {value: "강남구 압구정동 527번지 일대", match: text, accept: ["압구정동 527번지 일대", "서울특별시 강남구 압구정동 527번지 일대"]}
+  representative_jibun: {value: "압구정동 527", match: text, accept: ["강남구 압구정동 527", "압구정동 527번지"]}
+  area_m2:              {value: 22123.6, match: number}
+  public_review_start:  {value: "2026-10-06", match: date}
+  public_review_end:    {value: "2026-11-06", match: date}
+  review_places:        {value: ["강남구청 재건축사업과", "압구정동 주민센터"], match: set}
+  land_use:             {value: "제3종일반주거지역", match: text}
+  households_before:    {value: 239, match: number}
+  households_after:     {value: 268, match: number}
+  base_allowed_far:     {value: 230, match: number}
+  plan_far:             {value: 264.9, match: number}
+  legal_max_far:        {value: 300, match: number}
+stage: RB02
+representative_pnu: "1168011000105270000"

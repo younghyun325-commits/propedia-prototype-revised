@@ -173,7 +173,7 @@
 | D1 | 1~17 | 공고문 본문 전체 (공람 안내, 아파트지구 개발기본계획 변경, 정비계획(안)) | 텍스트 추출 가능 |
 | D1 | 18~21 | 붙임 도면 (정비구역 결정도 등) | 이미지 → **원문 보기용으로만** 렌더링, 추출하지 않음 |
 | D2 | 12~14 | 생활권의 구분, 지역생활권의 구분, **지역생활권 구분 결과** (강남구 6개 지역생활권: 역삼·논현, 삼성, 압구정·청담, 대치·도곡, 개포·일원, 수서·세곡) | 텍스트 추출 가능 |
-| D2 | 29~31 | 강남구 개요 (일반사항, 지역생활권 현황) | **이미지** (쪽당 30자 미만) |
+| D2 | 29~31 | 강남구 개요 (일반사항, 지역생활권 현황). **p29는 장 표지, p30은 빈 쪽 → p31만 선택·전사** `[확인 2026-10-25]` | **이미지** (쪽당 30자 미만) |
 | D2 | 113~151 | **압구정·청담 지역생활권계획** (113 표지, 인쇄 쪽 109~145) | **이미지** → 이 중 10~15쪽만 골라 전사 (§8-4) |
 | D3 | 243~248 | 재건축사업 부문: 제도 변천(243~244), 추진현황(245), 구역해제 현황(246), 정비구역 목록·표 75 재건축 추진 중 단지 현황(247~248) | 텍스트 추출 가능 |
 | D3 | 262~268 | 재건축 건축물의 밀도계획: 용적률 계획(262~264), **표 79 주거지역 용적률 체계(265)**, 역세권 용도지역 상향·공공기여(266~268) | 텍스트 추출 가능 |
@@ -182,7 +182,7 @@
 | D4 | 75~80 | 제3장 제2절 주택·정비 부문 (인쇄 67~72) | 텍스트 추출 가능 |
 | D4 | 175~179 | 제5장 제3절 권역별 구상 — 6. 동남권 (인쇄 167~171) | 텍스트 추출 가능 |
 
-- 인쇄 쪽 환산: D3 재건축 부문 `page_label = pdf_page − 13` (밀도계획 인쇄 249쪽 = PDF 262쪽) `[확인]`. D4 `page_label = pdf_page − 8` `[확인]`. D2 압구정·청담 `page_label = pdf_page − 4` (PDF 115 = 인쇄 109) `[확인]`. D1은 공고 내부 쪽 번호(- 1 - …)를 쓴다. `page_label`은 텍스트에서 읽히면 그 값을 쓰고, 안 읽히면 위 공식으로 채운다.
+- 인쇄 쪽 환산: D3 재건축 부문 `page_label = pdf_page − 13` (밀도계획 인쇄 249쪽 = PDF 262쪽) `[확인]`. D4 `page_label = pdf_page − 8` `[확인]`. D2 `page_label = pdf_page − 6` (PDF 12 = 인쇄 6, PDF 31 = 인쇄 25, PDF 115 = 인쇄 109) `[확인 2026-10-25, 처음 적은 −4는 틀림]`. D1은 공고 내부 쪽 번호(- 1 - …)를 쓴다. `page_label`은 텍스트에서 읽히면 그 값을 쓰고, 안 읽히면 위 공식으로 채운다.
 - P1에서 각 쪽의 첫 줄을 뽑아 위 표의 내용과 맞는지 확인한다 (`build/page_heads.txt`). 다르면 실제를 따른다(§0-1-5).
 
 ### 3-3. 출처 정보 (화면의 "출처" 줄에 쓴다)
@@ -311,6 +311,7 @@ pretotype/
     bjd_codes.csv         # 강남구 법정동코드 + 지역생활권 (§8-6)
     demo_addresses.csv    # 시연 주소 10건 (§8-7)
     d2_selected_pages.yaml# D2 이미지 쪽 선택 결과와 이유 (§8-4)
+    transcripts/D2/p###.txt # Claude Code 전사 원본 (build/는 커밋 안 하므로 여기 둔다. textify가 build/text로 합친다)
     stage_templates.yaml  # 재건축 단계 템플릿 (§9-5, 원 계획서 표 그대로)
     stage_rules.yaml      # 문서 제목 → 단계 판정 규칙 (§10-5)
   pipeline/               # 빌드 스크립트 (§8). 시연 코드에서 import 금지
@@ -567,7 +568,9 @@ CREATE TABLE bjd_codes (
    - 공백을 뺀 글자 수가 30자 미만이면 `method = "image-only"`, 아니면 `"text"`.
 2. `build/page_heads.txt`: 쪽마다 `{doc} p{pdf_page} chars={n} | {첫 비어 있지 않은 줄 2개}` 한 줄. 사람이 §3-2와 대조할 수 있게 한다.
 3. `build/text/{doc}/pages.json`: `[{pdf_page, page_label, method, char_count, image_url, selected}]`.
-   - `selected`: D1 1~17 = 1, D1 18~21 = 0, D2 12~14 = 1, D2 29~31 = 1, D2 113~151 = 0 (§8-4 선택 후 1로 바꿈), D3·D4 = 1.
+   - `selected`: D1 1~17 = 1, D1 18~21 = 0, D2 12~14 = 1, D2 31 = 1 (29 표지·30 빈 쪽 = 0), D2 113~151 = 0 (§8-4 선택 후 1로 바꿈), D3·D4 = 1.
+   - 텍스트는 `page.dedupe_chars(tolerance=1).extract_text()`로 뽑는다 (D1 굵은 글씨가 '공공람람'처럼 두 번 나오는 문제 `[확인]`).
+   - `seed/transcripts/{doc}/p###.txt`(전사 원본)가 있으면 그 텍스트를 쓰고 `method="vision-claude"`, `selected=1`. D2 113~151은 `seed/d2_selected_pages.yaml`에 있는 쪽만 `selected=1`.
 4. `page_label`: 텍스트에서 읽히면 그 값, 아니면 §3-2 공식.
 5. 쪽 이미지 전체 용량을 출력한다. 40MB를 넘으면 품질을 65로 낮춰 다시 만든다.
 
@@ -635,7 +638,7 @@ CREATE TABLE bjd_codes (
 ### 8-7. `pipeline/resolve_addresses.py` — 시연 주소 확정 (네트워크 사용)
 1. `.env`를 `python-dotenv`로 읽는다. 키 값은 절대 출력하지 않는다 (`key[:3] + "***"`도 출력 금지).
 2. 요청: `GET https://business.juso.go.kr/addrlink/addrLinkApi.do` 파라미터 `confmKey, currentPage=1, countPerPage=10, keyword, resultType=json`. 타임아웃 15초.
-3. 응답 `results.common.errorCode`가 `"0"`이 아니면: `E0001`(승인키 오류)면 `JUSO_CONFM_KEY_ALT`로 한 번 더 시도. 둘 다 실패하면 §19-3.
+3. 응답 `results.common.errorCode`가 `"0"`이 아니면: `E0001`(승인키 오류)·`E0014`(개발승인키 기간 만료)면 `JUSO_CONFM_KEY_ALT`로 한 번 더 시도. 둘 다 실패하면 §19-3 (스크립트의 `FALLBACK` 목록으로 지번 입력만 작성, `--offline`으로 강제 가능).
 4. 검색어에서 `% = > < [ ]` 같은 특수문자를 지운다.
 5. 응답 원본을 `build/juso_raw/{addr_id}.json`에 저장한다 (키는 응답에 없으므로 안전).
 6. §4의 방법대로 A1~A10을 확정하고 `seed/demo_addresses.csv`(열: §7 `demo_addresses`와 같음, `aliases`는 JSON 문자열)를 쓴다. A1의 aliases에 A3 입력을 넣는다.
@@ -644,7 +647,9 @@ CREATE TABLE bjd_codes (
 
 ### 8-8. `pipeline/geocode.py` — 좌표 (네트워크 사용)
 1. Nominatim `GET https://nominatim.openstreetmap.org/search` 파라미터 `q, format=jsonv2, limit=1, countrycodes=kr`, 헤더 `User-Agent: propedia-pretotype/0.1 (prototype demo)`. 요청 사이 1.1초 쉰다.
-2. 시도 순서: 도로명주소 → 지번주소 → `건물명 + 강남구`. 첫 성공을 쓴다. `coord_source = "osm-nominatim:{road|jibun|building}"`.
+2. 시도 순서: 도로명주소 → `건물명 + 강남구`. 첫 성공을 쓴다. `coord_source = "osm-nominatim:{road|building}"`.
+   - 지번 질의는 쓰지 않는다: 한국 OSM 번지는 도로명 번호라 '대치동 316'이 '선릉로 316' 건물로 잘못 맞았다 `[확인 2026-10-25]`.
+   - 행정경계(`boundary`)·동네(`place`)·도로/정류장(`highway`) 결과는 필지 좌표가 아니므로 받지 않는다.
 3. 결과를 `build/geocode_cache.json`에 캐시한다 (재실행 시 네트워크 안 씀).
 4. 한양7차 사업 중심점 = A1(또는 A2) 좌표. `projects.lat/lon`에 쓴다 (§8-11).
 5. 결과가 서울 강남구 범위(위도 37.45~37.54, 경도 127.01~127.12)를 벗어나면 실패로 본다.
@@ -1444,6 +1449,7 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-10-25 | Claude Code (P1) | 실제에 맞게 고침: D2 인쇄 쪽 환산 `−4` → `−6`(§3-2) / D2 p29 표지·p30 빈 쪽은 선택 제외, p31만 전사(§3-2, §8-3) / 텍스트 추출에 `dedupe_chars` 사용(§8-3) / 전사 원본을 커밋 대상인 `seed/transcripts/`에 두고 textify가 합침(§6, §8-3) / 도로명주소 API `E0014`도 예비 키 재시도 대상, 두 키 만료로 대체 모드(지번만) 작성(§8-7) / Nominatim 지번 질의 오매칭으로 제외, 경계·동네·정류장 결과 거부(§8-8) / D1 `title`은 공고 1쪽 제목 그대로 |
 | 2026-10-24 | Claude (동혁 요청) | 폴더 이름 `pretype` → `pretotype`. Claude Code가 이 파일만 보고 끝까지 작업하도록 전면 재작성: 배경 요약, 문서별 쪽 범위 확인(D1 1~21, D2 12~14·29~31·113~151, D3 243~248·262~268·275~277, D4 73·75~80·175~179), D1 확인 사실, DDL, 스크립트 명세, 추출 JSON 스키마, 단계 템플릿, API·화면·평가·테스트·배포 명세, P0~P8 |
 | 2026-10-24 | Claude (동혁 요청) | 결정 반영: 추출은 Claude Code 직접 추출(외부 LLM API 없음), 도로명주소 키 2개를 `.env`로 복사, 배포는 Vercel(정적 화면 + FastAPI), 시연은 2026-11-06 공람 마감 전 |
 | 2026-10-24 | Claude (동혁 요청) | 최초 작성 (`pretype/agents.md`) |
