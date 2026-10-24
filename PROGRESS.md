@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P4 (시작 전)
+현재 단계: P5 (시작 전)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -50,3 +50,14 @@
 - 완료 확인: `python -m pipeline.check P3` → 10/10 통과
   - projects `apgujeong-6-1-hanyang7 | RB02 | 2026-10-06` / deadlines `2026-11-06` / change_events `4|new_project, 4|deadline_added` (step 1~3은 0건) / review_queue `parcel_inclusion | 1:1168011000105270000` / project_parcels `…105270000 | representative_only | 0`
 - 남은 문제: 사업 중심 좌표 없음(HUMAN_TODO 7) → 주변 500m 판정은 좌표 확보 후 동작
+
+## P4 조회 로직·API — 완료 (2026-10-25)
+- [x] `core/db.py`(읽기 전용 `mode=ro&immutable=1`, SOURCE 조립), `timeutil.py`, `address.py`(normalize), `lookup.py`, `progress.py`, `review.py`, `catalog.py`(문서 DB·이벤트·검수 목록·평가 조회용으로 추가)
+- [x] `api/index.py` (§11 엔드포인트 13개, 로컬은 API 등록 뒤 `public/` 마운트, Vercel은 `/`→`/index.html`). 요청 본문은 `dict`로 받아 pydantic 직접 import 없음
+  - 진행상황 응답에 `facts`(고시 기재 면적·용도지역·세대수·용적률 — 추출값 + 근거 문장 + 원문 쪽)를 추가
+  - 필지 층에 사업이 없으면 판정표 6번 문구(`no_project_message`), 좌표가 없으면 `nearby_note`로 생략 사유 표시
+- [x] `tests/` 11개 파일 (§14) + `pytest.ini`
+- 완료 확인:
+  - `pytest -q` → 66 passed
+  - `python -m uvicorn api.index:app --port 8000` 실행 후 A1 조회 → status ok, PNU 1168011000105270000, 서울 전역 13·자치구 7·법정동 13 항목, 필지에 한양7차 `possible`(review_id 1), 승인 결정 POST 시 `included`
+- 남은 문제: 시연 화면(`public/`)은 P5
