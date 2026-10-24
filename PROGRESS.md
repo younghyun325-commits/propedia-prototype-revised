@@ -98,3 +98,10 @@
   - 6 `pytest -q` 66 passed, `python -m evals.run_eval` 종료 코드 0 ✓
   - 7 시연 경로 외부 네트워크·LLM 호출 0 ✓ (`test_no_network.py`: core/api에 httpx·requests·urllib.request·socket 없음, 표준 라이브러리+fastapi만 / `public/`에 외부 주소 없음)
 - 남은 문제: HUMAN_TODO 11(계획 보고서 이용 조건)은 공개 배포 전 확인 필요
+
+## P8 배포 — 진행 중 (사람 계정 필요, 2026-10-25)
+- [x] `gh auth status` → 로그인 확인 → 커밋된 파일에 `.env` 키 값 없음 확인(값은 출력하지 않음) → `gh repo create propedia-pretotype --private --source . --push`
+  - 저장소: https://github.com/greekyogurt02/propedia-pretotype (PRIVATE, main)
+- [ ] 사람: Vercel 가입·Import·Deploy → 주소 전달 (HUMAN_TODO 4). 공개 주소가 되므로 HUMAN_TODO 11(계획 보고서 이용 조건) 먼저 확인
+- [ ] Claude Code: 배포 주소로 `curl /api/v1/health`, A1 조회, `python tests/ui_check.py --base <주소>` → README·DEMO에 주소 기록
+- 멈춤 사유: agents.md §19-1-3 (Vercel 가입·Import는 사람 계정 필요)

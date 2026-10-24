@@ -3,7 +3,8 @@
 서울 주소 하나를 넣으면 그 주소에 해당하는 공공 문서(고시·공고·계획) 정보를 **4개 층**(서울 전역·자치구·법정동·필지)으로 모아 한 응답으로 돌려주고, 필지가 정비사업 구역에 걸리면 **현재 단계·다음 단계·기한·남은 기간**을 기준일·원문 쪽과 함께 보여주는 원리를 작게 보여주는 시연판입니다.
 
 - 작업 지시서: [agents.md](agents.md) · 진행 기록: [PROGRESS.md](PROGRESS.md) · 사람 확인 목록: [HUMAN_TODO.md](HUMAN_TODO.md) · 시연 대본: [DEMO.md](DEMO.md)
-- 배포 주소: (P8에서 기록)
+- GitHub(비공개): https://github.com/greekyogurt02/propedia-pretotype
+- 배포 주소: (Vercel Import 후 기록)
 
 ## 반영 범위
 

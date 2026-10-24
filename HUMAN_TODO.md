@@ -4,7 +4,7 @@
 | 1 | 정답셋 3개 확인 후 draft:false, confirmed_by 기입 | 평가 수치를 믿을 수 있게 | 시연 전 | 열림 |
 | 2 | 재건축 단계 템플릿 what_happens·법령 근거 작성 | 원칙 3 | 정식 MVP | 열림 |
 | 3 | D1 게시물 URL 확인 | 출처 링크 | 시연 전 | 열림 |
-| 4 | GitHub 저장소·Vercel 배포 | 계정 필요 | P8 | 열림 |
+| 4 | Vercel 배포: vercel.com에 GitHub 계정으로 가입 → New Project → `greekyogurt02/propedia-pretotype` Import → Framework 자동(FastAPI) → Deploy → 주소를 Claude Code에 알려 주기 | 계정 필요. GitHub 비공개 저장소 생성·push는 완료(2026-10-25). Hobby 주소는 기본 공개이므로 11번 먼저 확인 | P8 | 열림 (GitHub 완료) |
 | 5 | 시연 리허설 (DEMO.md대로 5분) | | 시연 전 | 열림 |
 | 6 | business.juso.go.kr에서 검색 API 승인키 재발급 후 `.env`의 `JUSO_CONFM_KEY` 교체 → `python -m pipeline.resolve_addresses && python -m pipeline.geocode && python -m pipeline.run_all` 재실행 | 두 키 모두 `E0014 개발승인키 기간 만료`(2026-10-25 확인). 지금은 지번 입력만 지원(§19-3): A2(도로명)·A5·A6은 비어 있고, A4·A7·A8·A9는 '예시·지번 미확인' 지번, 법정동 코드 `code_verified=0` | 시연 전 | 열림 |
 | 7 | 지도에서 위경도 확인 필요 (A1·A3 한양7차, A4, A9) | OSM Nominatim에 한양7차·현대백화점·은마아파트 위치가 없어 좌표를 못 얻음 → 사업 중심점이 없어 주변 500m 판정 생략. 키 재발급(6번) 후 도로명주소로 다시 시도 | 시연 전 | 열림 |
