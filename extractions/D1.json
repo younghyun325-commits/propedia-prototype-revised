@@ -1,0 +1,112 @@
+{
+  "doc_id": "D1",
+  "extractor_version": "claude-code-v1",
+  "extracted_at": "2026-10-25T10:00:00+09:00",
+  "document": {
+    "title": "도시관리계획(압구정 아파트지구 개발기본계획, 지구단위계획구역 및 지구단위계획) 결정(변경), 압구정 아파트지구 특별계획구역⑥-1 한양7차아파트 재건축 정비구역·정비계획 결정(변경)(안) 공람·공고",
+    "issuer": "강남구청장",
+    "gosi_no": "강남구 공고 제2026-2347호",
+    "published_at": "2026-10-06",
+    "gazette": "구보 제1871호 (2026.10.08)",
+    "doc_kind": "gongram"
+  },
+  "fields": {
+    "gosi_no": {"value": "강남구 공고 제2026-2347호", "unit": null, "evidence": "서울특별시 강남구 공고 제2026 - 2347호", "pdf_page": 1, "confidence": 0.98, "null_reason": null},
+    "published_at": {"value": "2026-10-06", "unit": null, "evidence": "2026년 10월 6일", "pdf_page": 1, "confidence": 0.95, "null_reason": null},
+    "gazette_no": {"value": "제1871호", "unit": null, "evidence": "제1871호 구 보 2026.10.08", "pdf_page": 1, "confidence": 0.95, "null_reason": null},
+    "gazette_date": {"value": "2026-10-08", "unit": null, "evidence": "제1871호 구 보 2026.10.08", "pdf_page": 1, "confidence": 0.95, "null_reason": null},
+    "issuer": {"value": "강남구청장", "unit": null, "evidence": "강 남 구 청 장", "pdf_page": 1, "confidence": 0.95, "null_reason": null},
+    "legal_basis": {"value": ["국토의 계획 및 이용에 관한 법률 제28조", "도시 및 주거환경정비법 제15조 제1항", "도시 및 주거환경정비법 시행령 제13조"], "unit": null, "evidence": "「국토의 계획 및 이용에 관한 법률」 제28조 및「도시 및 주거환경정비법」 제15조 제1항 및 같은법 시행령 제13조의 규정에 따라", "pdf_page": 1, "confidence": 0.9, "null_reason": null},
+    "project_name": {"value": "압구정아파트지구 특별계획구역6-1 재건축 정비구역", "unit": null, "evidence": "가. 정비사업의 명칭 : 압구정아파트지구 특별계획구역6-1 재건축 정비구역", "pdf_page": 4, "confidence": 0.97, "null_reason": null},
+    "location_text": {"value": "강남구 압구정동 527번지 일대", "unit": null, "evidence": "재건축 정비구역 527번지 일대", "pdf_page": 4, "confidence": 0.9, "null_reason": null},
+    "representative_jibun": {"value": "압구정동 527", "unit": null, "evidence": "재건축 정비구역 527번지 일대", "pdf_page": 4, "confidence": 0.9, "null_reason": null},
+    "area_m2": {"value": 22123.6, "unit": "㎡", "evidence": "변경 - 증) 22,123.6 22,123.6 -", "pdf_page": 4, "confidence": 0.95, "null_reason": null},
+    "public_review_start": {"value": "2026-10-06", "unit": null, "evidence": "가. 공람기간 : 2026. 10. 06. ~ 2026. 11. 06.", "pdf_page": 1, "confidence": 0.98, "null_reason": null},
+    "public_review_end": {"value": "2026-11-06", "unit": null, "evidence": "가. 공람기간 : 2026. 10. 06. ~ 2026. 11. 06.", "pdf_page": 1, "confidence": 0.98, "null_reason": null},
+    "review_places": {"value": ["강남구청 재건축사업과", "압구정동 주민센터"], "unit": null, "evidence": "○ 강남구청 재건축사업과 (☎02-3423-6063) ○ 압구정동 주민센터 (☎02-3423-7606)", "pdf_page": 1, "confidence": 0.97, "null_reason": null},
+    "land_use": {"value": "제3종일반주거지역", "unit": null, "evidence": "주거지역 제3종일반주거지역 18,034.4 81.5 -", "pdf_page": 5, "confidence": 0.85, "null_reason": null},
+    "households_before": {"value": 239, "unit": "세대", "evidence": "세대수 239 268 증) 29 -", "pdf_page": 15, "confidence": 0.9, "null_reason": null},
+    "households_after": {"value": 268, "unit": "세대", "evidence": "주택공급계획 : 268세대", "pdf_page": 7, "confidence": 0.95, "null_reason": null},
+    "base_allowed_far": {"value": 230, "unit": "%", "evidence": "기준(허용) 용적률 : 230% (허용용적률 인센티브 20%p)", "pdf_page": 7, "confidence": 0.95, "null_reason": null},
+    "plan_far": {"value": 264.9, "unit": "%", "evidence": "정비계획 용적률 : 264.9% (상한용적률 인센티브 순부담 10.44%)", "pdf_page": 7, "confidence": 0.95, "null_reason": null},
+    "legal_max_far": {"value": 300, "unit": "%", "evidence": "법정상한 용적률 : 300%", "pdf_page": 7, "confidence": 0.95, "null_reason": null}
+  },
+  "items": [
+    {
+      "item_key": "D1-01",
+      "item_type": "notice",
+      "title": "압구정아파트지구 개발기본계획 변경(안): 토지이용계획",
+      "summary": "압구정아파트지구 주택용지를 678,983.6㎡에서 677,347.5㎡로 줄이고 도로용지를 83,625.5㎡에서 85,261.6㎡로 늘리는 안이다. 합계 836,456.5㎡는 그대로다.",
+      "scope_type": "BJD",
+      "scope_ref": ["1168011000"],
+      "scope_note": "압구정아파트지구는 압구정동 일부. 경계 데이터가 없어 법정동 단위로 적용",
+      "pdf_page": 2,
+      "evidence": "주택용지 678,983.6 81.2 677,347.5 81.0 감)1,636.1",
+      "effective_from": null,
+      "confidence": 0.85,
+      "needs_review": false
+    },
+    {
+      "item_key": "D1-02",
+      "item_type": "notice",
+      "title": "압구정아파트지구 도로 결정(변경)(안): 보행자전용도로 신설",
+      "summary": "대상지 남측 문화복합시설과의 연계를 고려해 한강변 접근성과 개방감을 넓히기 위한 보행자전용도로(중로 3-A) 신설 안이다.",
+      "scope_type": "BJD",
+      "scope_ref": ["1168011000"],
+      "scope_note": "도로 기점은 압구정동 526. 경계 데이터가 없어 법정동 단위로 적용",
+      "pdf_page": 4,
+      "evidence": "- 중로 3-A 고려하여, 한강변 접근성 및 개방감 확대를 위한",
+      "effective_from": null,
+      "confidence": 0.8,
+      "needs_review": false
+    },
+    {
+      "item_key": "D1-03",
+      "item_type": "notice",
+      "title": "압구정아파트지구 지구단위계획 결정(변경): 공고 생략",
+      "summary": "압구정아파트지구 지구단위계획 결정(변경)은 공고에서 생략되었고 정비계획 결정(변경)(안)을 참고하도록 했다. 정비계획변경(안)은 주민공람을 거쳐 서울시에서 결정·고시된다.",
+      "scope_type": "BJD",
+      "scope_ref": ["1168011000"],
+      "scope_note": "압구정아파트지구는 압구정동 일부. 경계 데이터가 없어 법정동 단위로 적용",
+      "pdf_page": 17,
+      "evidence": "Ⅲ. 압구정아파트지구 지구단위계획 결정(변경) : 생략 (정비계획 결정(변경)(안) 참고)",
+      "effective_from": null,
+      "confidence": 0.8,
+      "needs_review": false
+    }
+  ],
+  "projects": [
+    {
+      "project_key": "apgujeong-6-1-hanyang7",
+      "name": "압구정아파트지구 특별계획구역6-1 재건축 정비구역",
+      "aliases": ["한양7차아파트 재건축", "압구정 아파트지구 특별계획구역⑥-1 한양7차아파트 재건축"],
+      "project_type": "rebuild",
+      "stage_candidate": "RB02",
+      "stage_evidence": {"evidence": "한양7차아파트 재건축 정비구역·정비계획 결정(변경)(안) 공람·공고", "pdf_page": 1},
+      "location_text": "강남구 압구정동 527번지 일대",
+      "representative_jibun": {"dong": "압구정동", "main": 527, "sub": 0, "san": false,
+                               "text": "527번지 일대", "evidence": "재건축 정비구역 527번지 일대", "pdf_page": 4},
+      "area_m2": {"value": 22123.6, "evidence": "변경 - 증) 22,123.6 22,123.6 -", "pdf_page": 4},
+      "land_use": {"value": "제3종일반주거지역", "evidence": "주거지역 제3종일반주거지역 18,034.4 81.5 -", "pdf_page": 5},
+      "deadlines": [
+        {"kind": "public_review", "title": "정비계획(안) 주민공람",
+         "starts_on": "2026-10-06", "due_on": "2026-11-06",
+         "how_to_submit": "토지등소유자 및 이해관계인은 공람기간 내에 의견서를 공람장소로 제출",
+         "places": ["강남구청 재건축사업과", "압구정동 주민센터"],
+         "evidence": "가. 공람기간 : 2026. 10. 06. ~ 2026. 11. 06.", "pdf_page": 1}
+      ],
+      "related_history": [
+        {"label": "아파트지구(용도지구) 최초 지정", "date": "1976-08-21", "gosi_no": "건설부고시 제131호",
+         "evidence": "건설부고시 제131호(1976.8.21.)에 의거 아파트지구(용도지구)로 최초 지정", "pdf_page": 1},
+        {"label": "아파트지구 개발기본계획 승인", "date": "1977-03-29", "gosi_no": "건설부 건축4441-6149호",
+         "evidence": "건설부 건축4441-6149호(1977.3.29.)로 아파트지구 개발기본계획 승인", "pdf_page": 1},
+        {"label": "개발기본계획(정비계획) 결정(변경)", "date": "2008-06-12", "gosi_no": "서울특별시고시 제2008-202호",
+         "evidence": "서울특별시고시 제2008-202호(2008.6.12.)로 개발기본계획(정비계획) 결정(변경)", "pdf_page": 1},
+        {"label": "개발기본계획 결정(변경)", "date": "2023-11-23", "gosi_no": "서울특별시고시 제2023-516호",
+         "evidence": "서울특별시고시 제2023-516호(2023.11.23.)로 개발기본계획 결정(변경)", "pdf_page": 1},
+        {"label": "지구단위계획구역 지정 및 지구단위계획 결정", "date": "2023-11-23", "gosi_no": "서울특별시고시 제2023-517호",
+         "evidence": "서울특별시고시 제2023-517호(2023.11.23.)로 결정된 도시관리계획(압구정아파트지구 지구단위계획구역 지정 및 지구단위계획)", "pdf_page": 1}
+      ]
+    }
+  ]
+}

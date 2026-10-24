@@ -100,6 +100,46 @@ def check_p1(c: Checker) -> None:
         c.add(f"정답셋 초안 {name}", draft)
 
 
+def check_p2(c: Checker) -> None:
+    from pipeline.load_extractions import validate
+    if not DB_PATH.exists():
+        c.add("DB 존재", False, "python -m pipeline.init_db && python -m pipeline.load_seed")
+        return
+    con = connect_rw()
+    min_items = {"D1": 2, "D2": 8, "D3": 5, "D4": 5}
+    all_keys = set()
+    for doc in DOC_ORDER:
+        p = EXTRACTIONS / f"{doc}.json"
+        if not p.exists():
+            c.add(f"{doc} 추출 JSON", False, "파일 없음")
+            continue
+        data = json.loads(p.read_text(encoding="utf-8"))
+        doc_pk = con.execute("SELECT id FROM documents WHERE doc_id=?", (doc,)).fetchone()[0]
+        pages = {r["pdf_page"]: dict(r) for r in
+                 con.execute("SELECT pdf_page, text, selected FROM pages WHERE document_id=?", (doc_pk,))}
+        errs = validate(doc, data, pages)
+        c.add(f"{doc} 스키마", not errs, "; ".join(errs[:3]))
+        n = len(data["items"])
+        c.add(f"{doc} 항목 수 ≥ {min_items[doc]}", n >= min_items[doc], f"{n}개")
+        all_keys |= {i["item_key"] for i in data["items"]}
+        if doc == "D1":
+            c.add("D1 필드 19개", len(data["fields"]) == 19, f"{len(data['fields'])}개")
+            c.add("D1 사업 1건", len(data["projects"]) == 1, f"{len(data['projects'])}건")
+        if doc == "D2":
+            c.add("D2 항목 전부 needs_review", all(i["needs_review"] for i in data["items"]))
+    row = con.execute("SELECT sum(evidence_ok_count), sum(evidence_total) FROM extractions").fetchone()
+    ok, total = row[0] or 0, row[1] or 0
+    mism = con.execute("SELECT count(*) FROM review_queue WHERE item_type='evidence_mismatch'").fetchone()[0]
+    c.add("근거 일치율 100% (불일치는 전부 검수 큐)", total > 0 and (ok == total or mism == total - ok),
+          f"{ok}/{total}, 검수 큐 {mism}")
+    con.close()
+    g = ROOT / "evals" / "goldset" / "scope_labels.yaml"
+    labels = (yaml.safe_load(g.read_text(encoding="utf-8")) or {}) if g.exists() else {}
+    missing = sorted(all_keys - set((labels.get("labels") or {}).keys()))
+    c.add("정답셋 초안 scope_labels.yaml (모든 item_key)", labels.get("draft") is True and not missing,
+          f"누락 {missing[:5]}" if missing else f"{len(all_keys)}개")
+
+
 def main() -> None:
     setup_stdout()
     if len(sys.argv) != 2 or sys.argv[1] not in CHECKS:
@@ -110,7 +150,7 @@ def main() -> None:
     sys.exit(c.report())
 
 
-CHECKS = {"P1": check_p1}
+CHECKS = {"P1": check_p1, "P2": check_p2}
 
 if __name__ == "__main__":
     main()

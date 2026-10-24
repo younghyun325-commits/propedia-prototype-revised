@@ -1,0 +1,8 @@
+# 문서 제목에 정규식을 위에서부터 적용, 처음 맞는 규칙의 code
+- {id: R1, project_type: rebuild, pattern: "정비구역.*정비계획.*\\(안\\).*공람", code: RB02}
+- {id: R2, project_type: rebuild, pattern: "정비구역\\s*지정.*고시", code: RB03}
+- {id: R3, project_type: rebuild, pattern: "추진위원회.*승인", code: RB04}
+- {id: R4, project_type: rebuild, pattern: "조합설립.*인가", code: RB05}
+- {id: R5, project_type: rebuild, pattern: "사업시행계획.*인가", code: RB07}
+- {id: R6, project_type: rebuild, pattern: "관리처분계획.*인가", code: RB09}
+- {id: R7, project_type: rebuild, pattern: "준공인가|이전고시", code: RB12}

@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P2 (시작 전)
+현재 단계: P3 (시작 전)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -34,8 +34,16 @@
 - 완료 확인: `python -m pipeline.check P1` → 15/15 통과 (텍스트 확보율 61/61 = 100%, D2 전사 12+1쪽, demo_addresses 10행)
 - 남은 문제: 도로명주소 키 재발급(HUMAN_TODO 6), 좌표(HUMAN_TODO 7)
 
-## P2 추출 — 시작 전
-- [ ] `pipeline/init_db.py`, `load_seed.py` → `python -m pipeline.init_db && python -m pipeline.load_seed`
-- [ ] D1 추출 → `extractions/D1.json` → `python -m pipeline.load_extractions --check`
-- [ ] D2 → D3 → D4 같은 방법
-- [ ] `evals/goldset/scope_labels.yaml` 초안 (모든 item_key)
+## P2 추출 — 완료 (2026-10-25)
+- [x] `pipeline/init_db.py`, `load_seed.py` → 테이블 19개, 문서 4건 text_status 모두 ok, 시연 주소 10건, 단계 템플릿 13개
+  - `seed/stage_templates.yaml`(§9-5 그대로), `seed/stage_rules.yaml`(§10-5)도 load_seed가 쓰므로 이때 작성
+- [x] D1 추출 → `extractions/D1.json`: 필드 19, 항목 3(BJD), 사업 1(관련 이력 5건 — 원문에 1977 건설부 승인이 더 있어 실제대로) → 근거 33/33
+- [x] D2 13항목(SGG 3, SAENGHWAL 10, 전부 needs_review) 13/13 → D3 9항목(SIDO 8, SGG 1 표 75 강남구 행) 9/9 → D4 8항목(SIDO 5, 동남권 SGG 3) 8/8
+- [x] `evals/goldset/scope_labels.yaml` 초안 (33개 item_key, 추출자와 같은 작성자 명시)
+- 완료 확인: `python -m pipeline.check P2` → 13/13 통과 (근거 일치율 63/63 = 100%)
+- 남은 문제: 없음 (추출 중 `evals/goldset/extraction.yaml`은 열지 않음)
+
+## P3 판정·DB 완성 — 시작 전
+- [x] `seed/stage_templates.yaml`(§9-5 그대로), `seed/stage_rules.yaml`(§10-5) — P2에서 작성
+- [ ] `build_projects.py`, `events.py`, `review_queue.py`, `run_all.py`
+- [ ] `python -m pipeline.run_all`

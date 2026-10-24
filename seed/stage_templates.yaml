@@ -1,0 +1,19 @@
+project_type: rebuild
+project_type_label: 재건축
+source: "Propedia 서울 MVP 개발 계획서 v1.0 「세부 단계 템플릿과 소유자 기한」 재개발 13단계 표 (재건축은 1번만 재건축진단으로 대체)"
+reviewed_by: null          # 법령 대조 전 초안 (원 계획서: CEO + 로스쿨생 팀원이 법제처 현행본과 대조 예정)
+reviewed_at: null
+stages:
+  - {seq: 1,  code: RB01, common_stage: "S0~S1", title: "재건축진단",              issuer: null,                       owner_actions: null}
+  - {seq: 2,  code: RB02, common_stage: "S4",    title: "정비계획 입안·주민공람",  issuer: "자치구",                   owner_actions: "공람 기간 내 의견 제출"}
+  - {seq: 3,  code: RB03, common_stage: "S6",    title: "정비구역 지정 고시",      issuer: "서울시보",                 owner_actions: "구역 경계와 내 필지 포함 여부"}
+  - {seq: 4,  code: RB04, common_stage: "S7",    title: "추진위원회 승인",         issuer: "자치구",                   owner_actions: "동의서 요청 대응"}
+  - {seq: 5,  code: RB05, common_stage: "S7",    title: "조합설립인가",            issuer: "자치구",                   owner_actions: "조합원 자격 확인"}
+  - {seq: 6,  code: RB06, common_stage: "S7",    title: "시공자 선정",             issuer: "조합 총회 (정보몽땅 공지)", owner_actions: "총회 의결권"}
+  - {seq: 7,  code: RB07, common_stage: "S7",    title: "사업시행계획인가",        issuer: "자치구",                   owner_actions: "사업시행계획 공람"}
+  - {seq: 8,  code: RB08, common_stage: "S7",    title: "분양신청",                issuer: "조합 통지·일간지 공고",    owner_actions: "기간 내 미신청 시 현금청산 대상"}
+  - {seq: 9,  code: RB09, common_stage: "S7",    title: "관리처분계획인가",        issuer: "자치구",                   owner_actions: "관리처분계획 공람·의견 제출"}
+  - {seq: 10, code: RB10, common_stage: "S7",    title: "이주·철거",               issuer: "조합·자치구",              owner_actions: "이주 기한"}
+  - {seq: 11, code: RB11, common_stage: "S8",    title: "착공·일반분양",           issuer: "자치구·건축HUB",           owner_actions: null}
+  - {seq: 12, code: RB12, common_stage: "S8",    title: "준공인가·이전고시",       issuer: "자치구",                   owner_actions: "소유권 이전 등기 확인"}
+  - {seq: 13, code: RB13, common_stage: "S8",    title: "청산·해산",               issuer: "조합",                     owner_actions: "청산금"}

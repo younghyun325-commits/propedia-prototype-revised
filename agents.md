@@ -672,7 +672,7 @@ D1 추출 JSON의 `projects` 배열로 사업 카드를 만든다 (프리토타�
 1. `projects` 행: `project_key`, `name`, `aliases`, `project_type='rebuild'`, `sgg_code='11680'`, `bjd_code`(압구정동), `area_m2`, `location_text`, `land_use`(D1 p5), `track='unknown'`(D1에 추진 방식 기재 없음), 좌표(§8-8).
 2. **단계 판정**: `seed/stage_rules.yaml`(§10-5)을 D1 `title`에 적용해 단계 코드를 정한다. 추출 JSON의 `stage_candidate`와 다르면 규칙 결과를 쓰고 `review_queue(item_type='stage_uncertain')`.
 3. `project_stage_history`: 현재 단계(RB02) 1행, `entered_at = 2026-10-06`(공고일), `basis='gosi'`, 근거 문장(공고 제목 문장)·쪽.
-4. `related_history`: §3-5의 관련 고시 이력 4건 (D1 p1 근거).
+4. `related_history`: D1 p1의 관련 고시 이력 5건 (§3-5의 4건 + 건설부 건축4441-6149호(1977.3.29.) 아파트지구 개발기본계획 승인 `[확인 2026-10-25]`).
 5. `deadlines`: 공람 1건 — `kind='public_review'`, `title='정비계획(안) 주민공람'`, `starts_on=2026-10-06`, `due_on=2026-11-06`, `how_to_submit`=원문 문장, `places`=공람장소 2곳.
 6. `doc_locations`, `project_parcels`: 대표 지번 "527번지 일대" → 압구정동 527 PNU, `basis='representative_only'`, `verified=0`. → `review_queue(item_type='parcel_inclusion', ref_key='{project_id}:{pnu}', title='한양7차 재건축 — 압구정동 527 포함 여부', reason='고시에 지번 조서 없이 대표 지번("527번지 일대")만 있음')`.
 7. `project_documents`: D1 `stage_basis`.
@@ -792,7 +792,7 @@ D1 추출 JSON의 `projects` 배열로 사업 카드를 만든다 (프리토타�
   `gosi_no`, `published_at`, `gazette_no`, `gazette_date`, `issuer`, `legal_basis`, `project_name`, `location_text`, `representative_jibun`(예: "압구정동 527"), `area_m2`, `public_review_start`, `public_review_end`, `review_places`(배열), `land_use`, `households_before`, `households_after`, `base_allowed_far`(%), `plan_far`(%), `legal_max_far`(%)
   (필드 이름은 바꾸지 않는다. 정답셋이 이 이름을 쓴다.)
 - `items` 2~4개: 아파트지구 개발기본계획 토지이용계획 변경(p2, `BJD` 압구정동), 도로 결정 변경(p3~4·p6, `BJD`), 필요하면 지구단위계획 관련 언급(p17). **한양7차 정비계획 자체는 item이 아니라 `projects`로** 넣는다.
-- `projects` 1개: §9-2 예시 구조. `related_history` 4건(§3-5).
+- `projects` 1개: §9-2 예시 구조. `related_history` 5건(D1 p1).
 
 **D2 (생활권계획 강남구, 12~14 + 29~31 + 선택한 113~151)**
 - 12~14쪽(텍스트): 강남구 지역생활권 구분 결과 → `SGG` 항목 1~2개 (`stat` 또는 `plan`).
@@ -806,7 +806,7 @@ D1 추출 JSON의 `projects` 배열로 사업 카드를 만든다 (프리토타�
 
 **D4 (2040 서울도시기본계획, 73, 75~80, 175~179)**
 - `SIDO` 항목 4~6개: 주택·정비 부문 목표와 전략(73쪽 표의 주택·정비 행, 75~80쪽 전략 1-1~1-3 등).
-- 동남권(175~179) 항목 2~4개: `SGG ["11650","11680","11710","11740"]` (동남권 = 서초·강남·송파·강동 `[추정: 175쪽 표에서 권역 구성 확인]`). 한강변 주거지 관리 등.
+- 동남권(175~179) 항목 2~4개: `SGG ["11650","11680","11710","11740"]` (동남권 = 서초·강남·송파·강동 `[확인: D2 p12 표 2. D4 175~179쪽 본문에는 권역 구성이 글로 없음]`). 한강변 주거지 관리 등.
 
 ### 9-4. 근거 문장 검사 규칙 (`core/text.py`)
 ```python
@@ -1449,6 +1449,7 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-10-25 | Claude Code (P2) | D1 관련 고시 이력은 원문대로 5건(1977 건설부 승인 포함)(§8-11, §9-3) / 동남권 구성 근거를 D2 p12로 확인(§9-3) |
 | 2026-10-25 | Claude Code (P1) | 실제에 맞게 고침: D2 인쇄 쪽 환산 `−4` → `−6`(§3-2) / D2 p29 표지·p30 빈 쪽은 선택 제외, p31만 전사(§3-2, §8-3) / 텍스트 추출에 `dedupe_chars` 사용(§8-3) / 전사 원본을 커밋 대상인 `seed/transcripts/`에 두고 textify가 합침(§6, §8-3) / 도로명주소 API `E0014`도 예비 키 재시도 대상, 두 키 만료로 대체 모드(지번만) 작성(§8-7) / Nominatim 지번 질의 오매칭으로 제외, 경계·동네·정류장 결과 거부(§8-8) / D1 `title`은 공고 1쪽 제목 그대로 |
 | 2026-10-24 | Claude (동혁 요청) | 폴더 이름 `pretype` → `pretotype`. Claude Code가 이 파일만 보고 끝까지 작업하도록 전면 재작성: 배경 요약, 문서별 쪽 범위 확인(D1 1~21, D2 12~14·29~31·113~151, D3 243~248·262~268·275~277, D4 73·75~80·175~179), D1 확인 사실, DDL, 스크립트 명세, 추출 JSON 스키마, 단계 템플릿, API·화면·평가·테스트·배포 명세, P0~P8 |
 | 2026-10-24 | Claude (동혁 요청) | 결정 반영: 추출은 Claude Code 직접 추출(외부 LLM API 없음), 도로명주소 키 2개를 `.env`로 복사, 배포는 Vercel(정적 화면 + FastAPI), 시연은 2026-11-06 공람 마감 전 |
