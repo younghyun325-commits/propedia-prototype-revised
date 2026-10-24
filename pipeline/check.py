@@ -140,6 +140,24 @@ def check_p2(c: Checker) -> None:
           f"누락 {missing[:5]}" if missing else f"{len(all_keys)}개")
 
 
+def check_p3(c: Checker) -> None:
+    from pipeline.run_all import P3_SQL, sql_rows
+    if not DB_PATH.exists():
+        c.add("DB 존재", False, "python -m pipeline.run_all")
+        return
+    con = connect_rw()
+    for sql, expect in P3_SQL:
+        got = sql_rows(con, sql)
+        c.add(sql[:60], got == expect, got)
+    for t in ("stage_templates", "project_stage_history", "related_history", "review_queue"):
+        n = con.execute(f"SELECT count(*) FROM {t}").fetchone()[0]
+        c.add(f"{t} 행 있음", n > 0, f"{n}행")
+    meta = dict(con.execute("SELECT key, value FROM meta").fetchall())
+    c.add("meta(build_at, as_of, coverage_note)", all(k in meta for k in ("build_at", "as_of", "coverage_note")),
+          f"as_of={meta.get('as_of')}")
+    con.close()
+
+
 def main() -> None:
     setup_stdout()
     if len(sys.argv) != 2 or sys.argv[1] not in CHECKS:
@@ -150,7 +168,7 @@ def main() -> None:
     sys.exit(c.report())
 
 
-CHECKS = {"P1": check_p1, "P2": check_p2}
+CHECKS = {"P1": check_p1, "P2": check_p2, "P3": check_p3}
 
 if __name__ == "__main__":
     main()

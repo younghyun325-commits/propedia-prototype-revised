@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P3 (시작 전)
+현재 단계: P4 (시작 전)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -43,7 +43,10 @@
 - 완료 확인: `python -m pipeline.check P2` → 13/13 통과 (근거 일치율 63/63 = 100%)
 - 남은 문제: 없음 (추출 중 `evals/goldset/extraction.yaml`은 열지 않음)
 
-## P3 판정·DB 완성 — 시작 전
+## P3 판정·DB 완성 — 완료 (2026-10-25)
 - [x] `seed/stage_templates.yaml`(§9-5 그대로), `seed/stage_rules.yaml`(§10-5) — P2에서 작성
-- [ ] `build_projects.py`, `events.py`, `review_queue.py`, `run_all.py`
-- [ ] `python -m pipeline.run_all`
+- [x] `build_projects.py`(단계는 D1 제목 + R1 → RB02, 대표 지번 → possible + 검수 큐), `events.py`, `review_queue.py`, `run_all.py`
+- [x] `python -m pipeline.run_all` → 검수 큐 14건: parcel_inclusion 1, vision_item 11(D2 전사 쪽), scope_uncertain 2(D2 p12·p14 텍스트 쪽 — 2018 계획 범위 확인)
+- 완료 확인: `python -m pipeline.check P3` → 10/10 통과
+  - projects `apgujeong-6-1-hanyang7 | RB02 | 2026-10-06` / deadlines `2026-11-06` / change_events `4|new_project, 4|deadline_added` (step 1~3은 0건) / review_queue `parcel_inclusion | 1:1168011000105270000` / project_parcels `…105270000 | representative_only | 0`
+- 남은 문제: 사업 중심 좌표 없음(HUMAN_TODO 7) → 주변 500m 판정은 좌표 확보 후 동작
