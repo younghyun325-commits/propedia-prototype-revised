@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P7 (시작 전)
+현재 단계: P8 (배포 — 사람 계정 필요, 대기)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -84,3 +84,17 @@
   - 채점기 검증: 정답 3곳을 메모리에서 일부러 바꿔 돌리니 오류 6건·M6/M8 미달로 잡아냄 (채점이 형식적으로 통과하는 구조가 아님을 확인)
 - 완료 확인: 종료 코드 0, `evals/report.md` 생성, `tests/ui_check.py` → 평가 화면 지표 카드 12개 표시 (29/29 통과)
 - 남은 문제: 정답셋 사람 확정(HUMAN_TODO 1), 키 재발급 후 A2·A5·A6 정답 추가
+
+## P7 시연 패키지 — 완료 (2026-10-25)
+- [x] `README.md`(개발자·동혁용), `DEMO.md`(시연자용 5분 대본·예상 질문·문제 해결), `run_demo.bat`(UTF-8 + CRLF, `.gitattributes`로 CRLF 고정), `.vercelignore`(§15-2 + `docs/` — 스크린샷은 런타임에 불필요)
+- [x] 처음부터 다시 빌드: `python -m pipeline.run_all && python -m evals.run_eval && pytest -q` → P3 SQL 기대값 일치, 지표 12개 통과, 66 passed. 재빌드 전후 DB 테이블 내용 동일(빌드 시각 제외)
+- [x] 크기: `db/propedia.db` 388KB (≤10MB), `public/pages` 16MB (≤40MB)
+- 완료 확인 — §2-2 성공 기준
+  - 1 로컬 화면 5개 동작 ✓ (`tests/ui_check.py` 29/29) / Vercel은 P8
+  - 2 A1 → 4개 층 모두 1건 이상(13·7·13·1) + 사업 카드 재건축 13단계 중 2번째 + 공람 기한 D-12 ✓
+  - 3 모든 항목에 문서·쪽·기준일·근거 문장, 원문 보기 → 쪽 이미지 ✓ (M9 169/169, 모달 이미지 로드 확인)
+  - 4 검수 승인 → "포함", 초기화 → "포함될 수 있음" ✓
+  - 5 평가 화면에 §13 지표 12개 ✓
+  - 6 `pytest -q` 66 passed, `python -m evals.run_eval` 종료 코드 0 ✓
+  - 7 시연 경로 외부 네트워크·LLM 호출 0 ✓ (`test_no_network.py`: core/api에 httpx·requests·urllib.request·socket 없음, 표준 라이브러리+fastapi만 / `public/`에 외부 주소 없음)
+- 남은 문제: HUMAN_TODO 11(계획 보고서 이용 조건)은 공개 배포 전 확인 필요

@@ -1,0 +1,11 @@
+.env
+.venv/
+build/
+data_raw/
+extractions/
+pipeline/
+evals/goldset/
+tests/
+seed/
+*.bat
+docs/
