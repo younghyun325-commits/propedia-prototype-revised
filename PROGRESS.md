@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P8 (배포 확인 중)
+현재 단계: P0~P8 완료 (2026-10-26). 남은 일은 HUMAN_TODO의 사람 확인 항목
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -99,7 +99,7 @@
   - 7 시연 경로 외부 네트워크·LLM 호출 0 ✓ (`test_no_network.py`: core/api에 httpx·requests·urllib.request·socket 없음, 표준 라이브러리+fastapi만 / `public/`에 외부 주소 없음)
 - 남은 문제: HUMAN_TODO 11(계획 보고서 이용 조건)은 공개 배포 전 확인 필요
 
-## P8 배포 — 진행 중 (사람 계정 필요, 2026-10-25)
+## P8 배포 — 완료 (2026-10-26)
 - [x] `gh auth status` → 로그인 확인 → 커밋된 파일에 `.env` 키 값 없음 확인(값은 출력하지 않음) → `gh repo create propedia-pretotype --private --source . --push`
   - 저장소: https://github.com/greekyogurt02/propedia-pretotype (PRIVATE, main)
 - [x] 동혁: Vercel 배포 완료 → https://propedia-pretotype.vercel.app (2026-10-26). HUMAN_TODO 11은 "링크 공유 안 함"으로 닫음
@@ -112,4 +112,5 @@
   - 정답셋 `addresses.yaml` 초안 갱신(제외 주소 없음), 테스트 4개 추가(A2 도로명, A4 주변, A5 500m 밖, A10 도로명 범위 밖)
 - 확인: `pytest -q` 70 passed / `run_eval` 지표 12개 통과(주소 10/10, 포함 판정 5/5, 원문 링크 265/265) / `pipeline.check P1` 15/15 / `tests/ui_check.py` 로컬 30/30
 - Vercel이 1690c28 배포를 막음: GitHub 커밋 상태 "Git author butterdduck02 must have access to the project on Vercel" — 커밋 이메일이 저장소 주인(greekyogurt02)이 아닌 다른 GitHub 계정에 연결돼 있음 → 이 커밋부터 저장소 주인 계정의 noreply 이메일로 커밋해 다시 배포(전역 git 설정은 그대로)
-- [ ] push 후 Vercel 재배포본 점검 (`curl /api/v1/health`, `python tests/ui_check.py --base https://propedia-pretotype.vercel.app`)
+- [x] push 후 Vercel 재배포본 점검 (`curl /api/v1/health`, `python tests/ui_check.py --base https://propedia-pretotype.vercel.app`)
+- 완료 확인: 배포본 health `build_at 2026-10-26T09:40:44+09:00` / 배포 주소 API 조회 A1 `possible`, A2(도로명) PNU …105280000·같은 동 사업 1건, A4 주변 260m, A10 `out_of_scope` / `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 30/30 (새 브라우저 세션, 콘솔 오류 없음)
