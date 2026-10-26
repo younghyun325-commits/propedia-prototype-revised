@@ -1291,7 +1291,7 @@ Claude Code는 **초안**만 쓰고 맨 위에 `draft: true`, `author: "claude-c
 - Hobby(무료) 플랜: 운영 주소는 기본 공개. 비밀번호 보호 없음. **비상업·개인 용도 조건**.
 
 ### 15-1-1. 환경변수 (P10)
-Vercel 프로젝트 Settings → Environment Variables에 `VWORLD_API_KEY`, `JUSO_CONFM_KEY`를 사람이 등록한다 (값은 Claude Code가 다루지 않음). 없으면 실시간 조회는 안내 문구로 대신하고, 시연 주소는 빌드 캐시(`land_cache`)로 동작한다. 브이월드 요청의 `domain`은 인증키에 등록한 서비스 URL `https://propedia-pretotype.vercel.app`.
+Vercel 프로젝트 Settings → Environment Variables에 `VWORLD_API_KEY`, `JUSO_CONFM_KEY`를 사람이 등록한다 (값은 Claude Code가 다루지 않음). 함수 실행 지역은 `vercel.json`의 `regions: ["icn1"]`(서울)로 고정한다 — 미국 지역(iad1)에서는 브이월드가 연결을 끊는다 `[확인 2026-10-26]`. 없으면 실시간 조회는 안내 문구로 대신하고, 시연 주소는 빌드 캐시(`land_cache`)로 동작한다. 브이월드 요청의 `domain`은 인증키에 등록한 서비스 URL `https://propedia-pretotype.vercel.app`.
 
 ### 15-2. `.vercelignore`
 ```
