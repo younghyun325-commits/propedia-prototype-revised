@@ -46,6 +46,15 @@ def ned_records(j: dict) -> list[dict] | None:
     return [f] if isinstance(f, dict) else list(f)
 
 
+def ned_error(j) -> str | None:
+    """오류 응답의 결과 코드 (예: INCORRECT_KEY). 화면·로그에 이유만 남긴다 (키·URL 없음)."""
+    if isinstance(j, dict) and j:
+        top = next(iter(j.values()))
+        if isinstance(top, dict) and top.get("resultCode"):
+            return str(top["resultCode"])
+    return "응답 형식 다름"
+
+
 def _num(v):
     try:
         x = float(str(v).replace(",", ""))
@@ -54,22 +63,28 @@ def _num(v):
     return int(x) if x.is_integer() else x
 
 
-def _call(fetch, op: str, key: str, **kw) -> list[dict] | None:
+def _call(fetch, op: str, key: str, errors: dict | None = None, **kw) -> list[dict] | None:
     try:
-        return ned_records(fetch(f"{NED}/{op}", _params(key, **kw)))
-    except LiveError:
+        j = fetch(f"{NED}/{op}", _params(key, **kw))
+    except LiveError as e:
+        if errors is not None:
+            errors[op] = str(e)
         return None
-
-
-def _by_year(fetch, op: str, key: str, pnu: str, year: int) -> list[dict] | None:
-    """올해 기준으로 먼저, 없으면 작년으로 한 번 더 (feedback2.md §3-2)."""
-    recs = _call(fetch, op, key, pnu=pnu, stdrYear=year, numOfRows=10, pageNo=1)
-    if recs == []:
-        recs = _call(fetch, op, key, pnu=pnu, stdrYear=year - 1, numOfRows=10, pageNo=1)
+    recs = ned_records(j)
+    if recs is None and errors is not None:
+        errors[op] = ned_error(j)
     return recs
 
 
-def geocode_parcel(address: str, *, fetch=None, key: str | None = None) -> dict | None:
+def _by_year(fetch, op: str, key: str, pnu: str, year: int, errors: dict | None = None) -> list[dict] | None:
+    """올해 기준으로 먼저, 없으면 작년으로 한 번 더 (feedback2.md §3-2)."""
+    recs = _call(fetch, op, key, errors, pnu=pnu, stdrYear=year, numOfRows=10, pageNo=1)
+    if recs == []:
+        recs = _call(fetch, op, key, errors, pnu=pnu, stdrYear=year - 1, numOfRows=10, pageNo=1)
+    return recs
+
+
+def geocode_parcel(address: str, *, fetch=None, key: str | None = None, errors: dict | None = None) -> dict | None:
     """지번 주소 → {lat, lon, pnu, source}. 못 찾으면 None."""
     fetch = fetch or get_json
     key = key if key is not None else env_key(KEY_ENV)
@@ -79,10 +94,15 @@ def geocode_parcel(address: str, *, fetch=None, key: str | None = None) -> dict 
         j = fetch(ADDRESS_URL, {"service": "address", "request": "getcoord", "version": "2.0", "crs": "epsg:4326",
                                 "type": "parcel", "address": address, "format": "json", "key": key,
                                 "domain": DOMAIN})
-    except LiveError:
+    except LiveError as e:
+        if errors is not None:
+            errors["getcoord"] = str(e)
         return None
     resp = (j or {}).get("response") or {}
     if resp.get("status") != "OK":
+        if errors is not None:
+            errors["getcoord"] = str(resp.get("status") or "응답 형식 다름") + (
+                f" {(resp.get('error') or {}).get('code')}" if resp.get("error") else "")
         return None
     try:
         pt = resp["result"]["point"]
@@ -185,11 +205,13 @@ def get_land(pnu: str, jibun_address: str | None, *, fetch=None, now=None, use_c
         return unavailable(pnu, NO_KEY_NOTE)
     fetch = fetch or get_json
     now = now or now_kst()
-    uses = _call(fetch, "getLandUseAttr", key, pnu=pnu, numOfRows=1000, pageNo=1)
-    chars = _by_year(fetch, "getLandCharacteristics", key, pnu, now.year)
-    prices = _by_year(fetch, "getIndvdLandPriceAttr", key, pnu, now.year)
-    loc = geocode_parcel(jibun_address, fetch=fetch, key=key) if jibun_address else None
+    errors: dict = {}
+    uses = _call(fetch, "getLandUseAttr", key, errors, pnu=pnu, numOfRows=1000, pageNo=1)
+    chars = _by_year(fetch, "getLandCharacteristics", key, pnu, now.year, errors)
+    prices = _by_year(fetch, "getIndvdLandPriceAttr", key, pnu, now.year, errors)
+    loc = geocode_parcel(jibun_address, fetch=fetch, key=key, errors=errors) if jibun_address else None
     land = build_land(pnu, uses, chars, prices, loc, now.isoformat(timespec="seconds"))
+    land["errors"] = errors or None        # 실패 이유 (HTTP 코드·오류 종류·결과 코드만)
     land["found"] = None if None in (uses, chars, prices) else bool(uses or chars or prices)
     if land["found"] is False:          # 세 API 모두 '결과 0건' (오류 아님) → 그런 지번이 없다
         land["note"] = NOT_FOUND_NOTE
