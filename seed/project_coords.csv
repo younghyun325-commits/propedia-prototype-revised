@@ -1,2 +1,3 @@
 ﻿project_key,lat,lon,coord_source,note
-apgujeong-6-1-hanyang7,37.5281754,127.0434009,osm-nominatim:anchor (청담고등학교 압구정동),근사: 인접 필지 압구정동 526(청담고등학교) OSM 좌표 — 527번지는 도로명주소가 없어 직접 좌표를 얻지 못함
+apgujeong-6-1-hanyang7,37.5291058,127.0433142,vworld-geocoder:parcel (대표 지번 압구정동 527),고시의 대표 지번을 브이월드 지오코더로 찾은 좌표
+ilwon-daecheong-north-moatown,37.4940125,127.0813894,vworld-geocoder:parcel (대표 지번 일원동 619),고시의 대표 지번을 브이월드 지오코더로 찾은 좌표

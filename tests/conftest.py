@@ -1,5 +1,8 @@
+import os
 import sys
 from pathlib import Path
+
+os.environ["PROPEDIA_LIVE"] = "0"   # pytest는 네트워크 없이 돈다 (feedback2.md §2-3)
 
 import pytest
 

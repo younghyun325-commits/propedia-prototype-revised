@@ -6,7 +6,7 @@ reference_rank가 있는 배경 항목은 '참고(reference)' 섹션으로 보�
 import math
 
 from core import review as review_mod
-from core.address import normalize
+from core.address import jibun_text, normalize
 from core.db import loads, meta, source
 from core.timeutil import d_day, dot, effective, parse_date, today_kst
 
@@ -19,11 +19,13 @@ REFERENCE_NOTE = "배경 설명과 참고 계획입니다. 이 땅에 바로 적
 DONGNAM = {"11650", "11680", "11710", "11740"}
 SGG_NAMES = {"11650": "서초구", "11680": "강남구", "11710": "송파구", "11740": "강동구"}
 
-INCLUSION_LABELS = {"included": "포함", "possible": "포함될 수 있음", "nearby": "주변", "none": "해당 없음"}
-BASIS_LABELS = {"manual_review": "사람 검수로 확정", "jibun_table": "지번 조서에 기재"}
+INCLUSION_LABELS = {"included": "포함", "likely": "포함된 것으로 보임", "possible": "포함될 수 있음", "nearby": "주변",
+                    "none": "해당 없음"}
+BASIS_LABELS = {"manual_review": "사람 검수로 확정", "jibun_table": "지번 조서에 기재",
+                "map_reading": "지도 대조 후보 (고시 결정도와 지적도를 맞대 본 결과, 사람 확인 전)"}
 NOTE_NO_ADDR_COORD = "좌표가 없어 주변 500m 사업 판정을 생략했습니다"
 NOTE_NO_PROJECT_COORD = "사업 중심 좌표가 없어 주변 500m 사업 판정을 생략했습니다"
-LAND_USE_NOTE = "필지별 용도지역은 프리토타입 범위 밖입니다 (브이월드 미연동)"
+LAND_OFFLINE_NOTE = "이 필지는 미리 받아 둔 토지 정보가 없고, 실시간 조회를 쓰지 않았습니다"
 BUILDING_NOT_FETCHED = "이 필지는 건축물대장을 조회하지 않았습니다 (빌드 때 시연 주소만 조회)"
 BUILDING_SOURCE = "건축HUB 건축물대장 표제부(getBrTitleInfo)"
 
@@ -159,9 +161,13 @@ def project_stage(con, p) -> dict:
     return {"code": p["sub_stage_code"], "title": t["title"] if t else None, "seq": t["seq"] if t else None}
 
 
-def review_id_for(con, project_id: int, pnu: str) -> int | None:
-    r = con.execute("SELECT id FROM review_queue WHERE item_type='parcel_inclusion' AND ref_key=?",
-                    (f"{project_id}:{pnu}",)).fetchone()
+def review_id_for(con, project_id: int, pnu: str, basis: str | None = None) -> int | None:
+    if basis == "map_reading":          # 지도 대조 후보는 사업마다 한 건으로 묶어 검수한다
+        r = con.execute("SELECT id FROM review_queue WHERE item_type='parcel_group' AND ref_key=?",
+                        (f"{project_id}:map_reading",)).fetchone()
+    else:
+        r = con.execute("SELECT id FROM review_queue WHERE item_type='parcel_inclusion' AND ref_key=?",
+                        (f"{project_id}:{pnu}",)).fetchone()
     return r["id"] if r else None
 
 
@@ -180,6 +186,10 @@ def parcel_projects(con, norm: dict, ov) -> tuple[list, list, str | None]:
             inclusion = "included"
             basis = pp["basis"] if pp["verified"] else "manual_review"
             message = f"이 필지는 {pp['name']} 구역에 포함되어 있습니다"
+        elif pp["basis"] == "map_reading":      # 판정표 3번과 같은 강도 (feedback2.md §5-4)
+            inclusion = "likely"
+            basis = pp["basis"]
+            message = f"{pp['name']} 구역에 포함된 것으로 보입니다. 확인해 주세요"
         else:
             inclusion = "possible"
             basis = pp["basis"]
@@ -193,7 +203,7 @@ def parcel_projects(con, norm: dict, ov) -> tuple[list, list, str | None]:
         included.append({
             "project_id": pp["project_id"], "name": pp["name"], "inclusion": inclusion,
             "inclusion_label": INCLUSION_LABELS[inclusion], "message": message, "basis": basis,
-            "basis_label": basis_label, "review_id": review_id_for(con, pp["project_id"], pnu),
+            "basis_label": basis_label, "review_id": review_id_for(con, pp["project_id"], pnu, pp["basis"]),
             "progress_url": f"/api/v1/projects/{pp['project_id']}/progress",
             "source": source(con, pp["source_doc_id"], pp["pdf_page"]),
         })
@@ -246,22 +256,29 @@ def building(con, pnu: str) -> tuple[dict | None, str | None]:
     return b | {"source": BUILDING_SOURCE, "fetched_label": f"{dot(b['fetched_at'])} 조회"}, None
 
 
-def land_use(con, included: list, bld: dict | None) -> tuple[dict | None, str | None]:
-    """우선순위: ① 사업 문서 기재값 ② 건축물대장에 적힌 지역·지구 ③ 없음 + note (feedback.md §5-2)."""
+def land_use_documented(con, included: list) -> dict | None:
+    """고시에 적힌 용도지역 (사업 구역 기준). 토지 정보(브이월드) 아래 보조 줄로 보인다 (feedback2.md §3-4)."""
     for inc in included:
         p = con.execute("SELECT land_use, land_use_page, stage_source_doc_id FROM projects WHERE id=?",
                         (inc["project_id"],)).fetchone()
         if p and p["land_use"]:
             src = source(con, p["stage_source_doc_id"], p["land_use_page"])
-            return ({"value": p["land_use"],
-                     "basis": f"사업 문서 기재 ({src['doc_id']} p{p['land_use_page']}, 정비구역 기준)",
-                     "source": src}, None)
-    z = (bld or {}).get("zoning") or {}
-    if z.get("jiyuk"):
-        value = " · ".join(v for v in (z.get("jiyuk"), z.get("jigu"), z.get("guyuk")) if v)
-        return ({"value": value, "basis": f"건축물대장 기재 지역·지구 ({bld['fetched_label']})", "source": None},
-                None)
-    return None, LAND_USE_NOTE
+            return {"value": p["land_use"],
+                    "basis": f"고시 기재 ({src['doc_id']} p{p['land_use_page']}, 정비구역 기준)", "source": src}
+    return None
+
+
+def land_for(con, norm: dict, live) -> dict:
+    """토지 정보: ① 빌드 캐시(seed/land_cache.json) ② 실시간(메모리 캐시 1시간 포함) ③ 없음 안내."""
+    r = con.execute("SELECT payload FROM land_cache WHERE pnu=?", (norm["pnu"],)).fetchone()
+    if r:
+        return dict(loads(r["payload"], {}) or {}, from_cache=True, cache="build")
+    if live is not None:
+        land = live.get_land(norm["pnu"], norm["jibun_address"] or jibun_text(con, norm["pnu"]))
+        return dict(land, cache="memory" if land.get("from_cache") else None)
+    return {"status": "unavailable", "pnu": norm["pnu"], "zones": [], "missing": [], "location": None,
+            "official_price": None, "from_cache": False, "cache": None, "found": None, "source": None,
+            "fetched_at": None, "note": LAND_OFFLINE_NOTE}
 
 
 def dong_projects(con, norm: dict, exclude: set, today) -> tuple[list, list]:
@@ -294,31 +311,45 @@ def projects_by_stage(con, sgg_code: str) -> dict:
     return dict(sorted(out.items()))
 
 
-def lookup(con, text: str, decisions=None, today=None) -> dict:
+NORM_KEYS = ("addr_id", "road_address", "jibun_address", "pnu", "bjd_code", "sgg_code", "dong_name", "saenghwal",
+             "lat", "lon", "coord_source", "match_via")
+
+
+def lookup(con, text: str, decisions=None, today=None, live=None) -> dict:
+    """live: 실시간 조회 객체(core.live.Live). None이면 네트워크 없이 시연 주소·지번·빌드 캐시만 쓴다."""
     today = today or today_kst()
     m = meta(con)
     ov = review_mod.apply(con, decisions)
-    norm = normalize(con, text)
-    normalized = {k: norm[k] for k in ("addr_id", "road_address", "jibun_address", "pnu", "bjd_code", "sgg_code",
-                                       "dong_name", "saenghwal", "lat", "lon", "coord_source")}
+    norm = normalize(con, text, search=live.search if live is not None else None)
+    normalized = {k: norm[k] for k in NORM_KEYS}
     resp = {"query": text, "status": norm["status"], "message": norm["message"], "normalized": normalized,
+            "candidates": norm.get("candidates"),
             "as_of": m.get("as_of"), "layers": None, "reference": None, "review_applied": ov.review_applied,
             "events": ov.events, "coverage_note": m.get("coverage_note"), "disclaimer": DISCLAIMER}
     if norm["status"] != "ok":
         return resp
 
+    land = land_for(con, norm, live)
+    loc = land.get("location")
+    if loc:                               # 좌표는 토지 정보(지오코더)를 쓰고, 주변 500m 판정을 모든 주소에 적용
+        norm.update(lat=loc["lat"], lon=loc["lon"], coord_source=loc["source"])
+        normalized.update(lat=loc["lat"], lon=loc["lon"], coord_source=loc["source"])
+    if not normalized["jibun_address"]:
+        normalized["jibun_address"] = jibun_text(con, norm["pnu"])
     items = load_items(con, ov, today)
     placed, reference = place_items(items, norm)
     included, nearby, nearby_note = parcel_projects(con, norm, ov)
     shown = {p["project_id"] for p in included} | {p["project_id"] for p in nearby}
     dprojects, ddeadlines = dong_projects(con, norm, shown, today)
     bld, bld_note = building(con, norm["pnu"])
-    lu, lu_note = land_use(con, included, bld)
     resp["layers"] = {
         "city": placed["city"],
         "gu": {"items": placed["gu"], "projects_by_stage": projects_by_stage(con, norm["sgg_code"])},
-        "dong": {"items": placed["dong"], "projects": dprojects, "deadlines": ddeadlines},
-        "parcel": {"items": placed["parcel"], "land_use": lu, "land_use_note": lu_note,
+        "dong": {"items": placed["dong"], "projects": dprojects, "deadlines": ddeadlines,
+                 "empty_note": None if (placed["dong"] or dprojects) else
+                 f"{norm['dong_name'] or '이 법정동'}에 대해 확인된 고시가 없습니다 (프리토타입에 모은 문서 기준)"},
+        "parcel": {"items": placed["parcel"], "land": land,
+                   "land_use_documented": land_use_documented(con, included),
                    "building": bld, "building_note": bld_note,
                    "included_projects": included, "nearby_projects": nearby, "nearby_note": nearby_note,
                    "no_project_message": None if included else

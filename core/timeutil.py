@@ -10,7 +10,7 @@ def today_kst() -> date:
 
 def d_day(due: date, today: date) -> tuple[int, str]:
     n = (due - today).days
-    return n, (f"D-{n}" if n > 0 else "D-day" if n == 0 else f"마감({due.isoformat()})")
+    return n, (f"D-{n}" if n > 0 else "D-day" if n == 0 else f"마감({due.isoformat().replace('-', '.')})")
 
 
 def parse_date(s) -> date | None:

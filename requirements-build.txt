@@ -6,3 +6,4 @@ PyYAML
 httpx
 python-dotenv
 pytest
+numpy

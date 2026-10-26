@@ -1,12 +1,16 @@
-"""평가 (agents.md §13, feedback.md §6-2). 정답셋과 비교해 지표 15개를 계산하고 evals/report.md 와 meta.eval_report 에 저장한다.
+"""평가 (agents.md §13, feedback.md §6-2, feedback2.md §8-2). 정답셋과 비교해 지표를 계산하고 evals/report.md 와
+meta.eval_report 에 저장한다.
 
-사용: python -m evals.run_eval
+사용: python -m evals.run_eval          # 네트워크 없이 M1~M17
+      python -m evals.run_eval --live   # M18(실시간 조회 성공률·p95)을 더 잰다 (외부 서비스 상태에 좌우됨)
 - 층별 기대 항목(M6·M7)은 core/lookup.py 를 쓰지 않고 정답셋(addresses.yaml + scope_labels.yaml)으로 따로 배치해 만든다.
   P9부터 기대 집합 = tier 'applies' + 효력 중 + 층별 5개 상한 적용 후 (정렬: tier_class → rank → 문서 날짜 최신).
 - 목표 미달이 있어도 종료 코드 0, 스크립트 오류는 1.
 """
+import argparse
 import hashlib
 import json
+import os
 import math
 import sqlite3
 import sys
@@ -34,7 +38,9 @@ LAYER_KO = {"city": "서울 전역", "gu": "자치구", "dong": "법정동", "pa
 BANNED = ["예상", "예정", "전망", "지연", "늦", "위험", "안전", "유망", "호재", "추천", "수익", "투자", "확실", "보장",
           "반드시", "가능성 높"]
 ALLOW = ["정비예정구역"]
-SKIP_KEYS = {"evidence", "how_to_submit", "places", "source_note", "payload", "text", "evidences", "query"}
+SKIP_KEYS = {"evidence", "how_to_submit", "places", "source_note", "payload", "text", "evidences", "query",
+             # 브이월드 원 자료 값 (예: '비행안전제2구역') — 원문 인용과 같이 검사하지 않는다
+             "zones", "jimok", "land_use_zone", "land_use_zone2", "use_situation", "road_side", "terrain"}
 TIMING_ROUNDS = 20
 LAYER_CAP = 5                      # feedback.md §3-3: 서울 전역·자치구·법정동 층별 상한
 CAPPED = ("city", "gu", "dong")
@@ -92,7 +98,7 @@ def expected_layers(addr: dict, labels: dict, doc_dates: dict, today: date) -> d
         exp[k] = set(keys[:LAYER_CAP] if k in CAPPED else keys)
     for p in addr.get("projects", []):
         tag = f"project:{p['project_key']}"
-        if p["inclusion"] in ("possible", "included", "nearby"):
+        if p["inclusion"] in ("possible", "likely", "included", "nearby"):
             exp["parcel"].add(tag)
         elif p["inclusion"] == "same_dong":
             exp["dong"].add(tag)
@@ -165,10 +171,22 @@ def walk_strings(obj):
         yield obj
 
 
-def evaluate() -> dict:
+def land_match(gold: dict, land: dict) -> list[tuple[str, bool]]:
+    """land.yaml 정답과 토지 정보 비교: 지목·면적·용도지역·공시지가(원/㎡·기준연도)."""
+    price, gp = land.get("official_price") or {}, gold.get("official_price") or {}
+    area_ok = land.get("area_m2") is not None and math.isclose(float(land["area_m2"]), float(gold["area_m2"]),
+                                                                 abs_tol=0.01)
+    return [("지목", land.get("jimok") == gold["jimok"]), ("면적", area_ok),
+            ("용도지역", land.get("land_use_zone") == gold["land_use_zone"]),
+            ("공시지가", price.get("won_per_m2") == gp.get("won_per_m2") and price.get("year") == gp.get("year"))]
+
+
+def evaluate(live: bool = False) -> dict:
     g_ext = load_yaml("extraction.yaml")
     g_addr = load_yaml("addresses.yaml")
     g_scope = load_yaml("scope_labels.yaml")
+    g_land = load_yaml("land.yaml")
+    gold_land = {x["addr_id"]: x for x in g_land.get("parcels", [])}
     labels = g_scope.get("labels", {})
     errors: list[dict] = []
     metrics: list[dict] = []
@@ -245,12 +263,15 @@ def evaluate() -> dict:
     cap_ok = cap_n = 0                 # M13
     reg_ok = reg_n = 0                 # M14
     bld_ok = bld_n = bld_found = 0     # M15
+    land_ok = land_n = 0               # M16
+    lf_ok = lf_n = 0                   # M17
     addr_rows = []
     responses = []
     for a in addresses:
         n = normalize(con, a["input"])
         row = {"addr_id": a["addr_id"], "input": a["input"], "status_ok": n["status"] == a["status"],
-               "pnu_ok": None, "layer_hits": {}, "inclusion_ok": None, "regulations": None, "building": None}
+               "pnu_ok": None, "layer_hits": {}, "inclusion_ok": None, "regulations": None, "building": None,
+               "land": None}
         good = row["status_ok"]
         if a["status"] == "ok":
             row["pnu_ok"] = n["pnu"] == a["pnu"]
@@ -288,6 +309,18 @@ def evaluate() -> dict:
             reg_ok += r_hit
             reg_n += r_tot
             row["regulations"] = f"{r_hit}/{r_tot}" if r_tot else None
+            # M16 토지 정보 확보 (빌드 캐시, 네트워크 없음) · M17 토지 정보 정확도
+            land = L["parcel"]["land"]
+            land_n += 1
+            land_ok += land["status"] in ("ok", "partial")
+            row["land"] = land["status"]
+            gl = gold_land.get(a["addr_id"]) or next((x for x in gold_land.values() if x["pnu"] == a.get("pnu")), None)
+            if gl:
+                for fname, okf in land_match(gl, land):
+                    lf_n += 1
+                    lf_ok += okf
+                    if not okf:
+                        errors.append({"type": "extraction", "detail": f"{a['addr_id']} 토지 정보 {fname} 정답과 다름"})
             # M15 건축물 정보 처리
             P = L["parcel"]
             bld_n += 1
@@ -380,12 +413,15 @@ def evaluate() -> dict:
 
     # M12 단계 판정
     stages = {r["project_key"]: r["sub_stage_code"] for r in con.execute("SELECT project_key, sub_stage_code FROM projects")}
-    gold_stage = g_ext.get("stage")
-    got_stage = stages.get("apgujeong-6-1-hanyang7")
-    if got_stage != gold_stage:
-        errors.append({"type": "other", "detail": f"단계: 정답 {gold_stage}, 응답 {got_stage}"})
-    metrics.append({"id": "M12", "name": "단계 판정", "value": got_stage == gold_stage,
-                    "display": f"{got_stage} (정답 {gold_stage})", "target": "일치", "pass": got_stage == gold_stage})
+    # 한양7차는 정답셋(extraction.yaml stage), 모아타운은 승인 고시를 확인하기 전까지 MT01 (feedback2.md §11)
+    gold_stages = {"apgujeong-6-1-hanyang7": g_ext.get("stage"), "ilwon-daecheong-north-moatown": "MT01"}
+    stage_ok = all(stages.get(k) == v for k, v in gold_stages.items())
+    for k, v in gold_stages.items():
+        if stages.get(k) != v:
+            errors.append({"type": "other", "detail": f"단계 {k}: 정답 {v}, 응답 {stages.get(k)}"})
+    metrics.append({"id": "M12", "name": "단계 판정", "value": stage_ok,
+                    "display": " / ".join(f"{stages.get(k)} (정답 {v})" for k, v in gold_stages.items()),
+                    "target": "일치", "pass": stage_ok})
 
     # M13~M15 (feedback.md §6-2)
     metrics.append({"id": "M13", "name": "층별 상한 준수", "value": pct(cap_ok, cap_n), "display": disp(cap_ok, cap_n),
@@ -397,6 +433,13 @@ def evaluate() -> dict:
     metrics.append({"id": "M15", "name": "건축물 정보 처리율", "value": pct(bld_ok, bld_n), "display": disp(bld_ok, bld_n),
                     "target": "100%", "pass": bld_n > 0 and bld_ok == bld_n,
                     "note": f"건축물대장 표제부가 조회된 주소(참고 값) {disp(bld_found, bld_n)}"})
+    # M16·M17 (feedback2.md §8-2)
+    metrics.append({"id": "M16", "name": "토지 정보 확보율 (캐시)", "value": pct(land_ok, land_n),
+                    "display": disp(land_ok, land_n), "target": "100%", "pass": land_n > 0 and land_ok == land_n,
+                    "note": "범위 안 시연 주소 중 토지 정보 status가 ok·partial인 비율 (빌드 캐시, 네트워크 없음)"})
+    metrics.append({"id": "M17", "name": "토지 정보 정확도", "value": pct(lf_ok, lf_n), "display": disp(lf_ok, lf_n),
+                    "target": "≥ 95%", "pass": lf_n > 0 and lf_ok / lf_n >= 0.95,
+                    "note": "land.yaml 정답과 지목·면적·용도지역·공시지가 일치 (정답셋은 fetch_land 결과 초안 — 토지이음 대조 전)"})
     demo_inputs = [r["input_text"] for r in con.execute("SELECT input_text FROM demo_addresses") if r["input_text"]]
     con.close()
 
@@ -420,13 +463,47 @@ def evaluate() -> dict:
                        "pass": p95 is not None and p95 <= 3000,
                        "note": f"시연 주소 {len(demo_inputs)}건 × {TIMING_ROUNDS}회 = {len(times)}회 (로컬 TestClient)"})
 
-    drafts = [g_ext.get("draft"), g_addr.get("draft"), g_scope.get("draft")]
+    # M18 실시간 조회 (--live): 시연 목록 밖 강남구 도로명주소 → 도로명 검색·토지 정보 실시간
+    live_rows = []
+    if live:
+        from core import live as live_mod
+        g_live = load_yaml("live_addresses.yaml")
+        con = connect_ro()
+        lt, ok_n = [], 0
+        for x in g_live.get("addresses", []):
+            t0 = time.perf_counter()
+            r = lookup(con, x["input"], live=live_mod.Live())
+            ms = (time.perf_counter() - t0) * 1000
+            lt.append(ms)
+            good = r["status"] == "ok" and r["layers"]["parcel"]["land"]["status"] in ("ok", "partial")
+            ok_n += good
+            live_rows.append({"input": x["input"], "status": r["status"],
+                              "land": r["layers"]["parcel"]["land"]["status"] if r["layers"] else None,
+                              "pnu_ok": (r["normalized"].get("pnu") == x.get("pnu")) if r["status"] == "ok" else None,
+                              "via": r["normalized"].get("match_via"), "ms": round(ms)})
+            if not good:
+                errors.append({"type": "other", "detail": f"실시간 {x['input']}: {r['status']} "
+                                                          f"{r.get('message') or ''}"})
+        con.close()
+        lt.sort()
+        lp95 = lt[max(0, math.ceil(len(lt) * 0.95) - 1)] if lt else None
+        n = len(lt)
+        metrics.append({"id": "M18", "name": "실시간 조회 성공률", "value": pct(ok_n, n),
+                        "display": f"{disp(ok_n, n)} · p95 {lp95:.0f}ms" if lp95 is not None else "—",
+                        "target": "≥ 90%, p95 ≤ 3000ms",
+                        "pass": n > 0 and ok_n / n >= 0.9 and lp95 is not None and lp95 <= 3000,
+                        "note": "실시간 항목은 실행 시점의 외부 서비스(도로명주소·브이월드) 상태에 좌우됨"})
+
+    drafts = [g_ext.get("draft"), g_addr.get("draft"), g_scope.get("draft"), g_land.get("draft")]
     return {
         "run_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "build_at": m.get("build_at"),
         "goldset": {"draft": any(d is not False for d in drafts),
                     "files": {"extraction": sha8(GOLD / "extraction.yaml"), "addresses": sha8(GOLD / "addresses.yaml"),
-                              "scope_labels": sha8(GOLD / "scope_labels.yaml")}},
+                              "scope_labels": sha8(GOLD / "scope_labels.yaml"), "land": sha8(GOLD / "land.yaml"),
+                              "live_addresses": sha8(GOLD / "live_addresses.yaml")}},
+        "live": live,
+        "live_rows": live_rows,
         "metrics": metrics,
         "layers": layer_rows,
         "addresses": addr_rows,
@@ -451,16 +528,24 @@ def write_report_md(rep: dict) -> None:
         f = lambda v: "—" if v is None else f"{v:.0%}"  # noqa: E731
         lines.append(f"| {LAYER_KO[r['layer']]} | {f(r['recall'])} | {f(r['precision'])} | {r['expected']} | {r['returned']} |")
     lines += ["", "## 주소별 결과", "",
-              "| 주소 | 입력 | 상태 | PNU | 서울 전역 | 자치구 | 법정동 | 필지 | 포함 판정 | 효력 중 고시 | 건축물 |",
-              "|---|---|---|---|---|---|---|---|---|---|---|"]
+              "| 주소 | 입력 | 상태 | PNU | 서울 전역 | 자치구 | 법정동 | 필지 | 포함 판정 | 효력 중 고시 | 건축물 | 토지 정보 |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     o = lambda v: "—" if v is None else ("일치" if v else "불일치")  # noqa: E731
     for a in rep["addresses"]:
         h = a["layer_hits"]
         lines.append(f"| {a['addr_id']} | {a['input']} | {o(a['status_ok'])} | {o(a['pnu_ok'])} | "
                      + " | ".join(h.get(k, "—") for k in LAYERS) + f" | {o(a['inclusion_ok'])} | "
-                     f"{a.get('regulations') or '—'} | {a.get('building') or '—'} |")
+                     f"{a.get('regulations') or '—'} | {a.get('building') or '—'} | {a.get('land') or '—'} |")
     if rep["excluded_addresses"]:
         lines.append(f"\n정답셋에서 뺀 주소: {', '.join(rep['excluded_addresses'])} (도로명주소 API 키 재발급 후 확정)")
+    if rep.get("live"):
+        lines += ["", "## 실시간 조회 (M18)", "", f"- 실행 {rep['run_at']} · 실시간 항목은 실행 시점의 외부 서비스 상태에 좌우됨", "",
+                  "| 입력 | 상태 | 토지 정보 | PNU 일치 | 검색 경로 | 응답(ms) |", "|---|---|---|---|---|---|"]
+        o2 = lambda v: "—" if v is None else ("일치" if v else "다름")  # noqa: E731
+        for x in rep.get("live_rows", []):
+            lines.append(f"| {x['input']} | {x['status']} | {x['land'] or '—'} | {o2(x['pnu_ok'])} | {x['via'] or '—'} | {x['ms']} |")
+    else:
+        lines += ["", "실시간 조회(M18)는 `python -m evals.run_eval --live`로 잽니다 (이번 실행에는 없음)."]
     lines += ["", "## 오류 목록", ""]
     if rep["errors"]:
         lines += [f"- [{e['type']}] {e['detail']}" for e in rep["errors"]]
@@ -484,8 +569,13 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     except Exception:
         pass
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--live", action="store_true", help="M18 실시간 조회까지 잰다 (네트워크 사용)")
+    args = ap.parse_args()
+    if not args.live:
+        os.environ["PROPEDIA_LIVE"] = "0"     # 네트워크 없이 (feedback2.md §8-2)
     try:
-        rep = evaluate()
+        rep = evaluate(live=args.live)
         write_report_md(rep)
         save_meta(rep)
     except Exception:

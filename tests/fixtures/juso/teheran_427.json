@@ -1,0 +1,39 @@
+{
+ "results": {
+  "common": {
+   "countPerPage": "5",
+   "errorMessage": "정상",
+   "errorCode": "0",
+   "totalCount": "1",
+   "currentPage": "1"
+  },
+  "juso": [
+   {
+    "siNm": "서울특별시",
+    "lnbrMnnm": "143",
+    "bdKdcd": "0",
+    "jibunAddr": "서울특별시 강남구 삼성동 143-40 위워크타워",
+    "buldSlno": "0",
+    "bdMgtSn": "1168010500101430040016984",
+    "zipNo": "06159",
+    "roadAddr": "서울특별시 강남구 테헤란로 427 (삼성동)",
+    "admCd": "1168010500",
+    "liNm": "",
+    "bdNm": "위워크타워",
+    "mtYn": "0",
+    "rnMgtSn": "116803122010",
+    "roadAddrPart2": " (삼성동)",
+    "sggNm": "강남구",
+    "buldMnnm": "427",
+    "roadAddrPart1": "서울특별시 강남구 테헤란로 427",
+    "emdNm": "삼성동",
+    "lnbrSlno": "40",
+    "engAddr": "427 Teheran-ro, Gangnam-gu, Seoul",
+    "udrtYn": "0",
+    "rn": "테헤란로",
+    "detBdNmList": "",
+    "emdNo": "02"
+   }
+  ]
+ }
+}

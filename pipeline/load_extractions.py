@@ -88,8 +88,15 @@ def validate(doc: str, data: dict, pages: dict[int, dict]) -> list[str]:
                 errs.append(f"field {name}: 키 없음 {k}")
         if f.get("value") is None and not f.get("null_reason"):
             errs.append(f"field {name}: 값이 null이면 null_reason 필요")
-    if doc != "D1" and (data["fields"] or data["projects"]):
-        errs.append("fields·projects는 D1에만 둔다")
+    if doc != "D1" and data["fields"]:
+        errs.append("fields는 D1에만 둔다")
+    for prj in data["projects"]:       # P10: 사업은 D1(재건축)·D9(모아타운)에 있다
+        for k in ("project_key", "name", "project_type", "stage_evidence", "representative_jibun", "area_m2"):
+            if k not in prj:
+                errs.append(f"project {prj.get('project_key', '?')}: 키 없음 {k}")
+        for f in prj.get("facts", []):
+            if not f.get("label") or not f.get("evidence") or not f.get("pdf_page"):
+                errs.append(f"project {prj.get('project_key', '?')}: facts는 label·evidence·pdf_page 필요")
     return errs
 
 
@@ -107,6 +114,8 @@ def project_evidences(prj: dict) -> list[tuple[str, str, int]]:
             out.append((f"{key}:deadline{i + 1}:how_to_submit", d["how_to_submit"], d.get("pdf_page")))
     for i, h in enumerate(prj.get("related_history", [])):
         out.append((f"{key}:history{i + 1}", h.get("evidence"), h.get("pdf_page")))
+    for i, f in enumerate(prj.get("facts", [])):
+        out.append((f"{key}:fact{i + 1}", f.get("evidence"), f.get("pdf_page")))
     return out
 
 

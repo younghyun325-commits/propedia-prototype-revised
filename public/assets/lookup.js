@@ -131,8 +131,10 @@ function progressCard(p) {
     </div>
     ${(p.aliases || []).length ? `<div class="small muted">다른 이름: ${esc(p.aliases.join(', '))}</div>` : ''}
     <div class="small muted">위치: ${esc(p.location_text || '')}${p.center ? ` · 중심 좌표 ${p.center.lat.toFixed(5)}, ${p.center.lon.toFixed(5)} (${esc(p.center.coord_source)})` : ' · 중심 좌표 없음'}</div>
-    <div class="stagebar" aria-label="단계 막대">${stagebar}</div>
+    <div class="stagebar" aria-label="단계 막대" style="grid-template-columns:repeat(${p.stages.length}, 1fr)">${stagebar}</div>
     <div class="row"><b>${esc(p.position_label)}</b><span class="small muted">초록=지난 단계(점선=확인된 고시 없음), 파랑=지금 단계, 회색=다음 단계들</span></div>
+    ${p.sub_status ? `<div class="row" style="margin-top:4px">${badge('세부 상태', 'info')}<span>${esc(p.sub_status)}</span></div>` : ''}
+    ${p.stage_note ? `<div class="box warn small" style="margin-top:6px">${esc(p.stage_note)}</div>` : ''}
     <div class="stage-chips">${chips}</div>
 
     <div class="grid cols-2">
@@ -141,14 +143,14 @@ function progressCard(p) {
         <dl class="kv" style="margin-top:8px">
           <dt>발행처</dt><dd>${esc(c.issuer || '—')}</dd>
           <dt>설명</dt><dd>${c.what_happens ? esc(c.what_happens) : `<span class="muted">${esc(c.what_happens_note)}</span>`}</dd>
-          <dt>소유자가 챙길 것</dt><dd>${esc(c.owner_actions || '—')}</dd>
+          <dt>소유자가 챙길 것</dt><dd>${c.owner_actions ? esc(c.owner_actions) : `<span class="muted">${esc(c.owner_actions_note || '—')}</span>`}</dd>
           <dt>단계 근거</dt><dd class="small">${esc(sourceLine(p.stage_basis.source))} (규칙 ${esc(p.stage_basis.rule_id)})
             ${pageButton(p.stage_basis.source, p.stage_basis.evidence, '원문')}</dd>
         </dl>
       </div>
       <div class="card soft">
         <h3>다음 단계${p.next ? ` · ${esc(p.next.title)}` : ''}</h3>
-        ${p.next ? `<dl class="kv"><dt>소유자가 챙길 것</dt><dd>${esc(p.next.owner_actions || '—')}</dd></dl>` : '<div class="empty">마지막 단계입니다</div>'}
+        ${p.next ? `<dl class="kv"><dt>소유자가 챙길 것</dt><dd>${p.next.owner_actions ? esc(p.next.owner_actions) : `<span class="muted">${esc(p.next.owner_actions_note || '—')}</span>`}</dd></dl>` : '<div class="empty">마지막 단계입니다</div>'}
         <h3 style="margin-top:12px">남은 기간</h3>
         <div>${esc(p.remaining.note)}</div>
         <details><summary>계산 방법 참고</summary><div class="small">${esc(p.remaining.method_note)}</div></details>
@@ -179,17 +181,51 @@ async function loadProgress(projectId) {
   return p;
 }
 
+const LAND_STATUS = { ok: ['토지 정보', 'ok'], partial: ['일부만 불러옴', 'warn'], unavailable: ['불러오지 못함', 'muted'] };
+const RELATION_KIND = { '포함': 'info', '저촉': 'warn', '접함': 'muted' };
+
+function fmtStamp(iso) {
+  if (!iso) return '';
+  const m = String(iso).match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  return m ? `${m[1]}.${m[2]}.${m[3]} ${m[4]}:${m[5]}` : fmtDate(iso);
+}
+
+function landCard(land, documented) {
+  const [st, kind] = LAND_STATUS[land.status] || [land.status, 'muted'];
+  const miss = '<span class="muted">불러오지 못함</span>';
+  const v = (x, unit) => (x === null || x === undefined || x === '' ? miss : `${fmtNum(x)}${unit || ''}`);
+  const price = land.official_price;
+  const zones = (land.zones || []).map((z) => badge(`${z.name}${z.relation ? ` · ${z.relation}` : ''}`, RELATION_KIND[z.relation] || 'muted')).join(' ');
+  const cache = land.cache === 'build' ? '미리 받아 둔 값(캐시)' : land.cache === 'memory' ? '최근 조회 값(캐시)' : '실시간 조회';
+  if (land.status === 'unavailable') {
+    return `<div class="card land-card"><div class="row"><h3 style="margin:0">토지 정보</h3>${badge(st, kind)}</div>
+      <p>${esc(land.note || '토지 정보를 지금 불러오지 못했습니다')}</p></div>`;
+  }
+  return `<div class="card land-card">
+    <div class="row"><h3 style="margin:0">토지 정보</h3>${badge(st, kind)}<span class="small muted">${esc(land.source || '')} · 조회 ${esc(fmtStamp(land.fetched_at))} · ${esc(cache)}</span></div>
+    <dl class="kv land-kv">
+      <dt>지목</dt><dd>${v(land.jimok)}</dd>
+      <dt>면적</dt><dd>${v(land.area_m2, '㎡')}</dd>
+      <dt>용도지역</dt><dd>${v(land.land_use_zone)}${land.land_use_zone2 ? ` · ${esc(land.land_use_zone2)}` : ''}
+        ${documented ? `<div class="small muted">고시 기재: ${esc(documented.value)} — ${esc(documented.basis)} ${pageButton(documented.source, null, '원문')}</div>` : ''}</dd>
+      <dt>공시지가</dt><dd>${price && price.won_per_m2 ? `${fmtNum(price.won_per_m2)}원/㎡ <span class="small muted">(${esc(price.year)}년 기준${price.announced_on ? ` · 공시 ${fmtDate(price.announced_on)}` : ''})</span>` : miss}</dd>
+      <dt>이용상황</dt><dd>${v(land.use_situation)}</dd>
+      <dt>도로접면</dt><dd>${v(land.road_side)}</dd>
+      <dt>지형</dt><dd>${v(land.terrain)}</dd>
+      <dt>지역·지구 등</dt><dd>${zones || miss}</dd>
+    </dl>
+    ${(land.missing || []).length ? `<div class="small muted">불러오지 못한 항목: ${esc(land.missing.join(', '))}</div>` : ''}
+    <p class="small muted">${esc(land.note || '')}</p>
+  </div>`;
+}
+
 function parcelHtml(P, normalized) {
-  let html = '';
-  html += P.land_use
-    ? `<div class="item"><b>용도지역</b> ${esc(P.land_use.value)} <span class="small muted">— ${esc(P.land_use.basis)}</span>
-         ${pageButton(P.land_use.source, null, '원문')}</div>`
-    : `<div class="item"><b>용도지역</b> <span class="muted">${esc(P.land_use_note)}</span></div>`;
+  let html = landCard(P.land, P.land_use_documented);
   html += buildingHtml(P);
   html += itemsHtml(P.items).replace('<div class="empty">이 층에 해당하는 항목이 없습니다</div>', '');
   if (P.included_projects.length) {
     P.included_projects.forEach((p) => {
-      const kind = p.inclusion === 'included' ? 'ok' : 'warn';
+      const kind = p.inclusion === 'included' ? 'ok' : p.inclusion === 'likely' ? 'info' : 'warn';
       html += `<div class="item">
         <div class="row">${badge(p.inclusion_label, kind)}<span class="item-title">${esc(p.message)}</span></div>
         <p class="small">판정 근거: ${esc(p.basis_label)}</p>
@@ -265,7 +301,12 @@ async function run(text) {
 
   document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.text === text));
   let html = normLine(r.normalized);
-  if (r.status !== 'ok') {
+  if (r.status === 'ambiguous') {
+    html += `<div class="box info"><b>${esc(r.message)}</b>
+      <div class="candidates">${(r.candidates || []).map((c) => `<button class="btn small candidate" type="button"
+        data-cand="${esc(c.jibun_address || c.road_address)}">${esc(c.road_address || '')}
+        <span class="small muted">${esc(c.jibun_address || '')}${c.bld_name ? ` · ${esc(c.bld_name)}` : ''}</span></button>`).join('')}</div></div>`;
+  } else if (r.status !== 'ok') {
     html += `<div class="box info"><b>${esc(r.message)}</b></div>`;
   } else {
     const L = r.layers;
@@ -276,15 +317,17 @@ async function run(text) {
       dong: L.dong.items.length + L.dong.projects.length,
       parcel: L.parcel.items.length + L.parcel.included_projects.length + L.parcel.nearby_projects.length,
     };
+    // 화면 순서: 이 땅(필지) → 법정동 → 자치구 → 서울 전역 → 참고 (feedback2.md §3-4). 가장 좁은 층에만 표시하는 규칙은 그대로
     html += `<div class="row small" style="margin:8px 0">바로가기
-      <a href="#layer-city">서울 전역 ${counts.city}</a> · <a href="#layer-gu">자치구 ${counts.gu}</a> ·
-      <a href="#layer-dong">법정동 ${counts.dong}</a> · <a href="#layer-parcel">필지 ${counts.parcel}${L.parcel.included_projects.length ? ' (사업 카드)' : ''}</a>
-      · <a href="#reference">참고 ${(r.reference && r.reference.items.length) || 0}</a></div>`;
-    html += layer('서울 전역', '시도 11', counts.city, itemsHtml(L.city), 'layer-city');
+      <a href="#layer-parcel">이 땅 (토지 정보${L.parcel.included_projects.length ? '·사업 카드' : ''})</a> ·
+      <a href="#layer-dong">법정동 ${counts.dong}</a> · <a href="#layer-gu">자치구 ${counts.gu}</a> ·
+      <a href="#layer-city">서울 전역 ${counts.city}</a> · <a href="#reference">참고 ${(r.reference && r.reference.items.length) || 0}</a></div>`;
+    html += layer('필지 · 이 땅', `PNU ${n.pnu}`, counts.parcel, parcelHtml(L.parcel, n), 'layer-parcel');
+    html += layer(`법정동 · ${n.dong_name}`, `법정동 ${n.bjd_code}`, counts.dong,
+      (L.dong.items.length || L.dong.projects.length ? itemsHtml(L.dong.items) : `<div class="empty">${esc(L.dong.empty_note || '이 층에 해당하는 항목이 없습니다')}</div>`)
+      + dongExtras(L.dong), 'layer-dong');
     html += layer(`자치구 · 강남구`, `시군구 ${n.sgg_code}`, counts.gu, itemsHtml(L.gu.items) + stageTable(L.gu.projects_by_stage), 'layer-gu');
-    html += layer(`법정동 · ${n.dong_name}`, `법정동 ${n.bjd_code}`,
-      counts.dong, itemsHtml(L.dong.items) + dongExtras(L.dong), 'layer-dong');
-    html += layer('필지', `PNU ${n.pnu}`, counts.parcel, parcelHtml(L.parcel, n), 'layer-parcel');
+    html += layer('서울 전역', '시도 11', counts.city, itemsHtml(L.city), 'layer-city');
     html += referenceHtml(r.reference);
   }
   html += `<p class="small muted">${esc(r.coverage_note || '')}</p><p class="small muted">${esc(r.disclaimer)}</p>`;
@@ -300,6 +343,8 @@ async function run(text) {
 }
 
 document.addEventListener('click', async (e) => {
+  const cand = e.target.closest('[data-cand]');
+  if (cand) { search(cand.dataset.cand, null); return; }
   const b = e.target.closest('[data-progress]');
   if (!b) return;
   const box = el(`progress-${b.dataset.progress}`);
@@ -317,8 +362,14 @@ function search(text, addrId) {
 (async () => {
   await initShell('lookup');
   demoList = await api('/api/v1/demo-addresses');
-  el('chips').innerHTML = demoList.map((d) => `<button class="chip" type="button" data-addr="${esc(d.addr_id)}"
-      data-text="${esc(d.input_text)}" ${d.available ? '' : 'disabled title="도로명주소 API 키 재발급 후 확정"'}>${esc(d.label)}</button>`).join('');
+  const groups = [];
+  demoList.forEach((d) => {
+    const g = groups.find((x) => x.name === d.group) || (groups.push({ name: d.group, items: [] }), groups[groups.length - 1]);
+    g.items.push(d);
+  });
+  el('chips').innerHTML = groups.map((g) => `<div class="chip-group"><span class="chip-group-name">${esc(g.name)}</span>
+    ${g.items.map((d) => `<button class="chip${g.name === '대표 시연' ? ' featured' : ''}" type="button" data-addr="${esc(d.addr_id)}"
+      data-text="${esc(d.input_text)}" ${d.available ? '' : 'disabled title="주소 확정 전"'}>${esc(d.label)}</button>`).join('')}</div>`).join('');
   el('chips').addEventListener('click', (e) => {
     const c = e.target.closest('.chip');
     if (c && !c.disabled) search(c.dataset.text, c.dataset.addr);

@@ -1,0 +1,237 @@
+{
+  "doc_id": "D9",
+  "extractor_version": "claude-code-v1.1",
+  "extracted_at": "2026-10-26T19:00:00+09:00",
+  "document": {
+    "title": "대청마을 북측구역(일원동 619번지 일원) 소규모주택정비 관리계획(모아타운 관리계획) 수립(안) 주민공람 공고",
+    "issuer": "강남구청장",
+    "gosi_no": "강남구 공고 제2026-1034호",
+    "published_at": "2026-04-17",
+    "gazette": "구보 제1846호 (2026.04.17)",
+    "doc_kind": "gongram"
+  },
+  "fields": {},
+  "items": [
+    {
+      "item_key": "D9-01",
+      "item_type": "notice",
+      "title": "대청마을 북측 모아타운 관리계획(안): 용도지역 변경",
+      "summary": "관리지역 90,992.0㎡ 중 사업시행구역 34,517.0㎡를 제2종일반주거지역으로 바꾸는 안이다. 제1종일반주거 28,124.4㎡, 제2종(7층) 6,392.6㎡가 줄어든다.",
+      "scope_type": "BJD",
+      "scope_ref": ["1168011400"],
+      "scope_note": "대청마을 북측구역은 일원동 일부. 경계 데이터가 없어 법정동 단위로 적용",
+      "pdf_page": 10,
+      "evidence": "제2종일반주거지역 20,017.5 증)34,517.0 54,534.5 59.8",
+      "more_evidence": [
+        {
+          "label": "제1종일반주거지역",
+          "evidence": "제1종일반주거지역 46,228.5 감)28,124.4 18,104.1 20.0",
+          "pdf_page": 10
+        },
+        {
+          "label": "제2종일반주거지역(7층)",
+          "evidence": "제2종일반주거지역(7층) 24,746.0 감)6,392.6 18,353.4 20.2",
+          "pdf_page": 10
+        }
+      ],
+      "target_note": "대상: 관리지역 안 사업시행구역 1·2구역 (일원동 629 일대·626 일대). 공람안이며 승인 고시 전",
+      "tier_class": "a",
+      "applies_rank": 1,
+      "tier_reason": "공람(2026.4.17~5.1)을 마친 관리계획(안)의 결정 사항. 승인 고시는 확인 못함",
+      "effective_from": null,
+      "effective_to": null,
+      "confidence": 0.85,
+      "needs_review": false,
+      "tier": "applies",
+      "reference_rank": null
+    },
+    {
+      "item_key": "D9-02",
+      "item_type": "notice",
+      "title": "대청마을 북측 모아타운 관리계획(안): 주차장·도로 계획",
+      "summary": "일원동 625-5 일원(3,935.9㎡)과 625-22 일원(2,542.5㎡)에 주차장을 신설하고, 관리지역 안 도로를 신설·변경·폐지하는 안이다.",
+      "scope_type": "BJD",
+      "scope_ref": ["1168011400"],
+      "scope_note": "대청마을 북측구역은 일원동 일부. 경계 데이터가 없어 법정동 단위로 적용",
+      "pdf_page": 6,
+      "evidence": "신설 ➀ 주차장 일원 - 3,935.9 3,935.9 •사업시행1구역 내 설치",
+      "more_evidence": [
+        {
+          "label": "주차장 ➀ 위치",
+          "evidence": "일원동 625-5",
+          "pdf_page": 6
+        },
+        {
+          "label": "주차장 ➁",
+          "evidence": "신설 ➁ 주차장 일원 - 2,542.5 2,542.5 •사업시행2구역 내 설치",
+          "pdf_page": 6
+        },
+        {
+          "label": "주차장 ➁ 위치",
+          "evidence": "일원동 625-22",
+          "pdf_page": 6
+        },
+        {
+          "label": "도로 계획",
+          "evidence": "1) 도로 계획(안)",
+          "pdf_page": 4
+        }
+      ],
+      "target_note": "대상: 주차장 부지 일원동 625-5 일원·625-22 일원, 도로는 관리지역 안 도로 (공람안)",
+      "tier_class": "a",
+      "applies_rank": 2,
+      "tier_reason": "공람을 마친 관리계획(안)의 정비기반시설 결정 사항",
+      "effective_from": null,
+      "effective_to": null,
+      "confidence": 0.85,
+      "needs_review": false,
+      "tier": "applies",
+      "reference_rank": null
+    },
+    {
+      "item_key": "D9-03",
+      "item_type": "plan",
+      "title": "대청마을 북측 사업시행구역 밖 건축 기준(안)",
+      "summary": "관리지역 안 사업시행구역 밖 주택용지 등 1~12는 건폐율 60% 이하, 용적률 기준 150~200%·허용 165~220%, 높이 4층·7층·12층 이하다.",
+      "scope_type": "BJD",
+      "scope_ref": ["1168011400"],
+      "scope_note": "대청마을 북측구역은 일원동 일부. 경계 데이터가 없어 법정동 단위로 적용",
+      "pdf_page": 8,
+      "evidence": "※ 사업시행구역 외는 기존 지구단위계획 지침을 따름",
+      "more_evidence": [
+        {
+          "label": "4층 이하 (제1종일반)",
+          "evidence": "1 용적률 기준 150%/허용 165%",
+          "pdf_page": 8
+        },
+        {
+          "label": "12층 이하 (제2종일반)",
+          "evidence": "8 용적률 기준 200%/허용 220%",
+          "pdf_page": 8
+        },
+        {
+          "label": "용도 지침",
+          "evidence": "용도 허용 ž 당해 개포택지개발지구(4지구) 지구단위계획 지침을 따름",
+          "pdf_page": 9
+        }
+      ],
+      "target_note": "대상: 관리지역 안 사업시행구역 밖 주택용지 등 1~12 (개포택지개발지구 4지구 지구단위계획 지침)",
+      "tier_class": "b",
+      "applies_rank": 1,
+      "tier_reason": "관리지역 안 단독·다가구 필지의 건축에 직접 쓰이는 수치 기준",
+      "effective_from": null,
+      "effective_to": null,
+      "confidence": 0.85,
+      "needs_review": false,
+      "tier": "applies",
+      "reference_rank": null
+    }
+  ],
+  "projects": [
+    {
+      "project_key": "ilwon-daecheong-north-moatown",
+      "name": "대청마을 북측구역 소규모주택정비 관리지역(모아타운)",
+      "aliases": ["대청마을 북측 모아타운", "일원동 619번지 일원 모아타운"],
+      "project_type": "moa_town",
+      "stage_candidate": "MT01",
+      "stage_evidence": {
+        "evidence": "관리계획(모아타운 관리계획) 수립(안) 주민공람 공고",
+        "pdf_page": 1
+      },
+      "representative_jibun": {
+        "dong": "일원동",
+        "main": 619,
+        "sub": 0,
+        "san": false,
+        "text": "619번지 일원",
+        "evidence": "대청마을 북측구역(일원동 619번지 일원) 소규모주택정비",
+        "pdf_page": 1
+      },
+      "area_m2": {
+        "value": 90992.0,
+        "evidence": "(일원동619번지 일원) - 증)90,992.0 90,992.0 -",
+        "pdf_page": 2
+      },
+      "land_use": null,
+      "location_text": "강남구 일원동 619번지 일원",
+      "deadlines": [
+        {
+          "kind": "public_review",
+          "title": "관리계획(안) 주민공람",
+          "starts_on": "2026-04-17",
+          "due_on": "2026-05-01",
+          "how_to_submit": "공람 기간 내 공람 장소에서 서면으로 제출하여 주시기 바랍니다",
+          "places": ["강남구청 재건축사업과", "일원1동 주민센터"],
+          "evidence": "가. 공람기간 : 2026. 4. 17. ~ 2026. 5. 1.(14일간)",
+          "pdf_page": 1
+        }
+      ],
+      "related_history": [],
+      "facts": [
+        {
+          "label": "관리지역 면적",
+          "value": 90992.0,
+          "unit": "㎡",
+          "evidence": "소규모주택정비 ž 소규모주택정비 관리지역 지정 면적 : 90,992.0㎡ 소규모주택 정비사업의",
+          "pdf_page": 2
+        },
+        {
+          "label": "노후·불량 건축물",
+          "value": "259동 / 전체 318동 (81.4%)",
+          "unit": null,
+          "evidence": "노후·불량 : 259동(81.4%)",
+          "pdf_page": 2
+        },
+        {
+          "label": "사업시행구역 1구역 면적 (공동주택용지, 가로주택정비형 모아주택)",
+          "value": 19276.2,
+          "unit": "㎡",
+          "evidence": "1구역 19,276.2 21.2 -",
+          "pdf_page": 3
+        },
+        {
+          "label": "사업시행구역 2구역 면적 (공동주택용지, 가로주택정비형 모아주택)",
+          "value": 15240.8,
+          "unit": "㎡",
+          "evidence": "사업 2구역 15,240.8 16.7 -",
+          "pdf_page": 3
+        },
+        {
+          "label": "1구역 세대수 (임대 124)",
+          "value": 419,
+          "unit": "세대",
+          "evidence": "1구역 419 124 서울특별시 29.59%",
+          "pdf_page": 9
+        },
+        {
+          "label": "2구역 세대수 (임대 92)",
+          "value": 337,
+          "unit": "세대",
+          "evidence": "2구역 337 92 서울주택도시공사 27.30%",
+          "pdf_page": 9
+        },
+        {
+          "label": "1구역 용도지역 (안)",
+          "value": "제1종일반주거지역 → 제2종일반주거지역 종상향",
+          "unit": null,
+          "evidence": "1구역 용적률 (제1종일반주거지역 →",
+          "pdf_page": 8
+        },
+        {
+          "label": "2구역 용도지역 (안)",
+          "value": "제1종/제2종(7층)일반주거지역 → 제2종일반주거지역 종상향",
+          "unit": null,
+          "evidence": "2구역 용적률 (제1종/제2종(7층)일반주거지역",
+          "pdf_page": 8
+        },
+        {
+          "label": "사업시행구역 용적률 (안)",
+          "value": "기준 200% 이하 · 법적상한 250% 이하",
+          "unit": null,
+          "evidence": "법적상한 250% 이하",
+          "pdf_page": 8
+        }
+      ]
+    }
+  ]
+}

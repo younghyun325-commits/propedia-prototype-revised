@@ -1,0 +1,39 @@
+{
+ "results": {
+  "common": {
+   "countPerPage": "5",
+   "errorMessage": "정상",
+   "errorCode": "0",
+   "totalCount": "1",
+   "currentPage": "1"
+  },
+  "juso": [
+   {
+    "siNm": "서울특별시",
+    "lnbrMnnm": "861",
+    "bdKdcd": "0",
+    "jibunAddr": "서울특별시 서초구 방배동 861-1 방배초등학교",
+    "buldSlno": "0",
+    "bdMgtSn": "1165010100108610001009697",
+    "zipNo": "06570",
+    "roadAddr": "서울특별시 서초구 방배중앙로13길 26 (방배동)",
+    "admCd": "1165010100",
+    "liNm": "",
+    "bdNm": "방배초등학교",
+    "mtYn": "0",
+    "rnMgtSn": "116504163285",
+    "roadAddrPart2": " (방배동)",
+    "sggNm": "서초구",
+    "buldMnnm": "26",
+    "roadAddrPart1": "서울특별시 서초구 방배중앙로13길 26",
+    "emdNm": "방배동",
+    "lnbrSlno": "1",
+    "engAddr": "26 Bangbaejungang-ro 13-gil, Seocho-gu, Seoul",
+    "udrtYn": "0",
+    "rn": "방배중앙로13길",
+    "detBdNmList": "창고, 본관동, 창고, 수위실, 야구부연습장",
+    "emdNo": "01"
+   }
+  ]
+ }
+}

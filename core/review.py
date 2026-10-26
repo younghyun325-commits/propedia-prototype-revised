@@ -87,6 +87,16 @@ def apply(con, decisions) -> Overrides:
         if it == "parcel_inclusion":
             pid, _, pnu = ref.partition(":")
             ov.parcel[(int(pid), pnu)] = action
+        elif it == "parcel_group":
+            # 지도 대조 후보 묶음 (feedback2.md §5-4): 승인하면 전부 포함, edits.exclude_pnus의 필지는 반려
+            pid = int(ref.partition(":")[0])
+            pnus = [p["pnu"] for p in (proposed.get("current") or {}).get("parcels", [])]
+            excl = (d.get("edits") or {}).get("exclude_pnus") or []
+            if not isinstance(excl, list) or not all(isinstance(x, str) for x in excl):
+                ov.review_applied.append({"review_id": rid, "ignored": "exclude_pnus는 문자열 배열이어야 함"})
+                continue
+            for pnu in pnus:
+                ov.parcel[(pid, pnu)] = "reject" if action == "reject" or pnu in excl else "approve"
         elif it in ITEM_TYPES and row["ref_table"] == "applicability_rules":
             ov.items_rejected.discard(ref)
             ov.items_approved.discard(ref)

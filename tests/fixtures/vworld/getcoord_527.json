@@ -1,0 +1,37 @@
+{
+ "response": {
+  "service": {
+   "name": "address",
+   "version": "2.0",
+   "operation": "getcoord",
+   "time": "14(ms)"
+  },
+  "status": "OK",
+  "input": {
+   "type": "parcel",
+   "address": "서울특별시 강남구 압구정동 527"
+  },
+  "refined": {
+   "text": "서울특별시 강남구 압구정동 527",
+   "structure": {
+    "level0": "대한민국",
+    "level1": "서울특별시",
+    "level2": "강남구",
+    "level3": "",
+    "level4L": "압구정동",
+    "level4LC": "1168011000105270000",
+    "level4A": "",
+    "level4AC": "",
+    "level5": "527",
+    "detail": ""
+   }
+  },
+  "result": {
+   "crs": "EPSG:4326",
+   "point": {
+    "x": "127.04331416864878",
+    "y": "37.52910580241611"
+   }
+  }
+ }
+}

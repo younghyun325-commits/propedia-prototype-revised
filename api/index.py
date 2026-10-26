@@ -1,6 +1,6 @@
 """Propedia 프리토타입 API (agents.md §11). Vercel 진입점이며, 로컬에서는 public/ 정적 화면도 함께 서빙한다.
 
-시연 경로: 네트워크·LLM 호출 없음, DB는 읽기 전용.
+시연 경로: LLM 호출 없음, DB는 읽기 전용. 외부 호출은 core/live/(도로명주소·브이월드)만 한다 (feedback2.md §2).
 """
 import os
 import sys
@@ -14,6 +14,7 @@ from fastapi.responses import RedirectResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from core import catalog  # noqa: E402
+from core import live as live_mod  # noqa: E402
 from core.db import connect_ro, meta  # noqa: E402
 from core.lookup import lookup, parcel_summary  # noqa: E402
 from core.progress import progress  # noqa: E402
@@ -49,7 +50,7 @@ def demo_addresses():
 def lookup_get(address: str = ""):
     con = _con()
     try:
-        return lookup(con, address)
+        return lookup(con, address, live=live_mod.default())
     finally:
         con.close()
 
@@ -58,7 +59,7 @@ def lookup_get(address: str = ""):
 def lookup_post(body: dict = Body(default_factory=dict)):
     con = _con()
     try:
-        return lookup(con, str(body.get("address") or ""), body.get("decisions"))
+        return lookup(con, str(body.get("address") or ""), body.get("decisions"), live=live_mod.default())
     finally:
         con.close()
 

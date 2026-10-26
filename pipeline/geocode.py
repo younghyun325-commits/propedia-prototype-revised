@@ -18,7 +18,9 @@ URL = "https://nominatim.openstreetmap.org/search"
 HEADERS = {"User-Agent": "propedia-pretotype/0.1 (prototype demo)"}
 CACHE = BUILD / "geocode_cache.json"
 LAT_RANGE = (37.45, 37.54)
-PROJECT_COORDS = SEED / "project_coords.csv"
+# P10: 사업 중심 좌표는 pipeline/fetch_land.py가 대표 지번을 브이월드 지오코더로 받아 seed/project_coords.csv에 쓴다.
+# 여기서는 OSM 근사값을 build/에만 남긴다 (브이월드가 안 될 때 fetch_land가 대신 쓴다).
+PROJECT_COORDS = BUILD / "project_anchors_osm.csv"
 # 사업 중심점 근사: A1·A2 좌표를 못 얻을 때만 쓴다. 인접 필지는 도로명주소 API로 확인한 것이어야 한다.
 # [확인 2026-10-26] 압구정동 526 = 청담고등학교(압구정로 419), 528 = 한양아파트(압구정로61길 37), 527은 도로명주소 없음
 PROJECT_ANCHORS = [

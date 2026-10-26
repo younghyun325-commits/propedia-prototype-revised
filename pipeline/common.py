@@ -3,6 +3,7 @@ import hashlib
 import logging
 import sqlite3
 import sys
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -77,6 +78,8 @@ SOURCES = {
     "sdm-gongji": {"name": "서대문구청 공지", "layer": "gu", "url": "https://www.sdm.go.kr"},
     "law-go-kr": {"name": "국가법령정보센터 행정규칙", "layer": "national", "url": "https://law.go.kr"},
     "molit-press": {"name": "국토교통부 보도자료", "layer": "national", "url": None},
+    # P10 강남구 구보 ZIP (feedback2.md §5-1)
+    "gangnam-gubo-zip": {"name": "강남구 구보", "layer": "gu", "url": None},
 }
 
 
@@ -242,12 +245,79 @@ DOCS = {
     },
 }
 
-DOC_ORDER = ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"]
+# ── P10: 강남구 토지 고시 (feedback2.md §5). 구보 ZIP 안의 PDF를 꺼내 쓴다 (ZIP은 수정하지 않음) ──
+DOCS["D9"] = {
+    "zip": ("10.강남구_토지고시", "69e57c91b3d816.58748850.zip", "강남구 제2026-1034호"),
+    "ranges": [(1, 16)],
+    "selected_ranges": [(1, 11)],          # 12~16쪽은 도면(관리지역 결정도 등) — 원문 보기·지도 대조용
+    "ingest_step": 9,
+    "label_fn": _label_none,
+    "source_id": "gangnam-gubo-zip",
+    "source_url": None,
+    "source_note": "강남구 구보 제1846호(2026.04.17) 게재, 강남구 공고 제2026-1034호",
+    "title": "대청마을 북측구역(일원동 619번지 일원) 소규모주택정비 관리계획(모아타운 관리계획) 수립(안) 주민공람 공고",
+    "short_title": "대청마을 북측 모아타운 관리계획(안) 공람",
+    "doc_kind": "gongram",
+    "issuer": "강남구청장",
+    "gosi_no": "강남구 공고 제2026-1034호",
+    "published_at": "2026-04-17",
+}
+DOCS["D10"] = {
+    "zip": ("10.강남구_토지고시", "69dd8efc1d5cb9.48809192.zip", "강남구 제2026-69호"),
+    "ranges": [(1, 3)],
+    "selected_ranges": [(1, 3)],
+    "ingest_step": 10,
+    "label_fn": _label_none,
+    "source_id": "gangnam-gubo-zip",
+    "source_url": None,
+    "source_note": "강남구 구보 제1845호(2026.04.10) 게재, 강남구 고시 제2026-69호",
+    "title": "개발행위허가 제한 연장 및 지형도면 고시",
+    "short_title": "대치동 506 일대 개발행위허가 제한 연장",
+    "doc_kind": "restriction",
+    "issuer": "강남구청장",
+    "gosi_no": "강남구 고시 제2026-69호",
+    "published_at": "2026-04-10",
+}
+
+DOC_ORDER = ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10"]
+ZIP_SRC = BUILD / "zip_src"
+
+
+def zip_member_name(info: zipfile.ZipInfo) -> str:
+    """ZIP 안 파일명: UTF-8 플래그가 없으면 CP949로 저장된 이름이다 (feedback2.md §5-1)."""
+    if info.flag_bits & 0x800:
+        return info.filename
+    try:
+        return info.filename.encode("cp437").decode("cp949")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return info.filename
+
+
+def _zip_member(doc_id: str) -> tuple[Path, zipfile.ZipInfo, str]:
+    folder, zname, needle = DOCS[doc_id]["zip"]
+    zpath = DATA / folder / zname
+    if not zpath.exists():
+        fail(f"{doc_id} ZIP이 없습니다: {zpath}")
+    with zipfile.ZipFile(zpath) as zf:
+        hits = [(i, zip_member_name(i)) for i in zf.infolist()
+                if needle in zip_member_name(i) and zip_member_name(i).lower().endswith(".pdf")]
+    if len(hits) != 1:
+        fail(f"{doc_id}: ZIP 안에서 '{needle}' PDF가 {len(hits)}개입니다. 정확히 1개여야 합니다.")
+    return zpath, hits[0][0], hits[0][1]
 
 
 def original_path(doc_id: str) -> Path:
-    """원본 PDF 경로. glob으로 찾는 문서(D1, D5~D8)는 결과가 정확히 1개여야 한다."""
+    """원본 PDF 경로. glob으로 찾는 문서(D1, D5~D8)는 결과가 정확히 1개여야 한다.
+    ZIP 안 문서(D9·D10)는 build/zip_src/{doc}.pdf로 꺼내 그 경로를 돌려준다 (ZIP은 읽기만 한다)."""
     d = DOCS[doc_id]
+    if "zip" in d:
+        out = ZIP_SRC / f"{doc_id}.pdf"
+        if not out.exists():
+            zpath, info, _ = _zip_member(doc_id)
+            ZIP_SRC.mkdir(parents=True, exist_ok=True)
+            with zipfile.ZipFile(zpath) as zf:
+                out.write_bytes(zf.read(info))
+        return out
     if "glob" in d:
         folder, pattern = d["glob"]
         hits = sorted((DATA / folder).glob(pattern))
@@ -261,7 +331,10 @@ def original_path(doc_id: str) -> Path:
 
 
 def original_rel(doc_id: str) -> str:
-    """'../data/...' 형식의 상대 경로 (DB·manifest 기록용)."""
+    """'../data/...' 형식의 상대 경로 (DB·manifest 기록용). ZIP 안 문서는 '../data/…/x.zip!/파일명.pdf'."""
+    if "zip" in DOCS[doc_id]:
+        zpath, _, member = _zip_member(doc_id)
+        return "../" + zpath.relative_to(ROOT.parent).as_posix() + "!/" + member
     p = original_path(doc_id)
     return "../" + p.relative_to(ROOT.parent).as_posix()
 

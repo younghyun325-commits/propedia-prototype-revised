@@ -2,13 +2,13 @@
 from core import review as review_mod
 from core.db import loads, meta, source
 from core.lookup import DISCLAIMER
-from core.timeutil import d_day, parse_date, today_kst
+from core.timeutil import d_day, dot, parse_date, today_kst
 
-PROJECT_TYPE_LABELS = {"rebuild": "재건축"}
-FACT_FIELDS = ["area_m2", "land_use", "households_before", "households_after", "base_allowed_far", "plan_far",
-               "legal_max_far"]
+PROJECT_TYPE_LABELS = {"rebuild": "재건축", "moa_town": "모아타운(소규모주택정비)"}
+PROJECT_TYPE_SHORT = {"rebuild": "재건축", "moa_town": "모아타운"}
 TRACK_LABELS = {"unknown": "확인 안 됨", "general": "일반", "shintong": "신속통합기획", "public": "공공"}
 WHAT_HAPPENS_NOTE = "단계 설명 문구는 법령 대조 후 사람이 작성합니다"
+OWNER_ACTIONS_NOTE = "안내 문구는 법령 대조 후 사람이 작성합니다"
 REMAINING = {
     "to_next": None,
     "to_completion": None,
@@ -71,17 +71,18 @@ def progress(con, project_id: int, decisions=None, today=None) -> dict | None:
             for r in con.execute("""SELECT d.doc_id, d.short_title, d.published_at, pd.role FROM project_documents pd
                                     JOIN documents d ON d.id = pd.document_id WHERE pd.project_id=?""", (project_id,))]
     # 고시에 적힌 수치 (Claude Code 추출값 — 근거 문장·원문 쪽과 함께만 보여준다)
-    from core.catalog import FIELD_LABELS
-    ex = con.execute("SELECT payload FROM extractions WHERE document_id=?", (p["stage_source_doc_id"],)).fetchone()
-    units = {k: v.get("unit") for k, v in (loads(ex["payload"], {}) or {}).get("fields", {}).items()} if ex else {}
-    frows = {r["field"]: r for r in con.execute("SELECT * FROM extracted_fields WHERE document_id=?",
-                                                 (p["stage_source_doc_id"],))}
-    facts = [{"field": f, "label": FIELD_LABELS.get(f, f), "value": loads(frows[f]["value"]), "unit": units.get(f),
-              "evidence": frows[f]["evidence"], "evidence_ok": bool(frows[f]["evidence_ok"]),
-              "source": source(con, p["stage_source_doc_id"], frows[f]["pdf_page"])}
-             for f in FACT_FIELDS if f in frows and loads(frows[f]["value"]) is not None]
+    facts = [{"label": r["label"], "value": loads(r["value"]), "unit": r["unit"], "evidence": r["evidence"],
+              "evidence_ok": bool(r["evidence_ok"]), "source": source(con, r["source_doc_id"], r["pdf_page"])}
+             for r in con.execute("SELECT * FROM project_facts WHERE project_id=? ORDER BY seq", (project_id,))]
     h = hist.get(p["sub_stage_code"])
     label = PROJECT_TYPE_LABELS.get(p["project_type"], p["project_type"])
+    short = PROJECT_TYPE_SHORT.get(p["project_type"], label)
+    position = f"{short} {len(tpls)}단계 중 {cur['seq']}번째" + (f" ({p['position_note']})" if p["position_note"] else "")
+    sub_status = None
+    if p["sub_status"]:                  # 예: 관리계획(안) 주민공람 (2026.04.17 ~ 2026.05.01, 마감)
+        dl = next((d for d in deadlines if d["kind"] == "public_review"), None)
+        sub_status = p["sub_status"] + (f" ({dot(dl['starts_on'])} ~ {dot(dl['due_on'])}"
+                                        f"{', 마감' if dl['status'] == 'closed' else ''})" if dl else "")
     return {
         "project_id": p["id"],
         "name": p["name"],
@@ -94,14 +95,18 @@ def progress(con, project_id: int, decisions=None, today=None) -> dict | None:
         "area_m2": p["area_m2"],
         "center": {"lat": p["lat"], "lon": p["lon"], "coord_source": p["coord_source"]} if p["lat"] is not None else None,
         "as_of": p["stage_as_of"] or m.get("as_of"),
-        "position_label": f"{label} {len(tpls)}단계 중 {cur['seq']}번째",
+        "position_label": position,
+        "sub_status": sub_status,
+        "stage_note": p["stage_note"],
         "stages": stages,
         "current": {"code": cur["sub_stage_code"], "title": cur["title"], "what_happens": cur["what_happens"],
                     "what_happens_note": None if cur["what_happens"] else WHAT_HAPPENS_NOTE,
-                    "owner_actions": cur["owner_actions"], "issuer": cur["issuer"],
+                    "owner_actions": cur["owner_actions"],
+                    "owner_actions_note": None if cur["owner_actions"] else OWNER_ACTIONS_NOTE, "issuer": cur["issuer"],
                     "legal_basis": cur["legal_basis"], "template_status": template_status(cur),
                     "template_source": cur["source"]},
-        "next": {"code": nxt["sub_stage_code"], "title": nxt["title"], "owner_actions": nxt["owner_actions"]}
+        "next": {"code": nxt["sub_stage_code"], "title": nxt["title"], "owner_actions": nxt["owner_actions"],
+                 "owner_actions_note": None if nxt["owner_actions"] else OWNER_ACTIONS_NOTE}
         if nxt else None,
         "deadlines": deadlines,
         "remaining": dict(REMAINING),

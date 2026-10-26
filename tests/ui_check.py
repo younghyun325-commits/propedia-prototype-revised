@@ -73,16 +73,42 @@ def main() -> int:
             page.goto(f"{base}/index.html")
             page.wait_for_selector("#coverage-body tr td b")
             check("① 시작 화면 링크 5개", page.locator("#steps a").count() == 5)
-            check("① 반영 범위 8행", page.locator("#coverage-body tr").count() == 8)
+            check("① 반영 범위 11행 (문서 10 + 브이월드)", page.locator("#coverage-body tr").count() == 11)
             hrefs = [page.locator("#steps a").nth(i).get_attribute("href") for i in range(5)]
-            check("① 링크 대상", hrefs == ["lookup.html?addr=A1", "docs.html?doc=D1", "docs.html#steps", "review.html",
+            check("① 링크 대상", hrefs == ["lookup.html?addr=B1", "docs.html?doc=D9", "docs.html#steps", "review.html",
                                          "eval.html"], str(hrefs))
+            check("① 땅 주소 소개", "땅 주소 하나로" in page.inner_text("h1"))
             shot("01_index.png")
+
+            # ②-0 P10 대청마을 (feedback2.md §9 G2): 토지 정보 카드가 첫 섹션, 모아타운 카드, 포함 판정
+            page.goto(f"{base}/lookup.html?addr=B1")
+            page.wait_for_selector(".project-card", timeout=20000)
+            first = page.locator("section.layer").first
+            check("②-0 B1 첫 섹션이 '필지 · 이 땅'", first.get_attribute("id") == "layer-parcel"
+                  and "필지 · 이 땅" in first.locator("h2").inner_text())
+            landc = page.locator(".land-card").first.inner_text()
+            check("②-0 B1 토지 정보 카드", all(k in landc for k in ("지목", "면적", "용도지역", "공시지가", "원/㎡"))
+                  and "브이월드" in landc, landc.split("\n")[0][:40])
+            mcard = page.locator(".project-card").inner_text()
+            check("②-0 B1 모아타운 8단계 중 1번째", "모아타운 8단계 중 1번째 (관리계획 수립 중)" in mcard)
+            check("②-0 B1 공람 마감·단계 메모", "마감(2026.05.01)" in mcard and "승인·고시는 확인된 문서가 없습니다" in mcard)
+            check("②-0 B1 사실(면적·노후도·세대수·종상향)", all(k in mcard for k in ("관리지역 면적", "노후·불량", "세대수", "종상향")))
+            check("②-0 B1 포함될 수 있음", page.locator(".badge.warn", has_text="포함될 수 있음").count() >= 1)
+            check("②-0 B1 일원동 항목", "대청마을 북측 모아타운 관리계획(안)" in page.inner_text("#layer-dong"))
+            shot("02_lookup_B1.png")
+            page.goto(f"{base}/lookup.html?addr=B2")
+            page.wait_for_selector(".project-card", timeout=20000)
+            check("②-0 B2 포함된 것으로 보임", page.locator(".badge", has_text="포함된 것으로 보임").count() >= 1
+                  and "확인해 주세요" in page.inner_text("#layer-parcel"))
+            check("②-0 B2 단독 필지", "단독" in page.locator(".land-card").first.inner_text())
+            shot("02c_lookup_B2.png")
 
             # ② A1 조회
             page.goto(f"{base}/lookup.html?addr=A1")
             page.wait_for_selector(".project-card", timeout=15000)
-            check("② 4개 층", page.locator("section.layer").count() == 4)
+            check("② 4개 층 (이 땅 → 법정동 → 자치구 → 서울 전역)",
+                  [page.locator("section.layer").nth(i).get_attribute("id") for i in range(4)]
+                  == ["layer-parcel", "layer-dong", "layer-gu", "layer-city"])
             counts = [page.locator("section.layer").nth(i).locator(".layer-head .badge").inner_text() for i in range(4)]
             check("② 층마다 1건 이상", all(not c.startswith("0") for c in counts), str(counts))
             card = page.locator(".project-card").inner_text()
@@ -156,7 +182,9 @@ def main() -> int:
             check("④ 투입 1단계 변화 없음", "사업 상태 변화 없음" in page.inner_text("#step-detail"))
             page.locator('[data-step="4"]').click()
             check("④ 투입 4단계 변경 2건", page.locator("#step-detail tbody tr").count() == 2)
-            check("④ 투입 단계 8개", page.locator("[data-step]").count() == 8)
+            check("④ 투입 단계 10개", page.locator("[data-step]").count() == 10)
+            page.locator('[data-step="9"]').click()
+            check("④ 투입 9단계(D9) 새 사업 카드", "새 사업 카드" in page.inner_text("#step-detail"))
             page.locator('[data-step="5"]').click()
             check("④ 투입 5단계(규제 고시) 변화 없음", "사업 상태 변화 없음" in page.inner_text("#step-detail"))
             page.locator("#steps").scroll_into_view_if_needed()
@@ -181,13 +209,47 @@ def main() -> int:
             check("⑤ 초기화 후 '포함될 수 있음'", page.locator(".badge.warn", has_text="포함될 수 있음").count() >= 1
                   and "구역에 포함되어 있습니다" not in page.inner_text("#result"))
 
+            # ⑤-2 지도 대조 후보 묶음 승인 → B2 '포함' → 초기화
+            page.goto(f"{base}/review.html")
+            page.wait_for_selector("#queue-body tr", timeout=15000)
+            page.locator("#queue-body tr", has_text="지도 대조 후보").first.click()
+            page.wait_for_selector("input.pg")
+            check("⑤-2 후보 필지 16개", page.locator("input.pg").count() == 16, str(page.locator("input.pg").count()))
+            page.locator("#detail [data-act='approve']").click()
+            page.goto(f"{base}/lookup.html?addr=B2")
+            page.wait_for_selector(".project-card", timeout=20000)
+            check("⑤-2 묶음 승인 후 B2 '포함'", "구역에 포함되어 있습니다" in page.inner_text("#layer-parcel"))
+            page.locator("#reset-decisions").click()
+            page.wait_for_selector(".project-card", timeout=20000)
+            check("⑤-2 초기화 후 B2 '포함된 것으로 보임'", page.locator(".badge", has_text="포함된 것으로 보임").count() >= 1)
+
+            # ⑤-3 자유 입력(실시간 도로명 검색·토지 정보)과 여러 건 후보
+            page.goto(f"{base}/lookup.html")
+            page.wait_for_selector("#chips .chip")
+            check("⑤-3 대표 시연 칩이 맨 앞", page.locator("#chips .chip").first.get_attribute("data-addr") == "B1")
+            page.fill("#q", "서울특별시 강남구 테헤란로 427")
+            page.locator("#search-form button").click()
+            page.wait_for_selector("#result .land-card, #result .box.info", timeout=30000)
+            landc = page.locator("#result .land-card").first.inner_text() if page.locator("#result .land-card").count() else ""
+            check("⑤-3 자유 입력 → 토지 정보", "공시지가" in landc and "삼성동" in page.inner_text("#result"),
+                  landc.split("\n")[0][:30])
+            page.fill("#q", "강남구 도곡로")
+            page.locator("#search-form button").click()
+            page.wait_for_selector("#result .candidate", timeout=30000)
+            n_c = page.locator("#result .candidate").count()
+            page.locator("#result .candidate").first.click()
+            page.wait_for_selector("#result .land-card", timeout=30000)
+            check("⑤-3 여러 건 → 후보 고르기 → 조회", n_c >= 2 and "도곡동" in page.inner_text("#result"), f"후보 {n_c}개")
+            shot("09_lookup_free_input.png")
+
             # ⑥ 평가
             page.goto(f"{base}/eval.html")
             page.wait_for_function("!document.getElementById('eval-body').innerText.includes('불러오는 중')")
             ev = page.inner_text("#eval-body")
             check("⑥ 평가 화면 표시", ("평가 전" in ev) or ("지표" in ev), ev[:40].replace("\n", " "))
             if "지표" in ev:
-                check("⑥ 지표 카드 15개", page.locator(".metric").count() == 15, str(page.locator(".metric").count()))
+                n_m = page.locator(".metric").count()
+                check("⑥ 지표 카드 17개 이상 (M18은 --live 실행 때)", n_m >= 17, str(n_m))
             shot("07_eval.png")
 
             # 좁은 화면(390px)에서 가로 스크롤 없음

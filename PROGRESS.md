@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P0~P9 완료 (2026-10-26). 남은 일은 HUMAN_TODO의 사람 확인 항목
+현재 단계: P10 (feedback2.md) — L0~L5 완료, L6 배포 확인 중
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -139,3 +139,27 @@
 - 배포: fc6bc67 push → Vercel 배포 완료(health schema_version 2, build_at 2026-10-26T16:33) → `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 40/40
 - 건축물대장 반영 후 확인: `run_all` → `run_eval` **M1~M15 전부 통과, 오류 0건** (M15 9/9, 표제부 조회 7/9) / `pytest -q` 88 passed / `pipeline.check` P1 19/19·P2 21/21·P3 10/10 / `tests/ui_check.py` 로컬 41/41 (A4 건축물 요약 표 점검 추가)
 - 최종 배포: 030743a → Vercel 배포 완료(build_at 2026-10-26T17:05) → `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 41/41. 커밋된 파일에 키 값 없음 확인
+
+## P10 토지 중심 + 실시간 조회 (feedback2.md) — 진행 중 (2026-10-26)
+- [x] H1 `VWORLD_API_KEY` 동혁이 `.env`에 넣음(36자, 값 미출력) · H2 Vercel 환경변수 등록 완료(동혁)
+- [x] L0 `python -m pipeline.check_keys` 작성·실행 → 처음에는 국가중점 API 인증 실패로 멈춤 → 동혁이 활용 API 수정 → 재점검 통과
+  - 지오코더(getcoord parcel, 일원동 619) OK — 응답 `refined.structure.level4LC`에 PNU `1168011400106190000`이 있음(juso 대체 경로에 쓸 수 있음)
+  - 이미지 API(getmap, 일원동 619 중심) OK — PNG 312KB
+  - juso(테헤란로 427) errorCode 0, 1건
+  - 국가중점 3종(getLandUseAttr·getLandCharacteristics·getIndvdLandPriceAttr, 압구정동 527·일원동 619) 전부 `INCORRECT_KEY`("인증키 정보가 올바르지 않습니다"). domain 없음·https/http·호스트만·localhost·127.0.0.1 모두 같음. 2D 데이터 API(LP_PA_CBND_BUBUN)도 `INCORRECT_KEY`
+  - 저장 응답 `tests/fixtures/vworld/`·`tests/fixtures/juso/` (키 포함 여부 검사: 없음)
+  - → HUMAN_TODO 18
+  - 재점검(2026-10-26): 국가중점 3종 OK(토지이용계획 압구정동 527 18건·일원동 619 13건, 토지특성·공시지가 각 1건), 지오코더·이미지·juso OK. 응답 키 이름은 지시서 추정과 같음, 토지이용계획에 '관련 법률' 칸 없음. 결과 없는 지번은 `totalCount 0`(오류 아님)
+  - 저장 응답 추가: juso(여러 건·강남구 밖·0건·가짜 키 E0001), 브이월드(결과 없음·가짜 키·지오코더 527/없음·도로명 검색) — 키 포함 여부 검사(test_live_vworld)
+- [x] L1 `core/live/`: `http.py`(urllib GET 4초·재시도 1회, 메모리 캐시 1시간, .env 로더), `vworld.py`(토지 3종+지오코더+도로명 검색, land 블록, 결과 없음/불러오지 못함/키 없음 구분), `juso.py`(검색→PNU, E0001/E0014 예비 키, 실패 시 브이월드 검색 대체), `Live` 묶음·`PROPEDIA_LIVE=0`
+  - 브이월드 도로명 검색 결과 `id`가 PNU, 지오코더 `refined.structure.level4LC`가 PNU `[확인]` → juso 대체 경로
+- [x] L2 조회 흐름 ③ 실시간 검색·`ambiguous`·후보, `parcel.land`·`land_use_documented`, 좌표를 토지 정보로 교체(모든 주소 500m 판정), `dong.empty_note`, 화면 순서(이 땅 → 법정동 → 자치구 → 서울 전역 → 참고)·토지 정보 카드·후보 버튼·칩 묶음
+- [x] L3 D9(대청마을 모아타운 관리계획안 공람, ZIP 안 PDF 16쪽)·D10(대치동 506 개발행위허가 제한 연장) 수집·텍스트화·추출(D9 항목 3·사업 1·사실 9, D10 항목 1), 모아타운 8단계 템플릿(원 계획서 문장)·규칙 M1·`project_facts`·세부 상태/단계 메모, 사업 카드 빌드를 모든 문서로 일반화
+- [x] L4 지도 대조: `pipeline/daecheong_map.py` — D9 12쪽 결정도와 브이월드 연속지적도(1,058필지)를 FFT 상호상관으로 맞춤. 축척 막대(0.947m/px)로는 어긋나 배율을 넓혀 탐색 → 0.79m/px·회전 0°에서 북측 블록과 일치(대조 그림 확인, 고시의 1구역 629·2구역 626 일대도 경계 안). 경계 20m 안쪽 대지 257필지 중 서로 45m 이상 떨어진 16필지(경계까지 45~141m) → `seed/daecheong_map_reading.csv` → `map_reading`·`likely`·묶음 검수 1건(필지별 제외 가능)
+- [x] L5 시연 주소 B1(일원동 619)·B2(개포로120길 55 = 633-2 단독)·B3(일원동 677-4, 사업 중심 275m)·B4(대치동 506)·B5(율현동 122, 지목 전·자연녹지) — B6는 D11을 받지 않아 없음. `fetch_land` 28필지 전부 ok → `seed/land_cache.json`, 사업 중심 좌표 = 대표 지번 지오코더(527·619). `fetch_buildings` 28필지 재조회
+  - 좌표가 실제 값으로 바뀌어 A2(66m)·A4(293m)는 한양7차 '주변'이 됨 (정답셋도 규칙대로 갱신)
+  - 정답셋 초안: addresses(B1~B5), land.yaml(13필지), scope_labels(D9·D10), live_addresses.yaml(강남구 지상 건물 도로명 20건)
+  - 지표 M16 토지 정보 확보율, M17 토지 정보 정확도, M18(`--live`) 실시간 성공률·p95. M12에 모아타운 MT01 추가
+  - 금지어 규칙(§9-6) 때문에 칩 묶음 "추천 시연" 대신 "대표 시연". 브이월드 원 자료 값(예: '비행안전제2구역')은 근거 문장처럼 금지어 검사에서 뺌
+- 확인: `pytest -q` 121 passed(네트워크 없음) / `run_eval` M1~M17 통과·오류 0 / `run_eval --live` M18 20/20 · p95 1,084ms / `pipeline.check` P1·P2·P3 통과 / `tests/ui_check.py` 로컬 58/58 / G3 지번 5건(세곡·역삼·논현·삼성·개포) 토지 정보 표시·고시 없는 동 안내
+- [ ] L6 문서(README·DEMO·agents.md) 갱신 완료 → push → Vercel 배포본에서 G1~G3·ui_check 확인

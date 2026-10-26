@@ -73,14 +73,23 @@ def load(con) -> dict:
              float(r["lat"]) if r["lat"] else None, float(r["lon"]) if r["lon"] else None,
              none_if_blank(r["coord_source"]), r["aliases"] or "[]", int(r["in_scope"])))
 
-    tpl = yaml.safe_load((SEED / "stage_templates.yaml").read_text(encoding="utf-8"))
-    for s in tpl["stages"]:
-        con.execute(
-            """INSERT INTO stage_templates(project_type, seq, sub_stage_code, common_stage, title, issuer, what_happens,
-               owner_actions, legal_basis, source, reviewed_by, reviewed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (tpl["project_type"], s["seq"], s["code"], s.get("common_stage"), s["title"], s.get("issuer"),
-             s.get("what_happens"), s.get("owner_actions"), s.get("legal_basis"), tpl["source"],
-             tpl.get("reviewed_by"), tpl.get("reviewed_at")))
+    # 사업 유형마다 YAML 문서 1개 (재건축, P10 모아타운)
+    for tpl in yaml.safe_load_all((SEED / "stage_templates.yaml").read_text(encoding="utf-8")):
+        for s in tpl["stages"]:
+            con.execute(
+                """INSERT INTO stage_templates(project_type, seq, sub_stage_code, common_stage, title, issuer,
+                   what_happens, owner_actions, legal_basis, source, reviewed_by, reviewed_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (tpl["project_type"], s["seq"], s["code"], s.get("common_stage"), s["title"], s.get("issuer"),
+                 s.get("what_happens"), s.get("owner_actions"), s.get("legal_basis"), tpl["source"],
+                 tpl.get("reviewed_by"), tpl.get("reviewed_at")))
+
+    # 브이월드 토지 정보 빌드 캐시 (feedback2.md §3-3). fetch_land를 아직 돌리지 않았으면 비어 있다
+    lpath = SEED / "land_cache.json"
+    if lpath.exists():
+        for land in json.loads(lpath.read_text(encoding="utf-8")):
+            con.execute("INSERT INTO land_cache(pnu, payload, fetched_at) VALUES (?,?,?)",
+                        (land["pnu"], json.dumps(land, ensure_ascii=False), land["fetched_at"]))
 
     # 건축물대장 요약 (feedback.md §5-1). fetch_buildings를 아직 돌리지 않았으면 비어 있다
     bpath = SEED / "buildings.json"
@@ -99,10 +108,11 @@ def main() -> None:
     n_addr = con.execute("SELECT count(*) FROM demo_addresses").fetchone()[0]
     n_tpl = con.execute("SELECT count(*) FROM stage_templates").fetchone()[0]
     n_bld = con.execute("SELECT count(*) FROM buildings").fetchone()[0]
+    n_land = con.execute("SELECT count(*) FROM land_cache").fetchone()[0]
     st = dict(con.execute("SELECT doc_id, text_status FROM documents").fetchall())
     con.close()
     log(f"load_seed: 문서 {len(counts)}건 (쪽 {counts}), text_status {st}, 시연 주소 {n_addr}건, "
-        f"단계 템플릿 {n_tpl}개, 건축물대장 요약 {n_bld}건")
+        f"단계 템플릿 {n_tpl}개, 건축물대장 요약 {n_bld}건, 토지 정보 캐시 {n_land}건")
 
 
 if __name__ == "__main__":

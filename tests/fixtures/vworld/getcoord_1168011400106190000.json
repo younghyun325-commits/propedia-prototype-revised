@@ -1,0 +1,37 @@
+{
+ "response": {
+  "service": {
+   "name": "address",
+   "version": "2.0",
+   "operation": "getcoord",
+   "time": "14(ms)"
+  },
+  "status": "OK",
+  "input": {
+   "type": "parcel",
+   "address": "서울특별시 강남구 일원동 619"
+  },
+  "refined": {
+   "text": "서울특별시 강남구 일원동 619",
+   "structure": {
+    "level0": "대한민국",
+    "level1": "서울특별시",
+    "level2": "강남구",
+    "level3": "",
+    "level4L": "일원동",
+    "level4LC": "1168011400106190000",
+    "level4A": "일원1동",
+    "level4AC": "1168073000",
+    "level5": "619",
+    "detail": ""
+   }
+  },
+  "result": {
+   "crs": "EPSG:4326",
+   "point": {
+    "x": "127.081389385546",
+    "y": "37.49401251826346"
+   }
+  }
+ }
+}

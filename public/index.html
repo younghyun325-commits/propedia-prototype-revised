@@ -9,26 +9,27 @@
 </head>
 <body>
 <header id="site-header"></header>
-<div class="band">강남구 · 공개 문서 8종으로 만든 시연용 프리토타입입니다.</div>
+<div class="band">강남구 · 공개 고시·계획 문서 10종과 브이월드 토지 정보로 만든 시연용 프리토타입입니다.</div>
 <main>
-  <h1>주소 하나로, 그 땅에 걸린 공공 문서와 사업 진행상황을</h1>
+  <h1>땅 주소 하나로, 그 땅의 토지 정보와 걸린 공공 문서·사업 진행상황을</h1>
   <p class="lead">
-    서울 주소 하나를 넣으면 그 땅에 해당하는 고시·공고·계획 문서를 <b>서울 전역 · 자치구 · 법정동 · 필지</b>의 4개 층으로 모아 한 번에 보여줍니다.
-    그 땅이 재건축 같은 정비사업 구역에 걸려 있으면 지금 단계, 다음 단계, 의견 제출 기한을 기준일과 원문 쪽을 붙여 보여줍니다.
-    이 시연판은 강남구 공개 문서 8종(정비계획 공람 공고, 계획 3종, 토지거래허가구역·조정대상지역 지정 공고 3종, 국토교통부 보도참고자료)으로 만들었습니다.
+    강남구 도로명주소나 지번 주소를 넣으면 먼저 <b>그 땅의 토지 정보</b>(지목·면적·용도지역·지역지구·공시지가)를 보여주고,
+    그 땅에 해당하는 고시·공고·계획 문서를 <b>필지 · 법정동 · 자치구 · 서울 전역</b>의 4개 층으로 모아 함께 보여줍니다.
+    그 땅이 모아타운·재건축 같은 정비사업 구역에 걸려 있으면 지금 단계, 의견 제출 기한을 기준일과 원문 쪽을 붙여 보여줍니다.
+    이 시연판은 강남구 고시·계획 문서 10종과 브이월드 토지 정보(실시간)로 만들었습니다.
   </p>
 
   <h2>시연 순서</h2>
   <div class="grid cols-5" id="steps">
     <div class="card step-card">
       <span class="step-num">1</span><h3>주소 조회</h3>
-      <p>압구정동 527을 조회해 4개 층과 사업 카드를 봅니다</p>
-      <a class="btn primary" href="lookup.html?addr=A1">주소 조회 열기</a>
+      <p>대청마을(일원동 619)을 조회해 토지 정보와 모아타운 사업 카드를 봅니다</p>
+      <a class="btn primary" href="lookup.html?addr=B1">주소 조회 열기</a>
     </div>
     <div class="card step-card">
       <span class="step-num">2</span><h3>원문과 근거</h3>
       <p>결과의 근거 문장이 원문 어느 쪽에서 왔는지 확인합니다</p>
-      <a class="btn" href="docs.html?doc=D1">문서 DB 열기</a>
+      <a class="btn" href="docs.html?doc=D9">문서 DB 열기</a>
     </div>
     <div class="card step-card">
       <span class="step-num">3</span><h3>문서 투입 순서</h3>
@@ -37,7 +38,7 @@
     </div>
     <div class="card step-card">
       <span class="step-num">4</span><h3>사람 검수</h3>
-      <p>애매한 판정을 사람이 확정하면 결과가 바뀝니다</p>
+      <p>지도 대조로 고른 후보 필지를 사람이 확정하면 결과가 바뀝니다</p>
       <a class="btn" href="review.html">검수 열기</a>
     </div>
     <div class="card step-card">
@@ -77,6 +78,8 @@
     D6: '서울 전역',
     D7: '서울 전역',
     D8: '서울 전역 (보도참고자료 현황표)',
+    D9: '법정동 (일원동) · 필지 · 모아타운 사업 카드',
+    D10: '법정동 (대치동)',
   };
   (async () => {
     await initShell('index');
@@ -90,7 +93,12 @@
           <td>${esc(LAYERS[d.doc_id] || '')}</td>
           <td class="mono">${esc(d.page_ranges)}</td>
           <td>${fmtDate(d.published_at)}</td>
-        </tr>`).join('');
+        </tr>`).join('') + `
+        <tr>
+          <td><b>토지</b></td>
+          <td>브이월드 토지 정보 (실시간)<div class="small muted">국토교통부 공간정보 오픈플랫폼: 토지이용계획·토지특성·개별공시지가·지오코더</div></td>
+          <td>필지 (토지 정보 카드)</td><td>—</td><td>조회 시점</td>
+        </tr>`;
       const h = await health();
       el('coverage-note').textContent = h.coverage_note || '';
     } catch (e) { /* 오류 상자 표시됨 */ }

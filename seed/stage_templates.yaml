@@ -17,3 +17,21 @@ stages:
   - {seq: 11, code: RB11, common_stage: "S8",    title: "착공·일반분양",           issuer: "자치구·건축HUB",           owner_actions: null}
   - {seq: 12, code: RB12, common_stage: "S8",    title: "준공인가·이전고시",       issuer: "자치구",                   owner_actions: "소유권 이전 등기 확인"}
   - {seq: 13, code: RB13, common_stage: "S8",    title: "청산·해산",               issuer: "조합",                     owner_actions: "청산금"}
+---
+# P10 (feedback2.md §5-3): 원 계획서 문장 그대로 — "가로주택·소규모재건축(모아타운 포함)은 '관리계획 고시(해당 시)
+# → 조합설립인가 → 건축심의 → 사업시행계획인가(관리처분계획 포함) → 이주·철거 → 착공 → 준공·이전고시 → 청산'의
+# 8단계로 둔다." 원 계획서에 없는 칸(issuer·owner_actions 등)은 null. Claude Code가 문구를 새로 쓰지 않는다.
+project_type: moa_town
+project_type_label: 모아타운(소규모주택정비)
+source: "Propedia 서울 MVP 개발 계획서 v1.0 「세부 단계 템플릿」 가로주택·소규모재건축(모아타운 포함) 8단계 문장"
+reviewed_by: null
+reviewed_at: null
+stages:
+  - {seq: 1, code: MT01, title: "관리계획 고시",                     issuer: null, owner_actions: null}
+  - {seq: 2, code: MT02, title: "조합설립인가",                       issuer: null, owner_actions: null}
+  - {seq: 3, code: MT03, title: "건축심의",                           issuer: null, owner_actions: null}
+  - {seq: 4, code: MT04, title: "사업시행계획인가(관리처분계획 포함)", issuer: null, owner_actions: null}
+  - {seq: 5, code: MT05, title: "이주·철거",                          issuer: null, owner_actions: null}
+  - {seq: 6, code: MT06, title: "착공",                               issuer: null, owner_actions: null}
+  - {seq: 7, code: MT07, title: "준공·이전고시",                      issuer: null, owner_actions: null}
+  - {seq: 8, code: MT08, title: "청산",                               issuer: null, owner_actions: null}

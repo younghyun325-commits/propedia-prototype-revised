@@ -16,7 +16,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BANNED = ["예상", "예정", "전망", "지연", "늦", "위험", "안전", "유망", "호재", "추천", "수익", "투자", "확실", "보장",
           "반드시", "가능성 높"]
 ALLOW = ["정비예정구역"]
-SKIP_KEYS = {"evidence", "how_to_submit", "places", "source_note", "payload", "text", "evidences", "query"}
+SKIP_KEYS = {"evidence", "how_to_submit", "places", "source_note", "payload", "text", "evidences", "query",
+             # 브이월드 원 자료 값 (예: '비행안전제2구역') — 원문 인용과 같이 검사하지 않는다
+             "zones", "jimok", "land_use_zone", "land_use_zone2", "use_situation", "road_side", "terrain"}
 
 
 def hits(text: str) -> list[str]:

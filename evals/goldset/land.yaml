@@ -1,0 +1,20 @@
+draft: true
+author: "claude-code (초안)"
+note: >
+  pipeline/fetch_land(브이월드, 2026-10-26 조회) 결과로 채운 초안. 동혁이 토지이음(eum.go.kr) 토지이용계획열람 화면과
+  대조해 확정한다 (지목·면적·용도지역·개별공시지가). 공시지가는 원/㎡·기준연도 그대로.
+written_at: "2026-10-26"
+parcels:
+  - {addr_id: A1, pnu: "1168011000105270000", jimok: "대", area_m2: 7774.2, land_use_zone: "제3종일반주거지역", official_price: {won_per_m2: 27600000, year: 2026}}
+  - {addr_id: A2, pnu: "1168011000105280000", jimok: "대", area_m2: 8669.5, land_use_zone: "제3종일반주거지역", official_price: {won_per_m2: 27600000, year: 2026}}
+  - {addr_id: A4, pnu: "1168011000104940000", jimok: "대", area_m2: 10159.1, land_use_zone: "제3종일반주거지역", official_price: {won_per_m2: 50940000, year: 2026}}
+  - {addr_id: A5, pnu: "1168011000104260000", jimok: "대", area_m2: 43128.6, land_use_zone: "제3종일반주거지역", official_price: {won_per_m2: 24460000, year: 2026}}
+  - {addr_id: A6, pnu: "1168010400101340038", jimok: "대", area_m2: 24393.1, land_use_zone: "제3종일반주거지역", official_price: {won_per_m2: 24370000, year: 2026}}
+  - {addr_id: A7, pnu: "1168010700106210000", jimok: "학교용지", area_m2: 13833.1, land_use_zone: "제2종일반주거지역", official_price: {won_per_m2: 15310000, year: 2026}}
+  - {addr_id: A8, pnu: "1168010100107370000", jimok: "대", area_m2: 13156.7, land_use_zone: "일반상업지역", official_price: {won_per_m2: 71160000, year: 2026}}
+  - {addr_id: A9, pnu: "1168010600103160000", jimok: "대", area_m2: 239225.8, land_use_zone: "제3종일반주거지역", official_price: {won_per_m2: 24420000, year: 2026}}
+  - {addr_id: B1, pnu: "1168011400106190000", jimok: "대", area_m2: 377.1, land_use_zone: "제2종일반주거지역", official_price: {won_per_m2: 11080000, year: 2026}}
+  - {addr_id: B2, pnu: "1168011400106330002", jimok: "대", area_m2: 192.1, land_use_zone: "제1종일반주거지역", official_price: {won_per_m2: 7752000, year: 2026}}
+  - {addr_id: B3, pnu: "1168011400106770004", jimok: "대", area_m2: 238.2, land_use_zone: "제2종일반주거지역", official_price: {won_per_m2: 10660000, year: 2026}}
+  - {addr_id: B4, pnu: "1168010600105060000", jimok: "대", area_m2: 78636.2, land_use_zone: "제3종일반주거지역", official_price: {won_per_m2: 28050000, year: 2026}}
+  - {addr_id: B5, pnu: "1168011300101220000", jimok: "전", area_m2: 10033, land_use_zone: "자연녹지지역", official_price: {won_per_m2: 4871000, year: 2026}}

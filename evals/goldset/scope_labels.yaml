@@ -7,6 +7,7 @@ note: >
   P9(2026-10-26): D5~D8 범위·효력 기간(공고문 날짜 그대로)과 모든 항목의 tier 라벨 추가. tier는 feedback.md §3-1 기준
   (a 효력 고시 · b 직접 쓰이는 수치 기준 · c 구·권역 주거지 정비 방향)으로 쪽 텍스트를 다시 읽고 붙였다.
   rank는 같은 tier_class 안 순서. 추출자와 같은 작성자 — 수치가 낙관적일 수 있음.
+  P10: D9(대청마을 모아타운 관리계획안 — 공람 마친 결정(안) a, 사업시행구역 밖 건축 기준 b), D10(개발행위허가 제한 a) 추가.
 written_at: "2026-10-26"
 labels:
   D1-01: {scope_type: BJD, scope_ref: ["1168011000"], tier: applies, tier_class: a, rank: 2}
@@ -46,3 +47,8 @@ labels:
   D6-01: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: a, rank: 1, effective_from: "2025-10-20", effective_to: "2026-12-31"}
   D7-01: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: a, rank: 2, effective_from: "2025-10-16", effective_to: null}
   D8-01: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: a, rank: 3}
+  D9-01: {scope_type: BJD, scope_ref: ["1168011400"], tier: applies, tier_class: a, rank: 1}
+  D9-02: {scope_type: BJD, scope_ref: ["1168011400"], tier: applies, tier_class: a, rank: 2}
+  D9-03: {scope_type: BJD, scope_ref: ["1168011400"], tier: applies, tier_class: b, rank: 1}
+  D10-01: {scope_type: BJD, scope_ref: ["1168010600"], tier: applies, tier_class: a, rank: 1, effective_from: "2026-04-01", effective_to: "2028-04-01"}
+

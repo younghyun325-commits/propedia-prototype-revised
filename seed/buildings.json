@@ -71,6 +71,31 @@
   "note": null
  },
  {
+  "pnu": "1168010600105060000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 14,
+  "bld_names": [
+   "선경아파트9동",
+   "선경아파트7동",
+   "선경아파트1동"
+  ],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "1983-12-12",
+  "max_grnd_flr": 15,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 1033,
+  "total_area": 152146.6,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": "지구단위계획구역"
+  },
+  "note": null
+ },
+ {
   "pnu": "1168010700106210000",
   "found": true,
   "fetched_at": "2026-10-26",
@@ -168,6 +193,398 @@
    "jiyuk": "일반주거지역",
    "jigu": "아파트지구",
    "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011300101220000",
+  "found": false,
+  "note": "이 지번에 건축물대장 표제부가 조회되지 않았습니다",
+  "fetched_at": "2026-10-26"
+ },
+ {
+  "pnu": "1168011400106190000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "교육연구시설",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "1989-01-14",
+  "max_grnd_flr": 5,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 1214.22,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106190002",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "교육연구시설",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "1988-12-06",
+  "max_grnd_flr": 5,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 1128.06,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106230000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [
+   "닥터비젼빌딩"
+  ],
+  "main_purpose": "제2종근린생활시설",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "2023-06-22",
+  "max_grnd_flr": 4,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 397.2,
+  "zoning": {
+   "jiyuk": "제1종일반주거지역",
+   "jigu": null,
+   "guyuk": "지구단위계획구역"
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106250000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "단독주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1987-07-29",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 249.66,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106280001",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [
+   "다세대주택(6세대)"
+  ],
+  "main_purpose": "공동주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1987-10-28",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 6,
+  "total_area": 289.62,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106290002",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [
+   "다세대주택"
+  ],
+  "main_purpose": "공동주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1986-11-04",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 6,
+  "total_area": 281.82,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106300004",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "2021-01-19",
+  "max_grnd_flr": 4,
+  "max_ugrnd_flr": 0,
+  "total_hhld": 10,
+  "total_area": 285.19,
+  "zoning": {
+   "jiyuk": "도시지역",
+   "jigu": "대공방어협조구역",
+   "guyuk": "지구단위계획구역"
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106310001",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "공동주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1987-07-20",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 6,
+  "total_area": 299.22,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106310006",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "단독주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1987-06-08",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 249,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106320003",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "단독주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1986-12-10",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 248.07,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106330002",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "단독주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1986-10-06",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 249.9,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106340006",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "단독주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1986-08-05",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 256.64,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106370000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "2006-03-25",
+  "max_grnd_flr": 3,
+  "max_ugrnd_flr": 0,
+  "total_hhld": 3,
+  "total_area": 281.6,
+  "zoning": {
+   "jiyuk": "제1종일반주거지역",
+   "jigu": null,
+   "guyuk": "제1종지구단위계획구역"
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106380014",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "단독주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1985-03-15",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 259.65,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106400007",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [
+   "낙원하우스"
+  ],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "2017-11-21",
+  "max_grnd_flr": 6,
+  "max_ugrnd_flr": 0,
+  "total_hhld": 16,
+  "total_area": 789.06,
+  "zoning": {
+   "jiyuk": "제2종일반주거지역",
+   "jigu": null,
+   "guyuk": "지구단위계획구역"
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106400012",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "공동주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1986-11-07",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 6,
+  "total_area": 287.48,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106410010",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "단독주택",
+  "structure": "벽돌구조",
+  "use_apr_day": "1987-08-31",
+  "max_grnd_flr": 2,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 265.02,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011400106770004",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "2019-09-18",
+  "max_grnd_flr": 6,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 9,
+  "total_area": 495.71,
+  "zoning": {
+   "jiyuk": "제2종일반주거지역",
+   "jigu": "대공방어협조구역",
+   "guyuk": "지구단위계획구역"
   },
   "note": null
  }

@@ -15,10 +15,14 @@ METHOD_LABELS = {"text": "텍스트", "vision-claude": "전사", "image-only": "
 REVIEW_TYPE_LABELS = {
     "parcel_inclusion": "포함 판정", "evidence_mismatch": "근거 불일치", "vision_item": "이미지 전사 항목",
     "scope_uncertain": "적용 범위 판단", "field_low_confidence": "낮은 신뢰도 필드", "stage_uncertain": "단계 판정",
+    "parcel_group": "지도 대조 후보",
 }
 EVENT_LABELS = {"new_project": "새 사업 카드", "stage_change": "단계 변경", "deadline_added": "기한 추가",
                 "doc_attached": "문서 연결"}
-DOC_KIND_LABELS = {"gongram": "공람·공고", "plan": "계획", "designation": "지정 공고", "press": "보도참고자료"}
+DOC_KIND_LABELS = {"gongram": "공람·공고", "plan": "계획", "designation": "지정 공고", "press": "보도참고자료",
+                   "restriction": "제한 고시"}
+# 시연 주소 칩 묶음 (feedback2.md §6): B1~B3 대표 시연 → B4~ 토지·고시 사례 → A 아파트 재건축 사례(이전 시연)
+ADDR_GROUPS = [("대표 시연", ("B1", "B2", "B3")), ("토지·고시 사례", ("B4", "B5", "B6")), ("아파트 재건축 사례", None)]
 TIER_LABELS = {"applies": "적용", "background": "배경"}
 MIN_CHARS = 30
 
@@ -126,7 +130,8 @@ def document_detail(con, doc_id: str) -> dict | None:
                             WHERE pd.document_id=?""", (d["id"],)):
         t = con.execute("SELECT title FROM stage_templates WHERE project_type=? AND sub_stage_code=?",
                         (p["project_type"], p["sub_stage_code"])).fetchone()
-        projects.append({"project_id": p["id"], "name": p["name"], "aliases": loads(p["aliases"], []),
+        projects.append({"project_id": p["id"], "project_key": p["project_key"], "name": p["name"],
+                         "aliases": loads(p["aliases"], []),
                          "stage": {"code": p["sub_stage_code"], "title": t["title"] if t else None},
                          "stage_rule": p["stage_rule"], "location_text": p["location_text"],
                          "progress_url": f"/api/v1/projects/{p['id']}/progress"})
@@ -187,7 +192,7 @@ def list_events(con) -> list[dict]:
 
 def list_review_queue(con) -> list[dict]:
     rows = con.execute("SELECT * FROM review_queue").fetchall()
-    rows = sorted(rows, key=lambda r: (r["item_type"] != "parcel_inclusion", r["id"]))
+    rows = sorted(rows, key=lambda r: (r["item_type"] not in ("parcel_inclusion", "parcel_group"), r["id"]))
     out = []
     for r in rows:
         d = con.execute("SELECT doc_id, short_title FROM documents WHERE id=?", (r["document_id"],)).fetchone()
@@ -208,8 +213,17 @@ def eval_report(con) -> dict:
     return rep
 
 
+def _addr_group(addr_id: str) -> tuple[int, str]:
+    for i, (name, ids) in enumerate(ADDR_GROUPS):
+        if ids is None or addr_id in ids:
+            return i, name
+    return len(ADDR_GROUPS), ""
+
+
 def demo_addresses(con) -> list[dict]:
+    rows = con.execute("SELECT * FROM demo_addresses").fetchall()
+    rows = sorted(rows, key=lambda r: (_addr_group(r["addr_id"])[0], int(r["addr_id"][1:])))
     return [{"addr_id": r["addr_id"], "label": r["label"], "input_text": r["input_text"],
              "road_address": r["road_address"], "jibun_address": r["jibun_address"], "in_scope": bool(r["in_scope"]),
-             "available": bool(r["input_text"])}
-            for r in con.execute("SELECT * FROM demo_addresses ORDER BY CAST(substr(addr_id, 2) AS INTEGER)")]
+             "available": bool(r["input_text"]), "group": _addr_group(r["addr_id"])[1]}
+            for r in rows]

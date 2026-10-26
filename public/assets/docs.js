@@ -48,7 +48,9 @@ function projectsBox(projects) {
     ${projects.map((p) => `<div class="item"><div class="row"><b>${esc(p.name)}</b>
       ${badge(`${p.stage.code} ${p.stage.title}`, 'info')}<span class="small muted">단계 규칙 ${esc(p.stage_rule)} (문서 제목 기준)</span></div>
       <div class="small">${esc(p.location_text || '')}</div>
-      <div class="actions"><a class="btn small primary" href="lookup.html?addr=A1">주소 조회에서 보기 (압구정동 527)</a></div></div>`).join('')}`;
+      <div class="actions">${p.project_key === 'ilwon-daecheong-north-moatown'
+        ? '<a class="btn small primary" href="lookup.html?addr=B1">주소 조회에서 보기 (대청마을 일원동 619)</a>'
+        : '<a class="btn small primary" href="lookup.html?addr=A1">주소 조회에서 보기 (압구정동 527)</a>'}</div></div>`).join('')}`;
 }
 
 function itemsList(items, title) {

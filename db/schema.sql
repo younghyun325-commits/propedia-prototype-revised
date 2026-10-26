@@ -1,7 +1,7 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
--- keys: build_at(ISO), as_of(가장 최근 문서 날짜), schema_version('2'), eval_report(JSON), coverage_note
+-- keys: build_at(ISO), as_of(가장 최근 문서 날짜), schema_version('3'), eval_report(JSON), coverage_note
 
 CREATE TABLE sources (
   id TEXT PRIMARY KEY,                 -- 'gangnam-gubo' | 'seoul-urban-portal' | 'seoul-citybuild' | 'gangnam-gongo' | 'sdm-gongji' | 'law-go-kr' | 'molit-press'
@@ -16,7 +16,7 @@ CREATE TABLE documents (
   source_id TEXT NOT NULL REFERENCES sources(id),
   title TEXT NOT NULL,
   short_title TEXT NOT NULL,
-  doc_kind TEXT NOT NULL,              -- 'gongram' | 'plan' | 'designation' | 'press'
+  doc_kind TEXT NOT NULL,              -- 'gongram' | 'plan' | 'designation' | 'press' | 'restriction'
   issuer TEXT,
   gosi_no TEXT,
   published_at TEXT,
@@ -117,13 +117,23 @@ CREATE TABLE projects (
   location_text TEXT,                  -- '강남구 압구정동 527번지 일대'
   land_use TEXT,                       -- 문서 기재 용도지역
   land_use_page INTEGER,
-  lat REAL, lon REAL, coord_source TEXT
+  lat REAL, lon REAL, coord_source TEXT,
+  sub_status TEXT,                     -- P10: 단계 안 세부 상태 (stage_rules의 sub_status, 예: '관리계획(안) 주민공람')
+  stage_note TEXT,                     -- P10: 단계 메모 (예: 공람 뒤 승인 고시를 확인하지 못함)
+  position_note TEXT                   -- P10: 단계 위치 보조 문구 (예: '관리계획 수립 중')
+);
+
+CREATE TABLE project_facts (           -- P10: 사업 카드의 '고시에 적힌 수치' (근거 문장·쪽과 함께)
+  project_id INTEGER NOT NULL REFERENCES projects(id),
+  seq INTEGER NOT NULL, label TEXT NOT NULL, value TEXT, unit TEXT,
+  evidence TEXT NOT NULL, evidence_ok INTEGER NOT NULL, source_doc_id INTEGER, pdf_page INTEGER,
+  PRIMARY KEY (project_id, seq)
 );
 
 CREATE TABLE project_parcels (
   project_id INTEGER NOT NULL REFERENCES projects(id),
   pnu TEXT NOT NULL,
-  basis TEXT NOT NULL,                 -- 'representative_only' | 'jibun_table' | 'manual_review'
+  basis TEXT NOT NULL,                 -- 'representative_only' | 'jibun_table' | 'manual_review' | 'map_reading'(P10)
   verified INTEGER NOT NULL DEFAULT 0,
   source_doc_id INTEGER REFERENCES documents(id),
   pdf_page INTEGER, evidence TEXT,
@@ -207,5 +217,11 @@ CREATE TABLE bjd_codes (
 CREATE TABLE buildings (               -- P9 건축HUB 건축물대장 표제부 요약 (pipeline/fetch_buildings.py → seed/buildings.json)
   pnu TEXT PRIMARY KEY,
   payload TEXT NOT NULL,               -- JSON 요약 (feedback.md §5-1)
+  fetched_at TEXT NOT NULL
+);
+
+CREATE TABLE land_cache (              -- P10 브이월드 토지 정보 빌드 캐시 (pipeline/fetch_land.py → seed/land_cache.json)
+  pnu TEXT PRIMARY KEY,
+  payload TEXT NOT NULL,               -- JSON land 블록 (feedback2.md §3-2)
   fetched_at TEXT NOT NULL
 );

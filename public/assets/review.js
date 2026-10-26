@@ -9,7 +9,21 @@ const CURRENT_LABELS = {
   tier: '층 분류',
 };
 const TIER_TEXT = { applies: '적용 (4개 층에 표시)', background: '배경 (참고·문서 DB에만)' };
-const INCLUSION_TEXT = { possible: '포함될 수 있음', included: '포함' };
+const INCLUSION_TEXT = { possible: '포함될 수 있음', included: '포함', likely: '포함된 것으로 보임' };
+
+/* 지도 대조 후보 묶음: 체크한 필지만 승인, 체크를 뗀 필지는 반려 (feedback2.md §5-4) */
+function parcelList(q) {
+  const prev = decisionFor(q.id);
+  const excl = new Set((prev && prev.edits && prev.edits.exclude_pnus) || []);
+  const rows = (q.proposed.current.parcels || []).map((p) => `<tr>
+      <td><input type="checkbox" class="pg" value="${esc(p.pnu)}" ${excl.has(p.pnu) ? '' : 'checked'}></td>
+      <td>${esc(p.jibun)}</td><td class="mono small">${esc(p.pnu)}</td><td class="small">${esc(p.reason)}</td>
+      <td>${p.confidence}</td><td class="small">${esc(p.checked_by || '미확인')}</td></tr>`).join('');
+  return `<h3 style="margin-top:12px">후보 필지 ${(q.proposed.current.parcels || []).length}개</h3>
+    <p class="small muted">체크를 떼고 [승인]을 누르면 그 필지는 반려되고 나머지만 '포함'이 됩니다.</p>
+    <div class="table-wrap"><table><thead><tr><th></th><th>지번</th><th>PNU</th><th>고른 이유</th><th>신뢰도</th><th>확인</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
 const SCOPE_TYPES = ['SIDO', 'SGG', 'SAENGHWAL', 'BJD', 'PARCEL'];
 let queue = [];
 let selectedId = null;
@@ -23,15 +37,16 @@ function statusBadge(id) {
 
 function renderList() {
   el('queue-body').innerHTML = queue.map((q) => `<tr class="clickable ${q.id === selectedId ? 'selected' : ''}" data-id="${q.id}">
-      <td>${q.id}</td><td>${badge(q.item_type_label, q.item_type === 'parcel_inclusion' ? 'warn' : 'muted')}</td>
+      <td>${q.id}</td><td>${badge(q.item_type_label, q.item_type.startsWith('parcel_') ? 'warn' : 'muted')}</td>
       <td>${esc(q.title)}</td><td class="small">${esc(q.reason)}</td><td>${statusBadge(q.id)}</td></tr>`).join('');
 }
 
 function currentTable(cur) {
-  const rows = Object.entries(cur || {}).filter(([k]) => !['evidence', 'pdf_page'].includes(k));
+  const rows = Object.entries(cur || {}).filter(([k]) => !['evidence', 'pdf_page', 'parcels'].includes(k));
   return `<table>${rows.map(([k, v]) => {
     let val = Array.isArray(v) ? v.join(', ') : v;
     if (k === 'inclusion') val = INCLUSION_TEXT[v] || v;
+    if (k === 'basis' && v === 'map_reading') val = '지도 대조 후보 (map_reading)';
     if (k === 'tier') val = TIER_TEXT[v] || v;
     if (k === 'basis' && v === 'representative_only') val = '대표 지번만 있음 (representative_only)';
     return `<tr><th>${esc(CURRENT_LABELS[k] || k)}</th><td>${esc(val)}</td></tr>`;
@@ -67,7 +82,7 @@ function renderDetail() {
   if (!q) { el('detail').innerHTML = '<p class="muted">목록에서 검수할 항목을 고르세요.</p>'; return; }
   const cur = q.proposed.current || {};
   const options = q.proposed.options || ['approve', 'reject'];
-  const editable = (q.proposed.editable_fields || []).length > 0;
+  const editable = (q.proposed.editable_fields || []).some((f) => ['summary', 'scope_type', 'scope_ref', 'tier'].includes(f));
   const ev = cur.evidence;
   el('detail').innerHTML = `<div class="card">
     <div class="row"><h2 style="margin:0">#${q.id} ${esc(q.title)}</h2>${badge(q.item_type_label, 'warn')}${statusBadge(q.id)}</div>
@@ -84,9 +99,10 @@ function renderDetail() {
           ${options.includes('reject') ? '<button class="btn warn" type="button" data-act="reject">반려</button>' : ''}
           ${decisionFor(q.id) ? '<button class="btn small" type="button" data-act="undo">이 결정 취소</button>' : ''}
         </div>
-        ${q.item_type === 'parcel_inclusion'
+        ${q.item_type === 'parcel_inclusion' || q.item_type === 'parcel_group'
           ? '<p class="small muted">승인하면 이 필지는 "포함"(근거: 사람 검수), 반려하면 포함 목록에서 빠집니다.</p>'
           : '<p class="small muted">승인하면 "검수 필요" 표시가 사라지고, 반려하면 조회 결과에서 빠집니다.</p>'}
+        ${q.item_type === 'parcel_group' ? parcelList(q) : ''}
         ${editable && options.includes('edit') ? editForm(q) : ''}
       </div>
     </div>
@@ -101,6 +117,9 @@ function decide(action) {
     el('decided').innerHTML = '<div class="box info">결정을 취소했습니다.</div>';
   } else {
     const d = { review_id: q.id, action };
+    if (q.item_type === 'parcel_group' && action === 'approve') {
+      d.edits = { exclude_pnus: [...document.querySelectorAll('input.pg')].filter((c) => !c.checked).map((c) => c.value) };
+    }
     if (action === 'edit') {
       const refs = el('edit-scope-ref').value.split(',').map((s) => s.trim()).filter(Boolean);
       d.edits = { summary: el('edit-summary').value.trim(), scope_type: el('edit-scope-type').value, scope_ref: refs };
@@ -108,7 +127,9 @@ function decide(action) {
       if (!d.edits.summary || !refs.length) { toast('요약과 범위 값을 채워 주세요'); return; }
     }
     upsertDecision(d);
-    const link = '<a class="btn small primary" href="lookup.html?addr=A1">주소 조회에서 확인 (압구정동 527)</a>';
+    const link = q.item_type === 'parcel_group' || (q.title || '').includes('대청마을')
+      ? '<a class="btn small primary" href="lookup.html?addr=B2">주소 조회에서 확인 (대청마을 단독주택)</a>'
+      : '<a class="btn small primary" href="lookup.html?addr=A1">주소 조회에서 확인 (압구정동 527)</a>';
     el('decided').innerHTML = `<div class="box ok row"><span>결정이 저장되었습니다. 주소 조회 화면에서 확인하세요.</span>${link}</div>`;
   }
   renderDecisionStatus();

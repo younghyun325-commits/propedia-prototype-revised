@@ -6,3 +6,6 @@
 - {id: R5, project_type: rebuild, pattern: "사업시행계획.*인가", code: RB07}
 - {id: R6, project_type: rebuild, pattern: "관리처분계획.*인가", code: RB09}
 - {id: R7, project_type: rebuild, pattern: "준공인가|이전고시", code: RB12}
+# P10 모아타운 (feedback2.md §5-3). sub_status·position_note·stage_note는 화면 표시용 사실 문구 (공고일 기준)
+- {id: M1, project_type: moa_town, pattern: "관리계획.*수립\\(안\\).*공람", code: MT01, sub_status: "관리계획(안) 주민공람",
+   position_note: "관리계획 수립 중", stage_note: "공람 이후 관리계획 승인·고시는 확인된 문서가 없습니다 ({published} 공고 기준)"}

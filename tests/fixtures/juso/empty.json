@@ -1,0 +1,12 @@
+{
+ "results": {
+  "common": {
+   "countPerPage": "5",
+   "errorMessage": "정상",
+   "errorCode": "0",
+   "totalCount": "0",
+   "currentPage": "1"
+  },
+  "juso": []
+ }
+}

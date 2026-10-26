@@ -1,0 +1,60 @@
+{
+  "doc_id": "D10",
+  "extractor_version": "claude-code-v1.1",
+  "extracted_at": "2026-10-26T19:00:00+09:00",
+  "document": {
+    "title": "개발행위허가 제한 연장 및 지형도면 고시",
+    "issuer": "강남구청장",
+    "gosi_no": "강남구 고시 제2026-69호",
+    "published_at": "2026-04-10",
+    "gazette": "구보 제1845호 (2026.04.10)",
+    "doc_kind": "restriction"
+  },
+  "fields": {},
+  "items": [
+    {
+      "item_key": "D10-01",
+      "item_type": "notice",
+      "title": "개발행위허가 제한 연장: 대치동 506번지 일대(선경아파트)",
+      "summary": "강남구가 대치동 506번지 일대(선경아파트) 79,269.1㎡에서 분양권을 늘리려는 건축·토지 분할에 대한 개발행위허가 제한을 2028.4.1까지 2년 연장했다.",
+      "scope_type": "BJD",
+      "scope_ref": ["1168010600"],
+      "scope_note": "제한 지역은 대치동 일부(선경아파트). 경계 데이터가 없어 법정동 단위로 적용",
+      "pdf_page": 1,
+      "evidence": "1 대치동 506번지 일대 79,269.1 선경아파트 연장(2년)",
+      "more_evidence": [
+        {
+          "label": "제한기간",
+          "evidence": "라. 제한기간 : 고시일로부터 2년 (2026.04.01. ~ 2028.04.01.)",
+          "pdf_page": 1
+        },
+        {
+          "label": "제한대상 행위",
+          "evidence": "나. 제한대상 행위 : 분양권을 늘리려는 행위",
+          "pdf_page": 1
+        },
+        {
+          "label": "토지의 분할",
+          "evidence": "② 「국토의 계획 및 이용에 관한 법률」제56조 제1항 제4호에 의한 토지의 분할",
+          "pdf_page": 1
+        },
+        {
+          "label": "지형도면",
+          "evidence": "- 대치 선경아파트",
+          "pdf_page": 3
+        }
+      ],
+      "effective_from": "2026-04-01",
+      "effective_to": "2028-04-01",
+      "target_note": "대상: 대치동 506번지 일대(선경아파트) 79,269.1㎡. 제한 대상은 분양권을 늘리려는 건축물의 건축·토지의 분할",
+      "confidence": 0.9,
+      "needs_review": false,
+      "tier": "applies",
+      "tier_class": "a",
+      "applies_rank": 1,
+      "reference_rank": null,
+      "tier_reason": "지금 효력이 있는 제한 고시 (2026.4.1~2028.4.1)"
+    }
+  ],
+  "projects": []
+}

@@ -21,15 +21,15 @@ def test_all_get_endpoints_200(client):
 
 def test_404s(client):
     assert client.get("/api/v1/projects/999/progress").status_code == 404
-    assert client.get("/api/v1/documents/D9").status_code == 404
+    assert client.get("/api/v1/documents/D99").status_code == 404
     assert client.get("/api/v1/documents/D1/pages/999").status_code == 404
     assert client.get("/api/v1/parcels/123/projects").status_code == 404
-    assert "detail" in client.get("/api/v1/documents/D9").json()
+    assert "detail" in client.get("/api/v1/documents/D99").json()
 
 
 def test_health(client):
     h = client.get("/api/v1/health").json()
-    assert h["status"] == "ok" and h["as_of"] == "2026-10-06" and h["schema_version"] == "2"
+    assert h["status"] == "ok" and h["as_of"] == "2026-10-06" and h["schema_version"] == "3"
 
 
 def test_lookup_structure(client):
@@ -40,8 +40,11 @@ def test_lookup_structure(client):
     assert set(L) == {"city", "gu", "dong", "parcel"}
     assert set(L["gu"]) >= {"items", "projects_by_stage"}
     assert set(L["dong"]) >= {"items", "projects", "deadlines"}
-    assert set(L["parcel"]) >= {"items", "land_use", "land_use_note", "building", "building_note",
+    assert set(L["parcel"]) >= {"items", "land", "land_use_documented", "building", "building_note",
                                 "included_projects", "nearby_projects", "nearby_note"}
+    assert set(L["parcel"]["land"]) >= {"status", "pnu", "jimok", "area_m2", "land_use_zone", "zones", "use_situation",
+                                        "road_side", "terrain", "official_price", "location", "source", "fetched_at",
+                                        "from_cache", "note"}
     for it in L["city"] + L["gu"]["items"] + L["dong"]["items"]:
         assert set(it) >= ITEM_KEYS
         assert set(it["source"]) >= SOURCE_KEYS
@@ -76,9 +79,10 @@ def test_progress_structure(client):
 
 def test_events_steps(client):
     ev = client.get("/api/v1/events").json()
-    assert [e["step"] for e in ev] == [1, 2, 3, 4, 5, 6, 7, 8]
-    assert [e["doc_id"] for e in ev] == ["D4", "D3", "D2", "D1", "D5", "D6", "D7", "D8"]
-    assert [len(e["events"]) for e in ev] == [0, 0, 0, 2, 0, 0, 0, 0]   # 규제 고시는 사업 상태를 바꾸지 않는다
+    assert [e["step"] for e in ev] == list(range(1, 11))
+    assert [e["doc_id"] for e in ev] == ["D4", "D3", "D2", "D1", "D5", "D6", "D7", "D8", "D9", "D10"]
+    # 사업 상태가 바뀌는 건 D1(한양7차)·D9(대청마을 모아타운)뿐이다. 규제·제한 고시는 바꾸지 않는다
+    assert [len(e["events"]) for e in ev] == [0, 0, 0, 2, 0, 0, 0, 0, 2, 0]
 
 
 def test_review_queue_parcel_first(client):
@@ -89,7 +93,7 @@ def test_review_queue_parcel_first(client):
 
 def test_documents_list(client):
     docs = client.get("/api/v1/documents").json()
-    assert [d["doc_id"] for d in docs] == ["D4", "D3", "D2", "D1", "D5", "D6", "D7", "D8"]
+    assert [d["doc_id"] for d in docs] == ["D4", "D3", "D2", "D1", "D5", "D6", "D7", "D8", "D9", "D10"]
     assert all(d["evidence_ok_rate"] == 1.0 for d in docs)
     kinds = {d["doc_id"]: d["doc_kind"] for d in docs}
     assert [kinds[k] for k in ("D5", "D6", "D7", "D8")] == ["designation"] * 3 + ["press"]

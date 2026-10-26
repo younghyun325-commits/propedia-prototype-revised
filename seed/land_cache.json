@@ -1,0 +1,2407 @@
+[
+ {
+  "status": "ok",
+  "pnu": "1168010100107370000",
+  "jimok": "대",
+  "area_m2": 13156.7,
+  "land_use_zone": "일반상업지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "일반상업지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "건축선",
+    "relation": "저촉",
+    "registered_on": "2026-07-02"
+   },
+   {
+    "name": "리모델링지구",
+    "relation": "포함",
+    "registered_on": "2026-04-01"
+   },
+   {
+    "name": "가로구역별 최고높이 제한지역",
+    "relation": "포함",
+    "registered_on": "2026-02-13"
+   },
+   {
+    "name": "광로3류(폭 40m~50m)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2026-03-19"
+   }
+  ],
+  "use_situation": "업무용",
+  "road_side": "광대소각",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 71160000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.499776773963944,
+   "lon": 127.03662604745813,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:16+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168010400101340038",
+  "jimok": "대",
+  "area_m2": 24393.1,
+  "land_use_zone": "제3종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2025-05-16"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2025-05-16"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "중점경관관리구역",
+    "relation": "포함",
+    "registered_on": "2016-11-24"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "공원",
+    "relation": "접함",
+    "registered_on": "2026-06-04"
+   }
+  ],
+  "use_situation": "아파트",
+  "road_side": "소로각지",
+  "terrain": "평지 · 사다리형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 24370000,
+   "year": 2026,
+   "announced_on": "2026-01-23"
+  },
+  "location": {
+   "lat": 37.52331074489146,
+   "lon": 127.05734758203727,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:16+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168010600103160000",
+  "jimok": "대",
+  "area_m2": 239225.8,
+  "land_use_zone": "제3종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "저촉",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "절대보호구역",
+    "relation": "저촉",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "저촉",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "공공청사",
+    "relation": "접함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "일반철도",
+    "relation": "저촉",
+    "registered_on": "2026-08-21"
+   },
+   {
+    "name": "개발행위허가제한지역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "건축선",
+    "relation": "저촉",
+    "registered_on": "2026-07-02"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "접함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "가로구역별 최고높이 제한지역",
+    "relation": "접함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "정비구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "교통광장",
+    "relation": "접함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "공공청사",
+    "relation": "저촉",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "중로2류(폭 15m~20m)",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "유수지",
+    "relation": "저촉",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "주차장",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "근린공원",
+    "relation": "저촉",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "소공원",
+    "relation": "저촉",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "광로3류(폭 40m~50m)",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   }
+  ],
+  "use_situation": "아파트",
+  "road_side": "광대소각",
+  "terrain": "평지 · 사다리형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 24420000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49754169735799,
+   "lon": 127.06544243887171,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:16+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168010600105060000",
+  "jimok": "대",
+  "area_m2": 78636.2,
+  "land_use_zone": "제3종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "절대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "광역계획구역",
+    "relation": "접함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "학교",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "경관녹지",
+    "relation": "접함",
+    "registered_on": "2026-06-04"
+   },
+   {
+    "name": "가로구역별 최고높이 제한지역",
+    "relation": "접함",
+    "registered_on": "2026-02-13"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2026-03-19"
+   }
+  ],
+  "use_situation": "아파트",
+  "road_side": "광대소각",
+  "terrain": "평지 · 부정형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 28050000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49224556253393,
+   "lon": 127.06228651361087,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:17+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168010700106210000",
+  "jimok": "학교용지",
+  "area_m2": 13833.1,
+  "land_use_zone": "제2종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "절대보호구역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "학교",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "가로구역별 최고높이 제한지역",
+    "relation": "접함",
+    "registered_on": "2026-02-13"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2026-03-19"
+   }
+  ],
+  "use_situation": "주거기타",
+  "road_side": "중로각지",
+  "terrain": "평지 · 정방형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 15310000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.52702283547666,
+   "lon": 127.03220933621077,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:17+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011000104260000",
+  "jimok": "대",
+  "area_m2": 43128.6,
+  "land_use_zone": "제3종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "절대보호구역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "절대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "학교",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "건축선",
+    "relation": "저촉",
+    "registered_on": "2026-07-02"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "공원",
+    "relation": "접함",
+    "registered_on": "2026-06-04"
+   },
+   {
+    "name": "중점경관관리구역",
+    "relation": "포함",
+    "registered_on": "2016-11-24"
+   },
+   {
+    "name": "특화경관지구",
+    "relation": "저촉",
+    "registered_on": "2026-06-04"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "주차장",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "근린공원",
+    "relation": "접함",
+    "registered_on": "2026-06-04"
+   },
+   {
+    "name": "정비구역",
+    "relation": "포함",
+    "registered_on": "2025-07-25"
+   },
+   {
+    "name": "아파트지구",
+    "relation": "포함",
+    "registered_on": "2023-11-28"
+   },
+   {
+    "name": "중로2류(폭 15m~20m)",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "중로3류(폭 12m~15m)",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "공공청사",
+    "relation": "저촉",
+    "registered_on": "2025-04-01"
+   },
+   {
+    "name": "대로2류(폭 30m~35m)",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "광로3류(폭 40m~50m)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2026-03-19"
+   }
+  ],
+  "use_situation": "아파트",
+  "road_side": "광대소각",
+  "terrain": "평지 · 부정형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 24460000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.52608190612989,
+   "lon": 127.02436642042484,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:17+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011000104940000",
+  "jimok": "대",
+  "area_m2": 10159.1,
+  "land_use_zone": "제3종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2024-01-16"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "저촉",
+    "registered_on": "2024-01-16"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2024-01-16"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2024-01-16"
+   },
+   {
+    "name": "용도구역기타",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2024-01-16"
+   },
+   {
+    "name": "철도",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "건축선",
+    "relation": "저촉",
+    "registered_on": "2026-07-02"
+   },
+   {
+    "name": "공원",
+    "relation": "저촉",
+    "registered_on": "2026-06-04"
+   },
+   {
+    "name": "중점경관관리구역",
+    "relation": "포함",
+    "registered_on": "2024-01-16"
+   },
+   {
+    "name": "특화경관지구",
+    "relation": "저촉",
+    "registered_on": "2026-06-04"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "아파트지구",
+    "relation": "접함",
+    "registered_on": "2025-10-29"
+   },
+   {
+    "name": "중로3류(폭 12m~15m)",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "광장",
+    "relation": "접함",
+    "registered_on": "2026-06-04"
+   },
+   {
+    "name": "대로2류(폭 30m~35m)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "광로3류(폭 40m~50m)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2026-03-19"
+   }
+  ],
+  "use_situation": "상업용",
+  "road_side": "광대소각",
+  "terrain": "평지 · 가로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 50940000,
+   "year": 2026,
+   "announced_on": "2026-01-23"
+  },
+  "location": {
+   "lat": 37.5285570447292,
+   "lon": 127.04005873897773,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:18+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011000105270000",
+  "jimok": "대",
+  "area_m2": 7774.2,
+  "land_use_zone": "제3종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "학교",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "중점경관관리구역",
+    "relation": "포함",
+    "registered_on": "2016-11-24"
+   },
+   {
+    "name": "아파트지구",
+    "relation": "포함",
+    "registered_on": "2023-11-28"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2026-03-19"
+   }
+  ],
+  "use_situation": "아파트",
+  "road_side": "광대소각",
+  "terrain": "평지 · 사다리형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 27600000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.52910580241611,
+   "lon": 127.04331416864878,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:18+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011000105280000",
+  "jimok": "대",
+  "area_m2": 8669.5,
+  "land_use_zone": "제3종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "절대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "학교",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "중점경관관리구역",
+    "relation": "포함",
+    "registered_on": "2016-11-24"
+   },
+   {
+    "name": "아파트지구",
+    "relation": "포함",
+    "registered_on": "2023-11-28"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "소로1류(폭 10m~12m)",
+    "relation": "저촉",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제3종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2026-03-19"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2021-09-16"
+   }
+  ],
+  "use_situation": "아파트",
+  "road_side": "광대소각",
+  "terrain": "평지 · 사다리형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 27600000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.529108522598335,
+   "lon": 127.04406087637506,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:19+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011300101220000",
+  "jimok": "전",
+  "area_m2": 10033,
+  "land_use_zone": "자연녹지지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "비행안전제2구역(전술)",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "자동차검사시설",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "광로1류(폭 70m 이상)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "자연녹지지역",
+    "relation": "포함",
+    "registered_on": "2026-09-14"
+   }
+  ],
+  "use_situation": "상업용",
+  "road_side": "광대소각",
+  "terrain": "평지 · 부정형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 4871000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.46792027444853,
+   "lon": 127.1191879570882,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:19+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106190000",
+  "jimok": "대",
+  "area_m2": 377.1,
+  "land_use_zone": "제2종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "상업용",
+  "road_side": "광대소각",
+  "terrain": "평지 · 정방형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 11080000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49401251826346,
+   "lon": 127.081389385546,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:20+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106190002",
+  "jimok": "대",
+  "area_m2": 377.2,
+  "land_use_zone": "제2종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "상업기타",
+  "road_side": "광대세각",
+  "terrain": "평지 · 정방형",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 10660000,
+   "year": 2026,
+   "announced_on": "2026-01-23"
+  },
+  "location": {
+   "lat": 37.49414172325638,
+   "lon": 127.08178574418106,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:21+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106230000",
+  "jimok": "대",
+  "area_m2": 198.5,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "소로3류(폭 8m 미만)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "주거기타",
+  "road_side": "세로각지(가)",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7379000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.494118353586835,
+   "lon": 127.08229814549546,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:21+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106250000",
+  "jimok": "대",
+  "area_m2": 192,
+  "land_use_zone": "제2종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "소로3류(폭 8m 미만)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "주상기타",
+  "road_side": "중로각지",
+  "terrain": "평지 · 가로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 9010000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.494261126873596,
+   "lon": 127.0828094016166,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:22+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106280001",
+  "jimok": "대",
+  "area_m2": 198.2,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "소로3류(폭 8m 미만)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "다세대",
+  "road_side": "세로각지(가)",
+  "terrain": "평지 · 가로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 8363000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49359633489169,
+   "lon": 127.0842220685783,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:23+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106290002",
+  "jimok": "대",
+  "area_m2": 194.3,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "다세대",
+  "road_side": "세로한면(가)",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7454000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.494461223013616,
+   "lon": 127.08380814410354,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:23+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106300004",
+  "jimok": "대",
+  "area_m2": 197.1,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "다세대",
+  "road_side": "세로한면(가)",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7228000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49436891708502,
+   "lon": 127.08432191766126,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:24+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106310001",
+  "jimok": "대",
+  "area_m2": 200.4,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "접함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "다세대",
+  "road_side": "소로각지",
+  "terrain": "평지 · 가로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 8348000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49481108803462,
+   "lon": 127.08457068948178,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:24+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106310006",
+  "jimok": "대",
+  "area_m2": 199.1,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "단독",
+  "road_side": "세로한면(가)",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7444000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49429125760053,
+   "lon": 127.08482501398547,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:25+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106320003",
+  "jimok": "대",
+  "area_m2": 198,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "단독",
+  "road_side": "세로한면(가)",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7454000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49473342913491,
+   "lon": 127.08507163095722,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:26+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106330002",
+  "jimok": "대",
+  "area_m2": 192.1,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "소로3류(폭 8m 미만)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "단독",
+  "road_side": "세로각지(가)",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7752000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.493888638461925,
+   "lon": 127.08457986846938,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:26+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106340006",
+  "jimok": "대",
+  "area_m2": 192.5,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "저촉",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "소로3류(폭 8m 미만)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "단독",
+  "road_side": "세로각지(가)",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7752000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.493866484767494,
+   "lon": 127.08513914201046,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:27+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106370000",
+  "jimok": "대",
+  "area_m2": 199.1,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "소로3류(폭 8m 미만)",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "다세대",
+  "road_side": "세로각지(가)",
+  "terrain": "평지 · 가로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 8363000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.494070359326706,
+   "lon": 127.08567712601706,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:28+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106380014",
+  "jimok": "대",
+  "area_m2": 193,
+  "land_use_zone": "제1종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제1종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "단독",
+  "road_side": "세로한면(가)",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7677000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.494470003108816,
+   "lon": 127.08547947793448,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:28+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106400007",
+  "jimok": "대",
+  "area_m2": 198.3,
+  "land_use_zone": "제2종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "다세대",
+  "road_side": "소로한면",
+  "terrain": "평지 · 가로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7882000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.494451922582414,
+   "lon": 127.08600676887372,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:29+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106400012",
+  "jimok": "대",
+  "area_m2": 198.3,
+  "land_use_zone": "제2종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "다세대",
+  "road_side": "소로한면",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7645000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49497036277828,
+   "lon": 127.08574715328885,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:29+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106410010",
+  "jimok": "대",
+  "area_m2": 198.2,
+  "land_use_zone": "제2종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "(한강)폐기물매립시설 설치제한지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "단독",
+  "road_side": "소로한면",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 7882000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.4940037399682,
+   "lon": 127.08623110945828,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:30+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ },
+ {
+  "status": "ok",
+  "pnu": "1168011400106770004",
+  "jimok": "대",
+  "area_m2": 238.2,
+  "land_use_zone": "제2종일반주거지역",
+  "land_use_zone2": null,
+  "zones": [
+   {
+    "name": "대공방어협조구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "상대보호구역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "도시지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "과밀억제권역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   },
+   {
+    "name": "토지거래계약에관한허가구역",
+    "relation": "포함",
+    "registered_on": "2026-05-18"
+   },
+   {
+    "name": "지구단위계획구역",
+    "relation": "포함",
+    "registered_on": "2026-06-10"
+   },
+   {
+    "name": "도로",
+    "relation": "접함",
+    "registered_on": "2026-07-09"
+   },
+   {
+    "name": "제2종일반주거지역",
+    "relation": "포함",
+    "registered_on": "2014-01-02"
+   }
+  ],
+  "use_situation": "상업기타",
+  "road_side": "중로한면",
+  "terrain": "평지 · 세로장방",
+  "characteristics_year": 2026,
+  "official_price": {
+   "won_per_m2": 10660000,
+   "year": 2026,
+   "announced_on": "2026-04-30"
+  },
+  "location": {
+   "lat": 37.49188772609993,
+   "lon": 127.08298772853924,
+   "source": "vworld-geocoder:parcel"
+  },
+  "missing": [],
+  "source": "브이월드(국토교통부 공간정보 오픈플랫폼)",
+  "fetched_at": "2026-10-26T21:24:31+09:00",
+  "from_cache": false,
+  "note": "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다",
+  "found": true
+ }
+]

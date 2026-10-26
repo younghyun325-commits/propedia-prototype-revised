@@ -48,6 +48,22 @@ CANDIDATES = [
     {"addr_id": "A8", "type": "다른 생활권", "keyword": "강남파이낸스센터", "pick": {"dong": "역삼동"}},
     {"addr_id": "A9", "type": "다른 생활권", "keyword": "대치동 은마아파트", "pick": {"dong": "대치동"}},
     {"addr_id": "A10", "type": "범위 밖", "keyword": "서초구 방배동 방배초등학교", "pick": {"dong": "방배동", "jibun_main": 861}},
+    # P10 토지 중심 시연 주소 (feedback2.md §6). B2·B3은 지도 대조 후보와 브이월드 토지 정보로 골랐다 (2026-10-26)
+    {"addr_id": "B1", "type": "대청마을 대표 (모아타운 대표 지번)", "input_text": "강남구 일원동 619",
+     "keyword": "서울특별시 강남구 일원동 619", "pick": {"dong": "일원동", "jibun_main": 619, "jibun_sub": 0},
+     "fixed": ("강남구", "일원동", 619, 0), "label": "★ 대청마을 대표 (일원동 619)"},
+    {"addr_id": "B2", "type": "대청마을 안 단독주택 필지 (지도 대조 후보)", "keyword": "서울특별시 강남구 개포로120길 55",
+     "pick": {"dong": "일원동", "jibun_main": 633, "jibun_sub": 2}, "road_input": True,
+     "label": "★ 대청마을 안 단독주택 (개포로120길 55)"},
+    {"addr_id": "B3", "type": "대청마을 밖 일원동 필지 (사업 중심 500m 안)", "input_text": "강남구 일원동 677-4",
+     "keyword": "서울특별시 강남구 일원동 677-4", "pick": {"dong": "일원동", "jibun_main": 677, "jibun_sub": 4},
+     "label": "★ 대청마을 밖 일원동 677-4"},
+    {"addr_id": "B4", "type": "개발행위허가 제한 (D10)", "input_text": "강남구 대치동 506",
+     "keyword": "서울특별시 강남구 대치동 506", "pick": {"dong": "대치동", "jibun_main": 506, "jibun_sub": 0},
+     "fixed": ("강남구", "대치동", 506, 0), "label": "대치동 506 (선경아파트, 개발행위허가 제한)"},
+    {"addr_id": "B5", "type": "녹지 필지 (지목 전)", "input_text": "강남구 율현동 122",
+     "keyword": "서울특별시 강남구 율현동 122", "pick": {"dong": "율현동", "jibun_main": 122, "jibun_sub": 0},
+     "fixed": ("강남구", "율현동", 122, 0), "label": "율현동 122 (녹지 필지, 지목 전)"},
 ]
 
 
@@ -205,7 +221,8 @@ def resolve() -> list[dict]:
             code = load_bjd()[dong]["bjd_code"]
             short = f"{gu} {dong} {main}" + (f"-{sub}" if sub else "")
             bd = c.get("building_name", "")
-            out[aid] = {"addr_id": aid, "label": f"{aid} {short.replace('강남구 ', '')}" + (f" ({bd})" if bd else ""),
+            out[aid] = {"addr_id": aid,
+                        "label": c.get("label") or f"{aid} {short.replace('강남구 ', '')}" + (f" ({bd})" if bd else ""),
                         "input_text": c.get("input_text") or short, "road_address": "",
                         "jibun_address": f"서울특별시 {short}", "pnu": make_pnu(code, main, sub), "bjd_code": code,
                         "sgg_code": code[:5], "building_name": bd, "lat": "", "lon": "", "coord_source": "",
@@ -225,6 +242,7 @@ def resolve() -> list[dict]:
                     + (f" {bd})" if bd else ")")
         else:
             label = f"{aid} {short.replace('강남구 ', '')}" + (f" ({bd})" if bd else "")
+        label = c.get("label") or label
         out[aid] = {
             "addr_id": aid,
             "label": label,

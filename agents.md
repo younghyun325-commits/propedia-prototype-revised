@@ -132,7 +132,7 @@
 4. 검수 화면에서 A1 포함 판정을 승인하면 주소 조회 결과가 "포함될 수 있음" → "포함"으로 바뀌고, 초기화하면 원래대로 돌아간다.
 5. 평가 화면에 §13 지표가 모두 보인다.
 6. `pytest -q` 전부 통과, `python -m evals.run_eval` 정상 종료.
-7. 시연 중 외부 네트워크·LLM 호출 0건 (코드에 네트워크 호출이 없음을 테스트로 확인).
+7. 시연 중 LLM 호출 0건. 외부 네트워크는 `core/live/`(도로명주소 검색·브이월드 토지 정보)만 쓴다 — P10부터 (feedback2.md §2). 테스트로 확인.
 
 ### 2-3. 원 계획서(MVP) 대비 축소
 | 항목 | MVP 계획서 | 프리토타입 |
@@ -168,6 +168,8 @@
 | D6 | 국토교통부공고 제2025-1219호 토지거래허가구역 지정 공고 (2025-10-15) | `../data/8.규제고시/토지거래허가구역지정공고.pdf` (4쪽) | 서울 전역 | 6 |
 | D7 | 국토교통부공고 제2025-1223호 조정대상지역 지정 (2025-10-16) | `../data/8.규제고시/(국토교통부공고 제2025-1223호) 조정대상지역 지정 공고.pdf` (2쪽) | 서울 전역 | 7 |
 | D8 | 국토교통부 보도참고자료 "투기과열지구 및 조정대상지역 추가 지정" (2026-06-30) — 투기과열지구 **지정 공고문이 아님** (공고문을 구하지 못해 5쪽 현황표를 씀, HUMAN_TODO) | `../data/8.규제고시/260630(보도참고) 투기과열지구 및 조정대상지역 추가 지정(주택정책과).pdf` (5쪽) | 서울 전역 | 8 |
+| D9 | 강남구 공고 제2026-1034호 (구보 제1846호, 2026-04-17) 대청마을 북측구역(일원동 619번지 일원) 소규모주택정비 관리계획(모아타운 관리계획) 수립(안) 주민공람 | `../data/10.강남구_토지고시/69e57c91b3d816.58748850.zip` 안 PDF (16쪽, 12~16쪽 도면). ZIP은 수정하지 않고 `build/zip_src/D9.pdf`로 꺼내 쓴다 (파일명 CP949) | 법정동(일원동) + 필지 + **모아타운 사업 카드** | 9 |
+| D10 | 강남구 고시 제2026-69호 (구보 제1845호, 2026-04-10) 개발행위허가 제한 연장 및 지형도면 고시 — 대치동 506번지 일대(선경아파트) | `../data/10.강남구_토지고시/69dd8efc1d5cb9.48809192.zip` 안 PDF (3쪽) | 법정동(대치동) | 10 |
 
 투입 순서는 "문서 1건씩 투입" 시연(§8-10)에서 쓴다. D4 → D3 → D2 → D1 → D5 → D6 → D7 → D8 순서로 들어오며, 사업 상태가 바뀌는 건 D1뿐이다 (규제 고시 D5~D8은 `change_events` 0건).
 - D5~D8은 P9(`feedback.md`)에서 추가했다. `doc_kind`는 D5~D7 `designation`, D8 `press`. 쓰는 쪽: D5 1~2(선택)·3~9(원문 보기용), D6 1~2(선택)·3~4, D7 1~2, D8 1·5(선택)·2~4. 원문 확인 결과 D7 공고의 신규 지정은 21개 구이고 강남구는 현황표에 '현행·좌동'으로만 나온다 `[확인 2026-10-26]`. D6 지정기간 종료일은 2026-12-31 `[확인: 공고문]`.
@@ -201,6 +203,8 @@
 | D6 | `sdm-gongji` | 서대문구청 공지 | `https://www.sdm.go.kr/news/notice/notice.do?mode=view&sdmBoardSeq=305997` | "서대문구청 공지 게시물 첨부 공고문 (국토교통부공고 제2025-1219호, 2025.10.15)" |
 | D7 | `law-go-kr` | 국가법령정보센터 행정규칙 | `https://law.go.kr/LSW/admRulInfoP.do?admRulSeq=2100000265026&chrClsCd=010201` | "국가법령정보센터 행정규칙 (국토교통부공고 제2025-1223호, 2025.10.16)" |
 | D8 | `molit-press` | 국토교통부 보도자료 | `null` ※ | "국토교통부 보도참고자료 (2026.6.30, 주택정책과) — 지정 공고문이 아님" |
+| D9 | `gangnam-gubo-zip` | 강남구 구보 | `null` ※ | "강남구 구보 제1846호(2026.04.17) 게재, 강남구 공고 제2026-1034호" |
+| D10 | `gangnam-gubo-zip` | 강남구 구보 | `null` ※ | "강남구 구보 제1845호(2026.04.10) 게재, 강남구 고시 제2026-69호" |
 
 ### 3-4. 문서 메타데이터 (DB `documents`에 넣을 값)
 | ID | title | short_title | doc_kind | issuer | gosi_no | published_at |
@@ -213,6 +217,8 @@
 | D6 | 토지거래허가구역 지정 공고문 | 서울 전역 아파트 토지거래허가구역 지정 | `designation` | 국토교통부장관 | 국토교통부공고 제2025-1219호 | 2025-10-15 |
 | D7 | 조정대상지역 지정 | 조정대상지역 지정 (서울 21개 구 신규) | `designation` | 국토교통부장관 | 국토교통부공고 제2025-1223호 | 2025-10-16 |
 | D8 | 투기과열지구 및 조정대상지역 추가 지정 (보도참고자료) | 투기과열지구 현황 (국토부 보도참고자료) | `press` | 국토교통부 | null | 2026-06-30 |
+| D9 | 대청마을 북측구역(일원동 619번지 일원) 소규모주택정비 관리계획(모아타운 관리계획) 수립(안) 주민공람 공고 | 대청마을 북측 모아타운 관리계획(안) 공람 | `gongram` | 강남구청장 | 강남구 공고 제2026-1034호 | 2026-04-17 |
+| D10 | 개발행위허가 제한 연장 및 지형도면 고시 | 대치동 506 일대 개발행위허가 제한 연장 | `restriction` | 강남구청장 | 강남구 고시 제2026-69호 | 2026-04-10 |
 
 ### 3-5. D1에서 확인된 사실 (정답셋 초안의 근거) `[확인: pdftotext]`
 | 항목 | 값 | pdf_page |
@@ -258,6 +264,14 @@ P1에서 `pipeline/resolve_addresses.py`(도로명주소 API)와 `pipeline/geoco
 | A8 | 다른 생활권 | 역삼동 1곳 | 같음 | 자치구·서울 전역만, coverage_note "역삼·논현 지역생활권 장은 프리토타입 범위 밖" |
 | A9 | 다른 생활권 | 대치동 1곳 | 같음 | A8과 같은 유형 (대치·도곡) |
 | A10 | 범위 밖 | 서초구 1곳 (예: `서초구 방배동` 임의 건물) | 같음 | `status: out_of_scope`, "시연 범위(강남구) 밖입니다" |
+| **B1** | 대청마을 대표 (P10) | `강남구 일원동 619` | D9 대표 지번 | 토지 정보 + 모아타운 `possible` + 일원동 항목(D9) |
+| **B2** | 대청마을 안 단독주택 | `서울특별시 강남구 개포로120길 55` (일원동 633-2) | 지도 대조 후보 중 이용상황 '단독' 필지 `[확인 2026-10-26 브이월드]` | 토지 정보 + 모아타운 `likely` |
+| **B3** | 대청마을 밖 일원동 | `강남구 일원동 677-4` | 후보 밖, 사업 중심 275m | 토지 정보 + `nearby` |
+| B4 | 개발행위허가 제한 | `강남구 대치동 506` (선경아파트) | D10 | 토지 정보 + D10 법정동 층 |
+| B5 | 녹지 필지 | `강남구 율현동 122` (지목 전, 자연녹지, 도로명 없음) | 브이월드 2D 데이터에서 지목 전·답·임야 필지 | 토지 정보, 법정동 층 "확인된 고시 없음" |
+
+- P10(feedback2.md §6): 칩은 B1~B3 "대표 시연" → B4~B5 "토지·고시 사례" → A1~A10 "아파트 재건축 사례" 순. 금지어(§9-6) '추천' 때문에 지시서의 "추천 시연" 대신 "대표 시연"을 쓴다.
+- P10부터 좌표는 브이월드 지오코더(토지 정보 `land.location`)를 쓴다. A2(66m)·A4(293m)는 한양7차 '주변', B3는 모아타운 '주변'(275m)이다.
 
 - 도로명주소 API가 두 키 모두 실패하면(§19-3) 도로명주소 없이 **지번 입력만** 지원한다. 지번 → PNU는 `seed/bjd_codes.csv`로 만들 수 있으므로 작업은 계속된다. HUMAN_TODO에 기록.
 - 좌표를 못 얻은 주소는 `lat/lon`을 비워 두고 500m 판정을 하지 않는다(응답에 "좌표 없음으로 주변 사업 판정 생략" 표시). HUMAN_TODO에 기록.
@@ -337,6 +351,7 @@ pretotype/
     propedia.db           # 커밋함 (빌드 산출물, 수 MB 이하)
   core/                   # 조회·판정 로직. 표준 라이브러리만 사용
     __init__.py, db.py, address.py, lookup.py, progress.py, review.py, text.py, timeutil.py
+    live/                 # P10 실시간 조회 (네트워크는 여기서만): http.py, juso.py, vworld.py
   api/
     index.py              # FastAPI 앱 (Vercel 진입점, 로컬에서는 public/도 서빙)
   public/                 # 커밋함
@@ -454,6 +469,10 @@ CREATE TABLE applicability_rules (     -- 4개 층에 나가는 '항목'
   tier_reason TEXT
 );
 
+-- P10: CREATE TABLE land_cache (pnu TEXT PRIMARY KEY, payload TEXT NOT NULL, fetched_at TEXT NOT NULL) — 브이월드 토지 정보 빌드 캐시
+--      CREATE TABLE project_facts (project_id, seq, label, value, unit, evidence, evidence_ok, source_doc_id, pdf_page)
+--      projects에 sub_status·stage_note·position_note, project_parcels.basis에 'map_reading', doc_kind에 'restriction'.
+--      meta.schema_version = '3'.
 -- P9: CREATE TABLE buildings (pnu TEXT PRIMARY KEY, payload TEXT NOT NULL, fetched_at TEXT NOT NULL)
 --     건축HUB 건축물대장 표제부 요약 (seed/buildings.json). sources.layer에 'national', documents.doc_kind에
 --     'designation'·'press'를 더했다. meta.schema_version = '2'.
@@ -910,6 +929,7 @@ def today_kst() -> date: return datetime.now(KST).date()
 def d_day(due: date, today: date) -> tuple[int, str]:
     n = (due - today).days
     return n, (f"D-{n}" if n > 0 else "D-day" if n == 0 else f"마감({due.isoformat()})")
+# P10: 마감 표기는 "마감(2026.11.06)" (점 구분)으로 바꿨다 (feedback2.md §5-3)
 ```
 
 ### 10-3. `core/address.py` — `normalize(con, text) -> dict`
@@ -919,6 +939,10 @@ def d_day(due: date, today: date) -> tuple[int, str]:
 3. 지번 정규식(§8-6) 일치 → 구가 강남구가 아니면 `out_of_scope` "시연 범위(강남구) 밖입니다". 동이 코드표에 없으면 `not_found`. 있으면 PNU를 만든다. 같은 PNU가 `demo_addresses`에 있으면 그 좌표를 쓴다. 없으면 좌표 없음.
 4. 문자열에 강남구가 아닌 `[가-힣]+구`가 있으면 `out_of_scope`.
 5. 그 외 `not_found` "시연 주소 목록에서 찾을 수 없습니다. 지번 주소(예: 강남구 압구정동 527)로 입력해 주세요".
+6. (P10, feedback2.md §3-1) 실시간 검색 객체(`core.live.Live`)가 있으면 5 대신 도로명주소 검색(juso, 5건): 0건 → `not_found`
+   "주소를 찾지 못했습니다…", 강남구 결과 없음 → `out_of_scope`, 1건(또는 첫 결과가 입력과 같은 도로명) → PNU,
+   강남구 결과 여러 건 → `ambiguous` + `candidates`(최대 5). juso 오류면 브이월드 검색(도로명, 결과 `id` = PNU)으로 대체하고,
+   그것도 안 되면 "도로명주소 검색을 지금 쓸 수 없습니다. 지번 주소(예: 강남구 일원동 619)로 입력해 주세요".
 
 ### 10-4. `core/lookup.py` — `lookup(con, text, decisions=None, today=None) -> dict`
 1. `normalize`. 상태가 ok가 아니면 `layers`를 비운 응답(§11-3)을 돌려준다.
@@ -939,6 +963,10 @@ def d_day(due: date, today: date) -> tuple[int, str]:
 7. 좌표가 없으면 `parcel.nearby_note` = "좌표가 없어 주변 500m 사업 판정을 생략했습니다".
 8. (P9에서 삭제) 다른 지역생활권 안내 문구는 붙이지 않는다. `coverage_note`는 "2030 생활권계획(2018)은 참고로만 보여줍니다"로 끝난다.
 9. `as_of` = `meta.as_of`. `disclaimer` 고정 문구(§11-3).
+10. (P10) `parcel.land` = 토지 정보: ① `land_cache`(빌드 캐시) ② 실시간(메모리 캐시 1시간) ③ 없음 안내. 좌표는 `land.location`을
+    쓰고 이 좌표로 모든 주소에 주변 500m 판정을 한다. 문서 기재 용도지역은 `land_use_documented`(보조 줄).
+    지도 대조 후보(`basis='map_reading'`)는 `likely` "…구역에 포함된 것으로 보입니다. 확인해 주세요" (판정표 3번 강도).
+    법정동 층이 비면 `dong.empty_note` "{동}에 대해 확인된 고시가 없습니다 (프리토타입에 모은 문서 기준)".
 
 ### 10-5. 단계 판정 규칙 `seed/stage_rules.yaml`
 ```yaml
@@ -960,7 +988,9 @@ D1 제목에는 "정비구역·정비계획 결정(변경)(안) 공람·공고"�
 - `deadlines`: 사업의 모든 기한 + `d_day`, `d_day_label`(§10-2), `status` (`open`|`closed`).
 - `remaining`: `{"to_next": null, "to_completion": null, "note": "비교할 사례가 부족합니다", "method_note": "원 계획은 비슷한 사업들의 단계별 소요 기간(생존분석)으로 범위를 보여줍니다. 프리토타입에는 비교 사례가 없습니다."}`
 - `related_history`, `documents`(사업에 묶인 문서와 역할), `stage_basis`(현재 단계 근거: 문서·쪽·근거 문장·규칙 id).
-- `position_label`: "재건축 13단계 중 2번째".
+- `position_label`: "재건축 13단계 중 2번째". (P10) 모아타운은 "모아타운 8단계 중 1번째 (관리계획 수립 중)" — 단계 규칙의
+  `position_note`. `sub_status`(예: "관리계획(안) 주민공람 (2026.04.17 ~ 2026.05.01, 마감)"), `stage_note`(승인 고시 미확인),
+  `owner_actions`가 없으면 `owner_actions_note` "안내 문구는 법령 대조 후 사람이 작성합니다". 고시 수치는 `project_facts`.
 
 ### 10-7. `core/review.py` — 검수 결정 적용 (서버에 저장하지 않음)
 - 결정 형식: `{"review_id": 3, "action": "approve"|"reject"|"edit", "edits": {"summary": "...", "scope_type": "...", "scope_ref": [...]}, "decided_at": "ISO"}`
@@ -1046,6 +1076,8 @@ D1 제목에는 "정비구역·정비계획 결정(변경)(안) 공람·공고"�
   + (P9) `effective_from`, `effective_to`, `effective_label`("효력 기간 2026.04.27 ~ 2027.04.26" / "효력 2025.10.20부터"), `effective_status`(`in_force`|`ended`|`not_started`, 기간이 없으면 null), `effective_status_label`("효력 기간 중"|"효력 기간 끝남"|"효력 시작 전"), `target_note`, `tier`, `tier_class`, `tier_reason`, `more_evidence`
 - `SOURCE` = `{"doc_id","short_title","published_at","pdf_page","page_label","page_image":"/pages/D3/p265.jpg","source_url","source_note"}`
 - 상태가 `not_found`/`out_of_scope`이면 `normalized`는 아는 값만, `layers`는 `null`, `message`에 안내 문구.
+- (P10) 상태 `ambiguous`면 `candidates: [{road_address, jibun_address, pnu, bld_name}]`(최대 5), `layers`는 `null`.
+  `layers.parcel`에 `land`(feedback2.md §3-2 형식), `land_use_documented`. `normalized.match_via`(demo|jibun|juso|vworld-search).
 
 ### 11-4. `progress` 응답 예시
 ```json
@@ -1207,6 +1239,9 @@ Claude Code는 **초안**만 쓰고 맨 위에 `draft: true`, `author: "claude-c
 | M13 | 층별 상한 준수 (P9) | 상태 ok 주소 중 서울 전역·자치구·법정동 층 항목이 5개 이하인 비율 | 100% |
 | M14 | 효력 중 고시 표시 (P9) | 정답셋 `expect_regulations`의 고시가 그 주소 응답의 해당 층에 나온 비율 | 100% |
 | M15 | 건축물 정보 처리율 (P9) | 범위 안 주소 중 `building`이 있거나 "조회되지 않았습니다" 안내가 있는 비율 (found 비율은 참고) | 100% |
+| M16 | 토지 정보 확보율 (캐시, P10) | 범위 안 시연 주소 중 `land.status ∈ {ok, partial}` 비율 | 100% |
+| M17 | 토지 정보 정확도 (P10) | `land.yaml` 정답과 지목·면적·용도지역·공시지가가 일치하는 비율 | ≥ 95% |
+| M18 | 실시간 조회 성공률 (P10, `--live`일 때만) | `live_addresses.yaml` 강남구 도로명주소 20건에서 status ok + land ok 비율, p95 | ≥ 90%, p95 ≤ 3초 |
 
 - (P9) M6·M7의 기대 집합 = 정답 라벨 기준 `tier = applies` + 효력 중 + 층별 5개 상한 적용 후. M4 note에 층 분류(tier) 일치 수를 함께 적는다.
 
@@ -1254,6 +1289,9 @@ Claude Code는 **초안**만 쓰고 맨 위에 `draft: true`, `author: "claude-c
 - `public/` 폴더 파일은 CDN이 서빙한다 (`/pages/D1/p001.jpg`, `/lookup.html` 등).
 - Python 함수는 도달 가능한 파일을 모두 묶는다(최대 500MB) → `.vercelignore`로 빌드 전용 파일을 뺀다.
 - Hobby(무료) 플랜: 운영 주소는 기본 공개. 비밀번호 보호 없음. **비상업·개인 용도 조건**.
+
+### 15-1-1. 환경변수 (P10)
+Vercel 프로젝트 Settings → Environment Variables에 `VWORLD_API_KEY`, `JUSO_CONFM_KEY`를 사람이 등록한다 (값은 Claude Code가 다루지 않음). 없으면 실시간 조회는 안내 문구로 대신하고, 시연 주소는 빌드 캐시(`land_cache`)로 동작한다. 브이월드 요청의 `domain`은 인증키에 등록한 서비스 URL `https://propedia-pretotype.vercel.app`.
 
 ### 15-2. `.vercelignore`
 ```
@@ -1332,13 +1370,14 @@ pause
 
 ## 17. 절대 규칙
 1. `../data/` 원본 파일을 수정·이동·삭제하지 않는다. 발췌본만 `data_raw/`에 만든다.
-2. `.env`의 키 값을 출력·로그·커밋·Vercel 환경변수에 넣지 않는다. 키는 `pipeline/resolve_addresses.py`(도로명주소)와 `pipeline/fetch_buildings.py`(P9, `DATA_GO_KR_SERVICE_KEY`)만 읽는다. 다른 폴더의 `.env`는 열지 않는다 (P9의 `DATA_GO_KR_SERVICE_KEY` 한 줄 복사는 사람이 한다).
+2. `.env`의 키 값을 출력·로그·커밋하지 않는다. 키를 읽는 곳: `pipeline/resolve_addresses.py`(도로명주소), `pipeline/fetch_buildings.py`(P9, `DATA_GO_KR_SERVICE_KEY`), P10의 `core/live/`(실시간, 환경변수)·`pipeline/check_keys.py`·`fetch_land.py`·`daecheong_map.py`. Vercel 환경변수에는 실시간 조회용 `VWORLD_API_KEY`·`JUSO_CONFM_KEY`만 사람이 등록한다 (feedback2.md H2). 다른 폴더의 `.env`는 열지 않는다.
 3. 사업 단계는 고시 근거(`stage_rules.yaml` + 문서 제목)로만 정한다. 추출값(`stage_candidate`)만으로 바꾸지 않는다.
 4. 단계 설명·소유자 안내 문구는 `seed/stage_templates.yaml`(원 계획서 표)에서만 나온다. Claude Code가 문구를 만들거나 고치지 않는다.
 5. 모든 근거 문장은 쪽 텍스트에 그대로 있어야 한다(§9-4). 없으면 검수 큐.
 6. 우리가 만든 문장에 §9-6 금지어를 쓰지 않는다. 사실과 출처만 보여준다. 점수·등급·예측 금지.
 7. 정답셋은 사람 소유다. Claude Code는 `draft: true` 초안만 만들고, 추출 전에 쓴 정답(extraction.yaml)을 추출 중에 열지 않는다.
-8. 시연 경로(`public/`, `api/`, `core/`)는 네트워크·LLM을 호출하지 않고, DB를 읽기 전용으로 연다.
+8. 시연 경로(`public/`, `api/`, `core/`)는 LLM을 호출하지 않고, DB를 읽기 전용으로 연다. 외부 호출은 `core/live/`(도로명주소·브이월드)만
+   한다 (P10, feedback2.md §2: 타임아웃 4초·재시도 1회, 실패해도 화면이 깨지지 않게, 키는 환경변수에서만). 브이월드 토지소유정보 API는 쓰지 않는다.
 9. 가짜 고시·가짜 사업·가짜 숫자를 만들지 않는다. 예시가 필요하면 화면에 "예시"라고 쓴다.
 10. 추출 JSON에 원문에 없는 값을 추정해 넣지 않는다. 없으면 `null` + `null_reason`.
 11. 외부 LLM API를 호출하지 않는다. 추출·전사는 Claude Code가 직접 한다.
@@ -1491,6 +1530,7 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-10-26 | Claude Code (P10) | P10 토지 중심 + 실시간 조회 (feedback2.md): `core/live/`(도로명주소·브이월드, §2-2-7·§17-8 수정) / 조회 흐름 ③ 실시간 검색·`ambiguous`(§10-3) / 토지 정보 `land`·`land_use_documented`·좌표 교체(§10-4·§11-3) / D9 대청마을 모아타운·D10 개발행위허가 제한(§3) / 모아타운 8단계 템플릿·규칙 M1·`project_facts`(§7·§10-6) / 지도 대조 후보 16필지 `map_reading`→`likely`·묶음 검수 / 시연 주소 B1~B5(§4) / M16~M18(§13-2) / 마감 표기 점 구분(§10-2). 확인: 국가중점 API 응답 키는 지시서 추정과 같음, 토지이용계획에 '관련 법률' 칸 없음 `[확인]`. D9 결정도 축척 막대(0.947m/px)는 실제와 달라 지적도와 맞춘 값 0.79m/px를 씀 `[확인]`. 한양7차 중심 = 527 지오코더 좌표(근사 해제) |
 | 2026-10-26 | Claude Code (P9) | P9 보정 (feedback.md): 규제 고시 D5~D8 추가(§3, D8은 공고문이 없어 국토부 보도참고자료) / 항목을 적용·배경으로 나누고 층별 5개 상한·참고 섹션(§9-2, §10-4, §11-3) / 지역생활권을 층에서 빼고 참고로만(§1-2, §10-4) / 효력 기간·대상 기준·`more_evidence`(§7, §9-2) / 건축물대장 요약·용도지역 우선순위·거리 기준 표시(§10-4) / 지표 M13~M15(§13-2) / `fetch_buildings` 키 규칙(§17-2) / 건축물대장 표제부에는 지역·지구 칸이 없어 기본개요(getBrBasisOulnInfo)에서 읽음 `[확인]`, 압구정동 527은 표제부 0건 |
 | 2026-10-26 | Claude Code (P8) | 새 도로명주소 키로 시연 주소 재확정: 압구정동 527은 도로명주소 없음 → A2를 인접 528 도로명 입력으로, A4를 갤러리아백화점(494)으로(§4) / 사업 중심 좌표를 인접 필지 526 근사로 허용, Nominatim 결과에 법정동 이름 확인 조건 추가(§8-8) / Vercel 배포 https://propedia-pretotype.vercel.app |
 | 2026-10-25 | Claude Code (P2) | D1 관련 고시 이력은 원문대로 5건(1977 건설부 승인 포함)(§8-11, §9-3) / 동남권 구성 근거를 D2 p12로 확인(§9-3) |

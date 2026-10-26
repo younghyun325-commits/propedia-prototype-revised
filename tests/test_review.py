@@ -26,8 +26,8 @@ def test_parcel_reject_removed(con):
     rid = parcel_review_id(con)
     r = lookup(con, A1, decisions=[{"review_id": rid, "action": "reject"}])
     assert inc(r) == []
-    # 필지에서 빠진 사업은 같은 법정동 사업 목록에 나온다
-    assert [p["project_id"] for p in r["layers"]["dong"]["projects"]] == [1]
+    # 포함 목록에서 빠진 사업은 좌표로 500m 안이면 주변 사업으로 나온다 (agents.md §10-7)
+    assert [p["project_id"] for p in r["layers"]["parcel"]["nearby_projects"]] == [1]
 
 
 def test_last_decision_wins(con):

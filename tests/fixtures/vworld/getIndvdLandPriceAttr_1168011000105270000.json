@@ -1,0 +1,25 @@
+{
+ "indvdLandPrices": {
+  "field": [
+   {
+    "mnnmSlno": "527",
+    "pblntfDe": "2026-04-30",
+    "stdLandAt": "N",
+    "stdrYear": "2026",
+    "pnu": "1168011000105270000",
+    "lastUpdtDt": "2026-05-21",
+    "ldCode": "1168011000",
+    "ldCodeNm": "서울특별시 강남구 압구정동",
+    "regstrSeCodeNm": "일반",
+    "stdrMt": "01",
+    "pblntfPclnd": "27600000",
+    "regstrSeCode": "1"
+   }
+  ],
+  "pageNo": "1",
+  "resultCode": "",
+  "totalCount": "1",
+  "numOfRows": "10",
+  "resultMsg": ""
+ }
+}

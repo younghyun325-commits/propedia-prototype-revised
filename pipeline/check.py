@@ -76,7 +76,8 @@ def check_p1(c: Checker) -> None:
     if p.exists():
         with open(p, encoding="utf-8-sig", newline="") as f:
             addr = list(csv.DictReader(f))
-    c.add("demo_addresses 10행", len(addr) == 10, f"{len(addr)}행")
+    ids = {a["addr_id"] for a in addr}
+    c.add("demo_addresses A1~A10 (+P10 B1~B5)", {f"A{i}" for i in range(1, 11)} <= ids, f"{len(addr)}행")
     pending = [a["addr_id"] for a in addr if a["in_scope"] == "1" and not a["input_text"]]
     missing = [a["addr_id"] for a in addr if a["in_scope"] == "1" and a["input_text"] and not a["pnu"]]
     pending_ok = not pending or human_todo_has("승인키")
@@ -106,7 +107,8 @@ def check_p2(c: Checker) -> None:
         c.add("DB 존재", False, "python -m pipeline.init_db && python -m pipeline.load_seed")
         return
     con = connect_rw()
-    min_items = {"D1": 2, "D2": 8, "D3": 5, "D4": 5, "D5": 1, "D6": 1, "D7": 1, "D8": 1}   # D5~D8: feedback.md §2-2-3
+    min_items = {"D1": 2, "D2": 8, "D3": 5, "D4": 5, "D5": 1, "D6": 1, "D7": 1, "D8": 1,   # D5~D8: feedback.md §2-2-3
+                 "D9": 2, "D10": 1}                                                    # D9·D10: feedback2.md §5
     all_keys = set()
     for doc in DOC_ORDER:
         p = EXTRACTIONS / f"{doc}.json"

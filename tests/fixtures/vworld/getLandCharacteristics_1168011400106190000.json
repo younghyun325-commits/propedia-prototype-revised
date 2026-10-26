@@ -1,0 +1,39 @@
+{
+ "landCharacteristicss": {
+  "field": [
+   {
+    "tpgrphHgCodeNm": "평지",
+    "stdrYear": "2026",
+    "lndcgrCodeNm": "대",
+    "roadSideCodeNm": "광대소각",
+    "pblntfPclnd": "11080000",
+    "prposArea2Nm": "지정되지않음",
+    "tpgrphHgCode": "02",
+    "prposArea1Nm": "제2종일반주거지역",
+    "ladUseSittnNm": "상업용",
+    "ladSn": "28652",
+    "ladUseSittn": "210",
+    "tpgrphFrmCode": "01",
+    "lastUpdtDt": "2026-05-12",
+    "regstrSeCodeNm": "일반",
+    "regstrSeCode": "1",
+    "lndpclAr": "377.1",
+    "tpgrphFrmCodeNm": "정방형",
+    "ldCode": "1168011400",
+    "ldCodeNm": "서울특별시 강남구 일원동",
+    "prposArea1": "14",
+    "prposArea2": "00",
+    "mnnmSlno": "619",
+    "lndcgrCode": "08",
+    "pnu": "1168011400106190000",
+    "stdrMt": "01",
+    "roadSideCode": "02"
+   }
+  ],
+  "pageNo": "1",
+  "resultCode": "",
+  "totalCount": "1",
+  "numOfRows": "10",
+  "resultMsg": ""
+ }
+}

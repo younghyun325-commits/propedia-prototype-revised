@@ -27,7 +27,7 @@ def test_d_day_labels(con):
     d = progress(con, 1, today=date(2026, 11, 6))["deadlines"][0]
     assert d["d_day_label"] == "D-day" and d["status"] == "open"
     d = progress(con, 1, today=date(2026, 11, 7))["deadlines"][0]
-    assert d["d_day_label"] == "마감(2026-11-06)" and d["status"] == "closed"
+    assert d["d_day_label"] == "마감(2026.11.06)" and d["status"] == "closed"
 
 
 def test_remaining_fixed(con):
@@ -47,3 +47,20 @@ def test_sources_and_history(con):
 
 def test_unknown_project(con):
     assert progress(con, 999) is None
+
+
+def test_moatown_card(con):
+    pid = con.execute("SELECT id FROM projects WHERE project_key='ilwon-daecheong-north-moatown'").fetchone()["id"]
+    p = progress(con, pid, today=date(2026, 10, 26))
+    assert p["project_type_label"] == "모아타운(소규모주택정비)"
+    assert p["position_label"] == "모아타운 8단계 중 1번째 (관리계획 수립 중)"
+    assert len(p["stages"]) == 8 and p["current"]["code"] == "MT01" and p["next"]["code"] == "MT02"
+    assert p["sub_status"] == "관리계획(안) 주민공람 (2026.04.17 ~ 2026.05.01, 마감)"
+    assert p["stage_note"] == "공람 이후 관리계획 승인·고시는 확인된 문서가 없습니다 (2026.04.17 공고 기준)"
+    d = p["deadlines"][0]
+    assert d["status"] == "closed" and d["d_day_label"] == "마감(2026.05.01)"
+    assert p["current"]["owner_actions"] is None
+    assert p["current"]["owner_actions_note"] == "안내 문구는 법령 대조 후 사람이 작성합니다"
+    labels = [f["label"] for f in p["facts"]]
+    assert "관리지역 면적" in labels and "노후·불량 건축물" in labels
+    assert all(f["evidence_ok"] and f["source"]["page_image"] for f in p["facts"])

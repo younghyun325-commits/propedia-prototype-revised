@@ -116,7 +116,10 @@ def test_a2_road_address_input(con):
     assert r["status"] == "ok" and r["normalized"]["addr_id"] == "A2"
     assert r["normalized"]["pnu"] == "1168011000105280000"   # 527은 도로명이 없어 인접 528
     assert r["layers"]["parcel"]["included_projects"] == []
-    assert [p["project_id"] for p in r["layers"]["dong"]["projects"]] == [1]
+    # P10: 토지 정보 좌표가 생겨 528은 한양7차 중심(527)에서 500m 안 → 주변 사업 (법정동 층에서는 빠짐)
+    near = r["layers"]["parcel"]["nearby_projects"]
+    assert [p["project_id"] for p in near] == [1] and near[0]["distance_m"] < 500
+    assert r["layers"]["dong"]["projects"] == []
 
 
 def test_a4_nearby_with_distance(con):
@@ -170,11 +173,24 @@ def test_layer_placement_rules(con):
     assert all(i["scope_type"] == "BJD" for i in L["dong"]["items"])
 
 
-def test_land_use_and_nearby_note(con):
-    P = lookup(con, A1)["layers"]["parcel"]
-    assert P["land_use"]["value"] == "제3종일반주거지역"
-    assert P["land_use"]["basis"].startswith("사업 문서 기재")   # 사업 문서 기재값이 건축물대장보다 앞선다
-    assert P["nearby_projects"] == []
+def test_land_info_and_documented_land_use(con):
+    r = lookup(con, A1)
+    P = r["layers"]["parcel"]
+    land = P["land"]
+    assert land["status"] == "ok" and land["from_cache"] is True and land["cache"] == "build"
+    assert land["land_use_zone"] == "제3종일반주거지역" and land["jimok"] == "대" and land["area_m2"] > 0
+    assert land["official_price"]["won_per_m2"] > 0 and land["official_price"]["year"] >= 2025
+    assert land["source"].startswith("브이월드")
+    assert P["land_use_documented"]["value"] == "제3종일반주거지역"
+    assert P["land_use_documented"]["basis"].startswith("고시 기재")
+    # 좌표는 토지 정보(지오코더)를 쓴다
+    assert r["normalized"]["coord_source"] == "vworld-geocoder:parcel"
+    assert P["nearby_projects"] == [] and P["nearby_note"] is None
+
+
+def test_no_coordinate_note_without_land(con):
+    P = lookup(con, "강남구 논현동 100")["layers"]["parcel"]   # 캐시에 없고 실시간도 쓰지 않음
+    assert P["land"]["status"] == "unavailable" and P["land"]["note"]
     assert P["nearby_note"]   # 좌표가 없으면 생략 사유를 알린다
 
 
@@ -189,4 +205,59 @@ def test_building_or_note(con):
 
 def test_projects_by_stage(con):
     gu = lookup(con, A1)["layers"]["gu"]
-    assert gu["projects_by_stage"] == {"RB02": {"title": "정비계획 입안·주민공람", "count": 1}}
+    assert gu["projects_by_stage"] == {"MT01": {"title": "관리계획 고시", "count": 1},
+                                       "RB02": {"title": "정비계획 입안·주민공람", "count": 1}}
+
+
+# ── P10 대청마을·토지 시나리오 (feedback2.md §6, §8-3) ──
+B1, B2, B3, B4, B5 = ("강남구 일원동 619", "서울특별시 강남구 개포로120길 55", "강남구 일원동 677-4", "강남구 대치동 506",
+                      "강남구 율현동 122")
+MOA = "대청마을 북측구역 소규모주택정비 관리지역(모아타운)"
+
+
+def test_b1_land_and_moatown_possible(con):
+    r = lookup(con, B1)
+    P = r["layers"]["parcel"]
+    assert P["land"]["status"] == "ok" and P["land"]["jimok"] == "대"
+    assert [(p["name"], p["inclusion"]) for p in P["included_projects"]] == [(MOA, "possible")]
+    assert {"D9-01", "D9-02", "D9-03"} <= set(keys(r["layers"]["dong"]["items"]))
+
+
+def test_b2_map_reading_likely(con):
+    r = lookup(con, B2)
+    assert r["normalized"]["addr_id"] == "B2" and r["normalized"]["pnu"] == "1168011400106330002"
+    inc = r["layers"]["parcel"]["included_projects"]
+    assert [(p["inclusion"], p["basis"]) for p in inc] == [("likely", "map_reading")]
+    assert inc[0]["message"].endswith("포함된 것으로 보입니다. 확인해 주세요")
+    assert inc[0]["review_id"] is not None
+    assert r["layers"]["parcel"]["land"]["use_situation"] == "단독"
+
+
+def test_b3_nearby_outside_candidates(con):
+    P = lookup(con, B3)["layers"]["parcel"]
+    assert P["included_projects"] == []
+    assert [(p["name"], p["distance_m"] <= 500) for p in P["nearby_projects"]] == [(MOA, True)]
+
+
+def test_b4_development_restriction(con):
+    dong = lookup(con, B4)["layers"]["dong"]["items"]
+    d10 = next(i for i in dong if i["item_key"] == "D10-01")
+    assert d10["effective_label"] == "효력 기간 2026.04.01 ~ 2028.04.01" and d10["target_note"].startswith("대상:")
+
+
+def test_b5_green_parcel_land_only(con):
+    r = lookup(con, B5)
+    L = r["layers"]
+    assert L["parcel"]["land"]["jimok"] == "전" and L["parcel"]["land"]["land_use_zone"] == "자연녹지지역"
+    assert L["dong"]["items"] == [] and L["dong"]["projects"] == []
+    assert "확인된 고시가 없습니다" in L["dong"]["empty_note"]
+
+
+def test_group_approval_and_exclusion(con):
+    rid = con.execute("SELECT id FROM review_queue WHERE item_type='parcel_group'").fetchone()["id"]
+    r = lookup(con, B2, decisions=[{"review_id": rid, "action": "approve"}])
+    assert [p["inclusion"] for p in r["layers"]["parcel"]["included_projects"]] == ["included"]
+    r = lookup(con, B2, decisions=[{"review_id": rid, "action": "approve",
+                                    "edits": {"exclude_pnus": ["1168011400106330002"]}}])
+    assert r["layers"]["parcel"]["included_projects"] == []
+    assert [p["name"] for p in r["layers"]["parcel"]["nearby_projects"]] == [MOA]   # 반려된 후보는 500m 안이면 주변 사업
