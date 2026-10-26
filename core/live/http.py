@@ -40,8 +40,12 @@ def _load_dotenv() -> None:
 
 
 def env_key(name: str) -> str:
+    """환경변수 키. 배포 설정에 흔히 섞이는 따옴표·공백·'이름=' 접두어는 떼고 읽는다 (값은 어디에도 출력하지 않는다)."""
     _load_dotenv()
-    return (os.environ.get(name) or "").strip()
+    v = (os.environ.get(name) or "").strip()
+    if v.startswith(name + "="):
+        v = v[len(name) + 1:]
+    return v.strip().strip('"').strip("'").strip()
 
 
 def get_json(url: str, params: dict, timeout: float = TIMEOUT, retries: int = RETRIES) -> dict:
