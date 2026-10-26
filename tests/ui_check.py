@@ -111,6 +111,13 @@ def main() -> int:
             check("③ A8 범위 밖 안내", "역삼·논현 지역생활권 장은 프리토타입 범위 밖입니다" in body)
             check("③ A8 사업 없음 문구", "진행 중인 사업이 없습니다" in body)
             shot("03_lookup_A8.png")
+            page.goto(f"{base}/lookup.html?addr=A4")
+            page.wait_for_selector("section.layer")
+            near_items = page.locator("#layer-parcel .item", has_text="주변에서 진행 중인 사업")
+            a4 = near_items.first.inner_text() if near_items.count() else ""
+            m4 = re.search(r"(\d+)m\b", a4)
+            check("③ A4 주변 500m 사업·거리", bool(m4) and int(m4.group(1)) <= 500, m4.group(0) if m4 else "")
+            shot("03b_lookup_A4_nearby.png")
             page.goto(f"{base}/lookup.html?addr=A10")
             page.wait_for_selector("#result .box.info")
             check("③ A10 시연 범위 밖", "시연 범위(강남구) 밖입니다" in page.inner_text("#result"))

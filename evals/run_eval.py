@@ -287,7 +287,8 @@ def evaluate() -> dict:
                     "target": "층마다 ≥ 95%", "pass": pre_ok})
     metrics.append({"id": "M8", "name": "포함 판정 정확도", "value": pct(pair_ok, pair_n), "display": disp(pair_ok, pair_n),
                     "target": "100%", "pass": pair_n > 0 and pair_ok == pair_n,
-                    "note": "좌표가 없어 주변(500m) 판정 쌍은 없음"})
+                    "note": f"주변(500m) 판정 쌍 {sum(p['inclusion'] == 'nearby' for a in addresses for p in a.get('projects', []))}개 "
+                            "— 사업 중심은 인접 필지 좌표 근사"})
     metrics.append({"id": "M9", "name": "원문 링크 유효율", "value": pct(img_ok, img_n), "display": disp(img_ok, img_n),
                     "target": "100%", "pass": img_n > 0 and img_ok == img_n})
 

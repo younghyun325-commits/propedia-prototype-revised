@@ -163,6 +163,7 @@ def parcel_projects(con, norm: dict, ov) -> tuple[list, list, str | None]:
                 stage = project_stage(con, p)
                 nearby.append({"project_id": p["id"], "name": p["name"], "inclusion": "nearby",
                                "inclusion_label": "주변에서 진행 중인 사업", "distance_m": int(round(dist)),
+                               "distance_basis": f"주소 좌표({norm['coord_source']}) ↔ 사업 중심({p['coord_source']})",
                                "stage": stage, "progress_url": f"/api/v1/projects/{p['id']}/progress",
                                "source": source(con, p["stage_source_doc_id"], None)})
         nearby.sort(key=lambda x: x["distance_m"])

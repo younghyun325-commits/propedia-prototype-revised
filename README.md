@@ -4,7 +4,7 @@
 
 - 작업 지시서: [agents.md](agents.md) · 진행 기록: [PROGRESS.md](PROGRESS.md) · 사람 확인 목록: [HUMAN_TODO.md](HUMAN_TODO.md) · 시연 대본: [DEMO.md](DEMO.md)
 - GitHub(비공개): https://github.com/greekyogurt02/propedia-pretotype
-- 배포 주소: (Vercel Import 후 기록)
+- 배포 주소: https://propedia-pretotype.vercel.app (Vercel Hobby, GitHub `main` push 시 자동 배포)
 
 ## 반영 범위
 
@@ -81,12 +81,13 @@ pip install -r requirements.txt -r requirements-build.txt
 
 `.vercelignore`가 빌드 전용 파일(pipeline, seed, extractions, data_raw, tests, docs 등)을 뺍니다. `db/propedia.db`, `core/`, `api/`, `public/`, `requirements.txt`는 올라갑니다. Hobby 플랜은 운영 주소가 기본 공개이며 비상업·개인 용도 조건입니다.
 
-[화면 캡처 자리: docs/screens/01_index.png, 02_lookup_A1.png, 05_review.png]
+화면 캡처: [docs/screens/](docs/screens/) (`python tests/ui_check.py`가 다시 만듭니다)
 
 ## 알려진 한계
 
-- **도로명주소 API 키 만료**(E0014, 2026-10-25): 지금은 지번 입력만 지원합니다. A2(도로명)·A5·A6 시연 주소는 비어 있고, A4·A7·A8·A9는 화면에 "예시·지번 미확인"으로 표시됩니다. 키 재발급 후 `resolve_addresses → geocode → run_all → run_eval`을 다시 실행하면 바뀝니다(HUMAN_TODO 6).
-- **좌표 없음**: OSM에 한양7차 위치가 없어 사업 중심점이 없고, 주변 500m 판정은 생략됩니다(HUMAN_TODO 7).
+- **압구정동 527은 도로명주소가 없는 필지**입니다(도로명주소 API 검색 결과 없음, 2026-10-26). 그래서 A2는 인접 528(한양아파트, 압구정로61길 37)의 도로명 입력으로 바꿨습니다.
+- **사업 중심 좌표는 근사값**입니다: 527·528 모두 OSM에 위치가 없어, 인접 필지 526(청담고등학교, 도로명주소 API로 확인)의 OSM 좌표를 씁니다. 주변 500m 판정(A4 갤러리아 260m)은 이 근사 중심 기준이며 화면에 거리 기준을 함께 표시합니다(HUMAN_TODO 7).
+- 좌표는 OSM Nominatim에서 도로명·건물명으로만 찾습니다(한국 OSM 번지는 도로명 번호라 지번 질의는 오매칭). 결과 주소에 해당 법정동 이름이 있을 때만 받습니다.
 - 경계 데이터가 없어 포함 판정은 대표 지번(`possible`)과 사람 검수(`included`)만 씁니다.
 - 지역생활권 계획은 2018년판이며 압구정·청담 장만 반영했습니다. 이미지 쪽은 Claude Code가 전사했고 모두 검수 대상입니다.
 - 재건축 단계 템플릿 문구(설명·법령 근거)는 법령 대조 전 초안이라 비어 있습니다(HUMAN_TODO 2).

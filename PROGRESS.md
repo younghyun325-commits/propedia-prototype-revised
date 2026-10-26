@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P8 (배포 — 사람 계정 필요, 대기)
+현재 단계: P8 (배포 확인 중)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -102,6 +102,13 @@
 ## P8 배포 — 진행 중 (사람 계정 필요, 2026-10-25)
 - [x] `gh auth status` → 로그인 확인 → 커밋된 파일에 `.env` 키 값 없음 확인(값은 출력하지 않음) → `gh repo create propedia-pretotype --private --source . --push`
   - 저장소: https://github.com/greekyogurt02/propedia-pretotype (PRIVATE, main)
-- [ ] 사람: Vercel 가입·Import·Deploy → 주소 전달 (HUMAN_TODO 4). 공개 주소가 되므로 HUMAN_TODO 11(계획 보고서 이용 조건) 먼저 확인
-- [ ] Claude Code: 배포 주소로 `curl /api/v1/health`, A1 조회, `python tests/ui_check.py --base <주소>` → README·DEMO에 주소 기록
-- 멈춤 사유: agents.md §19-1-3 (Vercel 가입·Import는 사람 계정 필요)
+- [x] 동혁: Vercel 배포 완료 → https://propedia-pretotype.vercel.app (2026-10-26). HUMAN_TODO 11은 "링크 공유 안 함"으로 닫음
+- [x] 동혁: 도로명주소 새 승인키 전달 → `.env`의 `JUSO_CONFM_KEY` 교체(값은 출력·커밋하지 않음)
+- [x] 시연 주소 재확정 (`resolve_addresses` → `geocode` → `run_all` → `run_eval`)
+  - 법정동 코드 14개 모두 API `admCd`로 확인(`code_verified=1`)
+  - 압구정동 527은 도로명주소 검색 결과 없음(건물 주소 없는 필지; 526 청담고등학교, 528 한양아파트) → A1은 D1 지번 고정, A2는 인접 528 도로명 `압구정로61길 37`
+  - A4 갤러리아백화점(494), A5 현대아파트(426), A6 청담자이(청담동 134-38), A7 신구중학교(신사동 621), A8 강남파이낸스센터(역삼동 737), A9 은마아파트(대치동 316), A10 방배초등학교(서초구 방배동 861-1) — 예전 예시 지번 중 역삼동 737·대치동 316은 실제와 일치
+  - 좌표: 527·528은 OSM에 없음 → 사업 중심을 인접 필지 526(청담고등학교) OSM 좌표로 근사(`seed/project_coords.csv`, 출처 명시). A4 260m(주변), A5 1,595m·A6 1,383m·A7 995m(밖). Nominatim 결과에 법정동 이름이 있어야 받도록 조건 추가('한양아파트 강남구'가 신사동 건물로 맞던 문제)
+  - 정답셋 `addresses.yaml` 초안 갱신(제외 주소 없음), 테스트 4개 추가(A2 도로명, A4 주변, A5 500m 밖, A10 도로명 범위 밖)
+- 확인: `pytest -q` 70 passed / `run_eval` 지표 12개 통과(주소 10/10, 포함 판정 5/5, 원문 링크 265/265) / `pipeline.check P1` 15/15 / `tests/ui_check.py` 로컬 30/30
+- [ ] push 후 Vercel 재배포본 점검 (`curl /api/v1/health`, `python tests/ui_check.py --base https://propedia-pretotype.vercel.app`)

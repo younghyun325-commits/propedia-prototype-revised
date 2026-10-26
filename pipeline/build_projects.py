@@ -3,6 +3,7 @@
 - 단계는 seed/stage_rules.yaml 을 문서 제목(공백만 정리)에 적용해 정한다. 추출값(stage_candidate)과 다르면 검수 큐.
 - 대표 지번만 있는 필지는 basis='representative_only', verified=0 → 검수 큐(parcel_inclusion).
 """
+import csv
 import json
 import re
 
@@ -25,6 +26,18 @@ def judge_stage(title: str, project_type: str, rules: list[dict]) -> tuple[str, 
     return None
 
 
+def project_center(con, project_key: str, anchors: dict) -> tuple:
+    """사업 중심점: A1 좌표 → A2 좌표 → seed/project_coords.csv의 인접 필지 근사 (§8-8-4)."""
+    for aid in ("A1", "A2"):
+        r = con.execute("SELECT lat, lon, coord_source FROM demo_addresses WHERE addr_id=?", (aid,)).fetchone()
+        if r and r["lat"] is not None:
+            return r["lat"], r["lon"], f"{aid} {r['coord_source']}"
+    a = anchors.get(project_key)
+    if a:
+        return float(a["lat"]), float(a["lon"]), a["note"]
+    return None, None, None
+
+
 def review(con, item_type, ref_table, ref_key, title, reason, proposed, doc_pk, page) -> None:
     con.execute(
         """INSERT INTO review_queue(item_type, ref_table, ref_key, title, reason, proposed, document_id, pdf_page)
@@ -39,7 +52,10 @@ def build(con) -> list[dict]:
     doc = con.execute("SELECT id, title, published_at FROM documents WHERE doc_id='D1'").fetchone()
     doc_pk = doc["id"]
     bjd = {r["dong_name"]: dict(r) for r in con.execute("SELECT * FROM bjd_codes")}
-    a1 = con.execute("SELECT lat, lon, coord_source FROM demo_addresses WHERE addr_id='A1'").fetchone()
+    anchors = {}
+    if (SEED / "project_coords.csv").exists():
+        with open(SEED / "project_coords.csv", encoding="utf-8-sig", newline="") as f:
+            anchors = {r["project_key"]: r for r in csv.DictReader(f) if r["lat"]}
 
     for prj in data["projects"]:
         judged = judge_stage(doc["title"], prj["project_type"], rules)
@@ -49,7 +65,8 @@ def build(con) -> list[dict]:
         rj = prj["representative_jibun"]
         dong = bjd.get(rj["dong"]) or fail(f"법정동 코드표에 {rj['dong']}가 없습니다")
         pnu = make_pnu(dong["bjd_code"], rj["main"], rj.get("sub", 0), rj.get("san", False))
-        has_coord = a1 is not None and a1["lat"] is not None
+        lat, lon, csrc = project_center(con, prj["project_key"], anchors)
+        has_coord = lat is not None
         cur = con.execute(
             """INSERT INTO projects(project_key, name, aliases, project_type, track, sgg_code, bjd_code, sub_stage_code,
                stage_as_of, stage_source_doc_id, stage_rule, area_m2, location_text, land_use, land_use_page,
@@ -57,8 +74,7 @@ def build(con) -> list[dict]:
             (prj["project_key"], prj["name"], json.dumps(prj.get("aliases", []), ensure_ascii=False),
              prj["project_type"], "unknown", dong["sgg_code"], dong["bjd_code"], code, doc["published_at"], doc_pk,
              rule_id, prj["area_m2"]["value"], prj.get("location_text"), prj["land_use"]["value"],
-             prj["land_use"]["pdf_page"], a1["lat"] if has_coord else None, a1["lon"] if has_coord else None,
-             f"A1 {a1['coord_source']}" if has_coord else None))
+             prj["land_use"]["pdf_page"], lat, lon, csrc))
         pid = cur.lastrowid
         if prj.get("stage_candidate") and prj["stage_candidate"] != code:
             review(con, "stage_uncertain", "projects", str(pid), f"{prj['name']} — 단계 판정",

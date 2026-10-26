@@ -92,6 +92,7 @@ def progress(con, project_id: int, decisions=None, today=None) -> dict | None:
         "track_label": TRACK_LABELS.get(p["track"], p["track"]),
         "location_text": p["location_text"],
         "area_m2": p["area_m2"],
+        "center": {"lat": p["lat"], "lon": p["lon"], "coord_source": p["coord_source"]} if p["lat"] is not None else None,
         "as_of": p["stage_as_of"] or m.get("as_of"),
         "position_label": f"{label} {len(tpls)}단계 중 {cur['seq']}번째",
         "stages": stages,

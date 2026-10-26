@@ -51,6 +51,33 @@ def test_same_dong_other_parcel_shows_dong_project(con):
     assert [p["name"] for p in dp] == ["압구정아파트지구 특별계획구역6-1 재건축 정비구역"]
 
 
+def test_a2_road_address_input(con):
+    r = lookup(con, "서울특별시 강남구 압구정로61길 37")
+    assert r["status"] == "ok" and r["normalized"]["addr_id"] == "A2"
+    assert r["normalized"]["pnu"] == "1168011000105280000"   # 527은 도로명이 없어 인접 528
+    assert r["layers"]["parcel"]["included_projects"] == []
+    assert [p["project_id"] for p in r["layers"]["dong"]["projects"]] == [1]
+
+
+def test_a4_nearby_with_distance(con):
+    r = lookup(con, "강남구 압구정동 494")
+    near = r["layers"]["parcel"]["nearby_projects"]
+    assert len(near) == 1 and 0 < near[0]["distance_m"] <= 500
+    assert near[0]["inclusion"] == "nearby" and "사업 중심" in near[0]["distance_basis"]
+    assert r["layers"]["dong"]["projects"] == []   # 필지 층에 나온 사업은 법정동 층에서 뺀다
+
+
+def test_a5_same_dong_outside_500m(con):
+    r = lookup(con, "강남구 압구정동 426")
+    assert r["layers"]["parcel"]["nearby_projects"] == []
+    assert r["layers"]["parcel"]["nearby_note"] is None
+    assert [p["project_id"] for p in r["layers"]["dong"]["projects"]] == [1]
+
+
+def test_a10_road_address_out_of_scope(con):
+    assert lookup(con, "서울특별시 서초구 방배중앙로13길 26")["status"] == "out_of_scope"
+
+
 def test_a8_other_saenghwal(con):
     r = lookup(con, "강남구 역삼동 737")
     L = r["layers"]

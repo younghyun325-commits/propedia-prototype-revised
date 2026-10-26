@@ -29,19 +29,25 @@ ADDR_COLS = ["addr_id", "label", "input_text", "road_address", "jibun_address", 
 
 # 시연 주소 후보 (§4). keyword = API 검색어, pick = 결과 중 고를 행의 조건.
 # A4·A5는 geocode 후 한양7차 중심과의 거리를 확인하고, 조건이 안 맞으면 여기 검색어를 바꿔 다시 실행한다.
+# [확인 2026-10-26] 압구정동 527은 도로명주소 검색 결과가 없다(건물 주소가 없는 필지로 보임. 526 청담고등학교,
+#   528 한양아파트 '압구정로61길 37'). 그래서 A1은 D1 근거 지번으로 고정하고(fixed), A2는 인접 528의 도로명 입력으로 한다.
 CANDIDATES = [
     {"addr_id": "A1", "type": "사업 대표 지번", "input_text": "강남구 압구정동 527",
      "keyword": "서울특별시 강남구 압구정동 527", "pick": {"jibun_main": 527, "jibun_sub": 0},
+     "fixed": ("강남구", "압구정동", 527, 0), "building_name": "한양7차아파트",
      "aliases": ["서울특별시 강남구 압구정동 527번지", "서울 강남구 압구정동 527"]},
-    {"addr_id": "A2", "type": "A1의 도로명주소", "input_text": None, "same_as": "A1", "use": "road"},
+    {"addr_id": "A2", "type": "도로명주소 입력 (527은 도로명 없음 → 인접 528)", "keyword": "서울특별시 강남구 압구정로61길 37",
+     "pick": {"dong": "압구정동", "jibun_main": 528}, "road_input": True},
     {"addr_id": "A3", "type": "입력 변형", "input_text": "서울특별시 강남구 압구정동 527번지", "same_as": "A1", "use": "input"},
-    {"addr_id": "A4", "type": "같은 동, 사업 500m 이내", "keyword": "압구정 현대아파트 13차", "pick": {"dong": "압구정동"}},
-    {"addr_id": "A5", "type": "같은 동, 500m 밖", "keyword": "압구정 현대아파트 1차", "pick": {"dong": "압구정동"}},
+    # A4: 압구정 한양아파트(513, 압구정로 401)는 OSM에 번지가 없어 좌표를 못 얻었다 → OSM에 번지가 있는 갤러리아백화점(494)
+    {"addr_id": "A4", "type": "같은 동, 사업 500m 이내", "keyword": "압구정동 갤러리아",
+     "pick": {"dong": "압구정동", "jibun_main": 494}},
+    {"addr_id": "A5", "type": "같은 동, 500m 밖", "keyword": "압구정 현대아파트", "pick": {"dong": "압구정동", "jibun_main": 426}},
     {"addr_id": "A6", "type": "같은 생활권, 다른 동", "keyword": "강남구 청담동 청담자이", "pick": {"dong": "청담동"}},
-    {"addr_id": "A7", "type": "생활권 확인용", "keyword": "강남구 신사동 신사중학교", "pick": {"dong": "신사동"}},
-    {"addr_id": "A8", "type": "다른 생활권", "keyword": "강남구 역삼동 역삼초등학교", "pick": {"dong": "역삼동"}},
-    {"addr_id": "A9", "type": "다른 생활권", "keyword": "강남구 대치동 은마아파트", "pick": {"dong": "대치동"}},
-    {"addr_id": "A10", "type": "범위 밖", "keyword": "서초구 방배동 방배초등학교", "pick": {"dong": "방배동"}},
+    {"addr_id": "A7", "type": "생활권 확인용", "keyword": "강남구 신사동 신구중학교", "pick": {"dong": "신사동"}},
+    {"addr_id": "A8", "type": "다른 생활권", "keyword": "강남파이낸스센터", "pick": {"dong": "역삼동"}},
+    {"addr_id": "A9", "type": "다른 생활권", "keyword": "대치동 은마아파트", "pick": {"dong": "대치동"}},
+    {"addr_id": "A10", "type": "범위 밖", "keyword": "서초구 방배동 방배초등학교", "pick": {"dong": "방배동", "jibun_main": 861}},
 ]
 
 
@@ -193,16 +199,36 @@ def resolve() -> list[dict]:
         data = search(c["keyword"])
         (RAW / f"{aid}.json").write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
         cands = [r for r in rows_of(data) if matches(r, c.get("pick", {}))]
+        if not cands and "fixed" in c:
+            # 도로명주소가 없는 필지: 원문(D1) 지번으로 고정하고 법정동 코드표로 PNU를 만든다
+            gu, dong, main, sub = c["fixed"]
+            code = load_bjd()[dong]["bjd_code"]
+            short = f"{gu} {dong} {main}" + (f"-{sub}" if sub else "")
+            bd = c.get("building_name", "")
+            out[aid] = {"addr_id": aid, "label": f"{aid} {short.replace('강남구 ', '')}" + (f" ({bd})" if bd else ""),
+                        "input_text": c.get("input_text") or short, "road_address": "",
+                        "jibun_address": f"서울특별시 {short}", "pnu": make_pnu(code, main, sub), "bjd_code": code,
+                        "sgg_code": code[:5], "building_name": bd, "lat": "", "lon": "", "coord_source": "",
+                        "aliases": json.dumps(c.get("aliases", []), ensure_ascii=False), "in_scope": 1,
+                        "_type": c["type"]}
+            log(f"  {aid}: 도로명주소 검색 결과 없음 → 원문 지번 {short}로 고정")
+            continue
         if not cands:
             fail(f"{aid} 검색 결과에서 조건에 맞는 행이 없습니다 (검색어: {c['keyword']}). CANDIDATES를 고치세요.")
         row = cands[0]
         in_scope = int(row.get("sggNm") == "강남구")
         bd = row.get("bdNm") or ""
         short = jibun_short(row)
+        road = row.get("roadAddrPart1") or row.get("roadAddr")
+        if c.get("road_input"):
+            label = f"{aid} 도로명 {road.replace('서울특별시 ', '').replace('강남구 ', '')} ({short.replace('강남구 ', '')}" \
+                    + (f" {bd})" if bd else ")")
+        else:
+            label = f"{aid} {short.replace('강남구 ', '')}" + (f" ({bd})" if bd else "")
         out[aid] = {
             "addr_id": aid,
-            "label": f"{aid} {short.replace('강남구 ', '')}" + (f" ({bd})" if bd else ""),
-            "input_text": c.get("input_text") or short,
+            "label": label,
+            "input_text": road if c.get("road_input") else (c.get("input_text") or short),
             "road_address": row.get("roadAddrPart1") or row.get("roadAddr"),
             "jibun_address": f"서울특별시 {short}",
             "pnu": pnu_from_juso(row),

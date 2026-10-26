@@ -88,6 +88,7 @@ function progressCard(p) {
       <span class="small muted">추진 방식 ${esc(p.track_label)} · 기준일 ${fmtDate(p.as_of)}</span>
     </div>
     ${(p.aliases || []).length ? `<div class="small muted">다른 이름: ${esc(p.aliases.join(', '))}</div>` : ''}
+    <div class="small muted">위치: ${esc(p.location_text || '')}${p.center ? ` · 중심 좌표 ${p.center.lat.toFixed(5)}, ${p.center.lon.toFixed(5)} (${esc(p.center.coord_source)})` : ' · 중심 좌표 없음'}</div>
     <div class="stagebar" aria-label="단계 막대">${stagebar}</div>
     <div class="row"><b>${esc(p.position_label)}</b><span class="small muted">초록=지난 단계(점선=확인된 고시 없음), 파랑=지금 단계, 회색=다음 단계들</span></div>
     <div class="stage-chips">${chips}</div>
@@ -160,9 +161,10 @@ function parcelHtml(P, normalized) {
   }
   html += '<h3 style="margin-top:14px">주변 500m 사업</h3>';
   if (P.nearby_projects.length) {
-    html += P.nearby_projects.map((n) => `<div class="item row">${badge('주변', 'muted')}
-      <b>${esc(n.name)}</b><span>${n.distance_m}m</span>
-      <button class="btn small" type="button" data-progress="${n.project_id}">진행상황 보기</button>
+    html += P.nearby_projects.map((n) => `<div class="item"><div class="row">${badge(n.inclusion_label, 'info')}
+      <b>${esc(n.name)}</b><span><b>${n.distance_m}m</b></span>
+      <button class="btn small" type="button" data-progress="${n.project_id}">진행상황 보기</button></div>
+      <div class="small muted">거리 기준: ${esc(n.distance_basis || '')}</div>
       <div id="progress-${n.project_id}" style="width:100%"></div></div>`).join('');
   } else {
     html += `<div class="empty">${esc(P.nearby_note || '주변 500m 안에서 진행 중인 사업이 없습니다')}</div>`;
@@ -188,7 +190,7 @@ function dongExtras(D) {
 function normLine(n) {
   const parts = [
     ['지번', n.jibun_address || '—'],
-    ['도로명', n.road_address || '— (도로명주소 API 키 재발급 후 추가)'],
+    ['도로명', n.road_address || '— (이 필지에 부여된 도로명주소 없음)'],
     ['PNU', n.pnu ? `<span class="mono">${esc(n.pnu)}</span>` : '—'],
     ['법정동', n.dong_name ? `${esc(n.dong_name)} <span class="mono small">${esc(n.bjd_code)}</span>` : '—'],
     ['지역생활권', n.saenghwal || '—'],
