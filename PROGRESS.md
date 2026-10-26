@@ -134,3 +134,5 @@
 - 확인: `pytest -q` 87 passed, 1 skipped(seed/buildings.json 없음) / `run_eval` M1~M14 통과, **M15 0/9 미달(키 대기)** — M2 근거 79/79, M13 9/9, M14 32/32 / `pipeline.check` P1 19/19·P2 21/21·P3 10/10 / `tests/ui_check.py` 로컬 40/40
   - A1: 서울 전역 5(D6·D7·D8·D3-07·D3-08) / 자치구 2(D4-07·D4-08) + 단계 분포 / 법정동 3(D5·D1-01·D1-02) / 필지: 용도지역 + 건축물 안내 + 사업 카드 / 참고 4(D3-06·D4-03 넘침, D2-11·D2-13)
   - A8: 서울 전역에 D6, 법정동 항목 없음
+- 배포: fc6bc67 push → Vercel 배포 완료(health schema_version 2, build_at 2026-10-26T16:33) → `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 40/40
+- 남은 일: HUMAN_TODO 14(키) 받으면 `fetch_buildings` → `run_all` → `run_eval`(M15) → `pytest` → `ui_check` 로컬·배포본 → P9 완료 기록
