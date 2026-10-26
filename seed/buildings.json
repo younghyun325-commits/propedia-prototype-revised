@@ -1,0 +1,174 @@
+[
+ {
+  "pnu": "1168010100107370000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [
+   "강남파이낸스센터"
+  ],
+  "main_purpose": "업무시설",
+  "structure": "철골철근콘크리트구조",
+  "use_apr_day": "2001-07-31",
+  "max_grnd_flr": 45,
+  "max_ugrnd_flr": 8,
+  "total_hhld": 0,
+  "total_area": 212615.29,
+  "zoning": {
+   "jiyuk": "일반상업지역",
+   "jigu": "중심지미관지구",
+   "guyuk": "지구단위계획구역"
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168010400101340038",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 5,
+  "bld_names": [
+   "청담자이아파트"
+  ],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "2011-10-21",
+  "max_grnd_flr": 35,
+  "max_ugrnd_flr": 0,
+  "total_hhld": 708,
+  "total_area": 64984.14,
+  "zoning": {
+   "jiyuk": "제3종일반주거지역",
+   "jigu": "아파트지구",
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168010600103160000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 31,
+  "bld_names": [
+   "은마상가비부럭",
+   "은마아파트(20동)",
+   "은마아파트21동"
+  ],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "1979-08-30",
+  "max_grnd_flr": 14,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 4424,
+  "total_area": 528772.0,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": "중심지미관지구",
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168010700106210000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 2,
+  "bld_names": [
+   "신구중학교"
+  ],
+  "main_purpose": "교육연구시설",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "1996-04-24",
+  "max_grnd_flr": 4,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 0,
+  "total_area": 8682.61,
+  "zoning": {
+   "jiyuk": "제2종일반주거지역",
+   "jigu": null,
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011000104260000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 13,
+  "bld_names": [
+   "현대상가제3동",
+   "현대아파트103동",
+   "현대아파트102동"
+  ],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "1972-06-14",
+  "max_grnd_flr": 12,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 600,
+  "total_area": 82169.59,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": "아파트지구",
+   "guyuk": null
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011000104940000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 1,
+  "bld_names": [
+   "갤러리아 백화점 생활관"
+  ],
+  "main_purpose": "판매시설",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "1979-08-27",
+  "max_grnd_flr": 5,
+  "max_ugrnd_flr": 2,
+  "total_hhld": 0,
+  "total_area": 22760.43,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": "아파트지구",
+   "guyuk": "광역계획구역"
+  },
+  "note": null
+ },
+ {
+  "pnu": "1168011000105270000",
+  "found": false,
+  "note": "이 지번에 건축물대장 표제부가 조회되지 않았습니다",
+  "fetched_at": "2026-10-26"
+ },
+ {
+  "pnu": "1168011000105280000",
+  "found": true,
+  "fetched_at": "2026-10-26",
+  "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)",
+  "main_count": 2,
+  "bld_names": [
+   "한양아파트72동",
+   "한양아파트71동"
+  ],
+  "main_purpose": "공동주택",
+  "structure": "철근콘크리트구조",
+  "use_apr_day": "1981-04-25",
+  "max_grnd_flr": 12,
+  "max_ugrnd_flr": 1,
+  "total_hhld": 239,
+  "total_area": 29985.87,
+  "zoning": {
+   "jiyuk": "일반주거지역",
+   "jigu": "아파트지구",
+   "guyuk": null
+  },
+  "note": null
+ }
+]

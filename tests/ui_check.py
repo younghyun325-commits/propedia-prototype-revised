@@ -137,6 +137,9 @@ def main() -> int:
             a4 = near_items.first.inner_text() if near_items.count() else ""
             m4 = re.search(r"(\d+)m\b", a4)
             check("③ A4 주변 500m 사업·거리", bool(m4) and int(m4.group(1)) <= 500, m4.group(0) if m4 else "")
+            bld = page.locator("#layer-parcel .item.building")
+            check("③ A4 건축물 요약 표", bld.count() == 1 and "건축HUB 건축물대장" in bld.inner_text(),
+                  bld.locator("tbody td").first.inner_text() if bld.count() else "")
             shot("03b_lookup_A4_nearby.png")
             page.goto(f"{base}/lookup.html?addr=A10")
             page.wait_for_selector("#result .box.info")
