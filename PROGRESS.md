@@ -138,3 +138,4 @@
   - A8: 서울 전역에 D6, 법정동 항목 없음
 - 배포: fc6bc67 push → Vercel 배포 완료(health schema_version 2, build_at 2026-10-26T16:33) → `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 40/40
 - 건축물대장 반영 후 확인: `run_all` → `run_eval` **M1~M15 전부 통과, 오류 0건** (M15 9/9, 표제부 조회 7/9) / `pytest -q` 88 passed / `pipeline.check` P1 19/19·P2 21/21·P3 10/10 / `tests/ui_check.py` 로컬 41/41 (A4 건축물 요약 표 점검 추가)
+- 최종 배포: 030743a → Vercel 배포 완료(build_at 2026-10-26T17:05) → `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 41/41. 커밋된 파일에 키 값 없음 확인
