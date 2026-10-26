@@ -111,4 +111,5 @@
   - 좌표: 527·528은 OSM에 없음 → 사업 중심을 인접 필지 526(청담고등학교) OSM 좌표로 근사(`seed/project_coords.csv`, 출처 명시). A4 260m(주변), A5 1,595m·A6 1,383m·A7 995m(밖). Nominatim 결과에 법정동 이름이 있어야 받도록 조건 추가('한양아파트 강남구'가 신사동 건물로 맞던 문제)
   - 정답셋 `addresses.yaml` 초안 갱신(제외 주소 없음), 테스트 4개 추가(A2 도로명, A4 주변, A5 500m 밖, A10 도로명 범위 밖)
 - 확인: `pytest -q` 70 passed / `run_eval` 지표 12개 통과(주소 10/10, 포함 판정 5/5, 원문 링크 265/265) / `pipeline.check P1` 15/15 / `tests/ui_check.py` 로컬 30/30
+- Vercel이 1690c28 배포를 막음: GitHub 커밋 상태 "Git author butterdduck02 must have access to the project on Vercel" — 커밋 이메일이 저장소 주인(greekyogurt02)이 아닌 다른 GitHub 계정에 연결돼 있음 → 이 커밋부터 저장소 주인 계정의 noreply 이메일로 커밋해 다시 배포(전역 git 설정은 그대로)
 - [ ] push 후 Vercel 재배포본 점검 (`curl /api/v1/health`, `python tests/ui_check.py --base https://propedia-pretotype.vercel.app`)

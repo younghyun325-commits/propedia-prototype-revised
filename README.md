@@ -75,6 +75,7 @@ pip install -r requirements.txt -r requirements-build.txt
 
 1. GitHub 비공개 저장소에 push (`gh repo create propedia-pretotype --private --source . --push`, 완료).
    - 이후 `git push`가 "Repository not found"로 실패하면 Windows 자격 증명 관리자에 다른 GitHub 계정이 저장된 것입니다. 전역 설정을 바꾸지 않고 `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push`로 올립니다.
+   - push했는데 Vercel이 배포하지 않고 GitHub 커밋 상태에 "Git author … must have access to the project on Vercel"가 뜨면, 커밋 이메일이 저장소 주인(greekyogurt02)이 아닌 다른 GitHub 계정에 연결된 것입니다(Hobby 플랜은 프로젝트 주인이 작성한 커밋만 배포). `git -c user.email=232514334+greekyogurt02@users.noreply.github.com commit …`으로 커밋하거나 Vercel 화면에서 Redeploy합니다.
 2. vercel.com → New Project → 저장소 Import → Framework 자동(FastAPI) → Deploy.
 3. 확인: `curl -s https://<주소>/api/v1/health`, 화면 5개.
 4. `/api/*`가 404면 루트에 `vercel.json` `{ "rewrites": [ { "source": "/api/(.*)", "destination": "/api/index" } ] }` 추가 후 재배포 (agents.md §15-3).
