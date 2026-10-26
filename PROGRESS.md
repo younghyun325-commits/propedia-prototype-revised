@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P10 (feedback2.md) — L0~L5 완료, L6 배포본 실시간 토지 정보는 Vercel 키 값 교체 대기 (HUMAN_TODO 26)
+현재 단계: P0~P10 완료 (2026-10-26). 남은 일은 HUMAN_TODO의 사람 확인 항목
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -140,7 +140,7 @@
 - 건축물대장 반영 후 확인: `run_all` → `run_eval` **M1~M15 전부 통과, 오류 0건** (M15 9/9, 표제부 조회 7/9) / `pytest -q` 88 passed / `pipeline.check` P1 19/19·P2 21/21·P3 10/10 / `tests/ui_check.py` 로컬 41/41 (A4 건축물 요약 표 점검 추가)
 - 최종 배포: 030743a → Vercel 배포 완료(build_at 2026-10-26T17:05) → `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 41/41. 커밋된 파일에 키 값 없음 확인
 
-## P10 토지 중심 + 실시간 조회 (feedback2.md) — 진행 중 (2026-10-26)
+## P10 토지 중심 + 실시간 조회 (feedback2.md) — 완료 (2026-10-26)
 - [x] H1 `VWORLD_API_KEY` 동혁이 `.env`에 넣음(36자, 값 미출력) · H2 Vercel 환경변수 등록 완료(동혁)
 - [x] L0 `python -m pipeline.check_keys` 작성·실행 → 처음에는 국가중점 API 인증 실패로 멈춤 → 동혁이 활용 API 수정 → 재점검 통과
   - 지오코더(getcoord parcel, 일원동 619) OK — 응답 `refined.structure.level4LC`에 PNU `1168011400106190000`이 있음(juso 대체 경로에 쓸 수 있음)
@@ -162,8 +162,15 @@
   - 지표 M16 토지 정보 확보율, M17 토지 정보 정확도, M18(`--live`) 실시간 성공률·p95. M12에 모아타운 MT01 추가
   - 금지어 규칙(§9-6) 때문에 칩 묶음 "추천 시연" 대신 "대표 시연". 브이월드 원 자료 값(예: '비행안전제2구역')은 근거 문장처럼 금지어 검사에서 뺌
 - 확인: `pytest -q` 121 passed(네트워크 없음) / `run_eval` M1~M17 통과·오류 0 / `run_eval --live` M18 20/20 · p95 1,084ms / `pipeline.check` P1·P2·P3 통과 / `tests/ui_check.py` 로컬 58/58 / G3 지번 5건(세곡·역삼·논현·삼성·개포) 토지 정보 표시·고시 없는 동 안내
-- [ ] L6 문서(README·DEMO·agents.md) 갱신 완료 → push(d57a54b) → Vercel 배포 → 배포본 확인 **진행 중**
+- [x] L6 문서(README·DEMO·agents.md) 갱신 완료 → push(d57a54b) → Vercel 배포 → 배포본 확인
   - 배포본에서 도로명주소 검색(juso)은 정상, 브이월드는 실패 → 실패 이유를 응답 `land.errors`에 싣도록 함(HTTP 코드·결과 코드만)
   - 원인 1: Vercel 함수가 미국(iad1)에서 실행 → 브이월드가 연결을 끊음(`RemoteDisconnected`, `HTTP 502`) → `vercel.json` `regions: ["icn1"]`(서울)로 해결
   - 원인 2: 서울에서 호출하자 `INVALID_KEY`(등록되지 않은 인증키) → Vercel에 등록된 `VWORLD_API_KEY` 값이 로컬 `.env`와 다름 (따옴표·공백·'이름=' 접두어는 코드에서 걸러도 같음) → **HUMAN_TODO 26** (동혁이 Vercel 값 교체 후 재배포)
   - 배포본 `tests/ui_check.py --no-shots` 57/58 — 실패는 '자유 입력 → 토지 정보' 1건(원인 2). 시연 주소(B1·B2 포함)는 빌드 캐시로 정상
+  - 동혁이 Vercel `VWORLD_API_KEY`를 로컬과 같은 값으로 교체 → 재배포(245eeb5) → 배포본 브이월드 정상
+- 완료 확인 (배포본 https://propedia-pretotype.vercel.app, 서울 지역 icn1)
+  - G1 시연 목록 밖 강남구 도로명 10건(`live_addresses.yaml` 앞 10건): 10/10 status ok + 토지 정보 카드, 건당 0.8~1.3초
+  - G2 B1·B2: 토지 정보 + 모아타운 카드(8단계 중 1번째, 공람 마감, 단계 메모) + `possible`/`likely` + 일원동 항목 + 사실(근거·원문 쪽) — ui_check 통과
+  - G3 대청마을 밖 지번 5건(세곡동 279·역삼동 823·논현동 100·삼성동 159·개포동 12): 5/5 토지 정보, 법정동 층 "확인된 고시가 없습니다"
+  - `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 58/58 (자유 입력·여러 건 후보 포함)
+  - 로컬: `pytest -q` 121 passed, `run_eval` M1~M17 + `--live` M18 20/20(p95 1,093ms) 오류 0, `pipeline.check` P1·P2·P3 통과, ui_check 58/58
