@@ -1,6 +1,6 @@
 {
   "doc_id": "D2",
-  "extractor_version": "claude-code-v1",
+  "extractor_version": "claude-code-v1.1",
   "extracted_at": "2026-10-25T11:00:00+09:00",
   "document": {
     "title": "2030 서울생활권계획 (강남구)",
@@ -24,7 +24,14 @@
       "evidence": "동남권 146㎢ 218만명 서초구, 강남구, 송파구, 강동구",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "권역 구성 일반 설명"
     },
     {
       "item_key": "D2-02",
@@ -38,7 +45,14 @@
       "evidence": "강남구 역삼·논현, 삼성, 압구정·청담,",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "생활권 구분 일반 설명"
     },
     {
       "item_key": "D2-03",
@@ -52,7 +66,14 @@
       "evidence": "•1988년 자치구로 승격되었으며, 14개 법정동에 22개 행정동을 관할",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "자치구 현황 통계"
     },
     {
       "item_key": "D2-04",
@@ -66,7 +87,14 @@
       "evidence": "• 행정구역 : 신사동, 압구정동, 청담동",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "지역생활권 일반 설명 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-05",
@@ -80,7 +108,14 @@
       "evidence": "▪ 한강변에 접한 노후 아파트지구 - 압구정 아파트지구(고밀) 지정 - 대규모 아파트지구의 정비시점 도래",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "지역생활권 일반 설명 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-06",
@@ -94,7 +129,14 @@
       "evidence": "▪ 아파트 노후화에 따른 재건축사업 추진 검토",
       "effective_from": null,
       "confidence": 0.75,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "지역생활권 일반 설명 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-07",
@@ -108,7 +150,14 @@
       "evidence": "특화 상업가로 및 블럭외부 상업용도와 조화를 이루는 주거지 관리 계획 수립",
       "effective_from": null,
       "confidence": 0.8,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "지역생활권 일반 설명 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-08",
@@ -122,7 +171,14 @@
       "evidence": "•압구정 아파트지구 종합 관리방안",
       "effective_from": null,
       "confidence": 0.8,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "지역생활권 일반 설명 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-09",
@@ -136,7 +192,14 @@
       "evidence": "생활권면적대비 아파트지구 면적 비율 17.2%",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "지역생활권 일반 설명 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-10",
@@ -150,7 +213,14 @@
       "evidence": "압구정동 한강변을 따라 30년이상 노후건축물 밀집",
       "effective_from": null,
       "confidence": 0.8,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "지역생활권 일반 설명 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-11",
@@ -164,7 +234,14 @@
       "evidence": "✓압구정지구 노후 아파트 재건축 지원",
       "effective_from": null,
       "confidence": 0.8,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": 1,
+      "tier_reason": "생활권 지역과제 — 참고 계획으로만 표시 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-12",
@@ -178,7 +255,14 @@
       "evidence": "목표2 : 한강변 수변 주거지의 종합적 계획관리",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "지역생활권 일반 설명 (2030 생활권계획 2018)"
     },
     {
       "item_key": "D2-13",
@@ -192,7 +276,14 @@
       "evidence": "· 동시다발적 재건축사업으로 인한 주거 수급 불균형 해소를 위해 정비사업시기 조정(현대, 한양, 미성 등)",
       "effective_from": null,
       "confidence": 0.8,
-      "needs_review": true
+      "needs_review": true,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": 2,
+      "tier_reason": "생활권 실현전략 — 참고 계획으로만 표시 (2030 생활권계획 2018)"
     }
   ],
   "projects": []

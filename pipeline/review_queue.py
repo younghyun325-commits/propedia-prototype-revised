@@ -9,7 +9,7 @@ import json
 
 from pipeline.common import connect_rw, log, setup_stdout
 
-ITEM_EDITABLE = ["summary", "scope_type", "scope_ref"]
+ITEM_EDITABLE = ["summary", "scope_type", "scope_ref", "tier"]
 
 
 def build(con) -> dict[str, int]:
@@ -31,7 +31,8 @@ def build(con) -> dict[str, int]:
     for a in rows:
         current = {"item_key": a["item_key"], "title": a["title"], "summary": a["summary"],
                    "scope_type": a["scope_type"], "scope_ref": json.loads(a["scope_ref"]), "scope_note": a["scope_note"],
-                   "evidence": a["evidence"], "pdf_page": a["pdf_page"], "confidence": a["confidence"]}
+                   "tier": a["tier"], "evidence": a["evidence"], "pdf_page": a["pdf_page"],
+                   "confidence": a["confidence"]}
         proposed = {"current": current, "options": ["approve", "reject", "edit"], "editable_fields": ITEM_EDITABLE}
         if a["confidence"] < 0.7:
             add("scope_uncertain", "applicability_rules", a["item_key"], f"{a['item_key']} {a['title']}",

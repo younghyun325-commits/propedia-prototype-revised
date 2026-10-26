@@ -1,5 +1,5 @@
 # 진행 기록
-현재 단계: P0~P8 완료 (2026-10-26). 남은 일은 HUMAN_TODO의 사람 확인 항목
+현재 단계: P9 (feedback.md 보정) — F1~F3·F5 완료, F4 건축물대장은 키 대기 (HUMAN_TODO 14)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
@@ -114,3 +114,23 @@
 - Vercel이 1690c28 배포를 막음: GitHub 커밋 상태 "Git author butterdduck02 must have access to the project on Vercel" — 커밋 이메일이 저장소 주인(greekyogurt02)이 아닌 다른 GitHub 계정에 연결돼 있음 → 이 커밋부터 저장소 주인 계정의 noreply 이메일로 커밋해 다시 배포(전역 git 설정은 그대로)
 - [x] push 후 Vercel 재배포본 점검 (`curl /api/v1/health`, `python tests/ui_check.py --base https://propedia-pretotype.vercel.app`)
 - 완료 확인: 배포본 health `build_at 2026-10-26T09:40:44+09:00` / 배포 주소 API 조회 A1 `possible`, A2(도로명) PNU …105280000·같은 동 사업 1건, A4 주변 260m, A10 `out_of_scope` / `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 30/30 (새 브라우저 세션, 콘솔 오류 없음)
+
+## P9 보정 (feedback.md) — 진행 중 (2026-10-26)
+원 계획서의 축소판에 맞추기: 4개 층에는 지금 이 땅에 적용되는 결정만, 배경 설명은 참고로.
+- [x] F1 규제 고시 추가: `../data/8.규제고시/` 파일 4개 확인 → D5(서울시 공고 제2026-1141호 토지거래허가구역 재지정, 압구정 아파트지구 1,149,476㎡, 2026.4.27~2027.4.26), D6(국토부공고 제2025-1219호 토지거래허가구역 지정, 서울 25개 구 아파트·연립·다세대, 2025.10.20~2026.12.31), D7(국토부공고 제2025-1223호 조정대상지역, 2025.10.16~지정 해제시까지), D8(국토부 보도참고자료 2026.6.30 현황표 — 투기과열지구 공고문이 없어 대신 씀, 출처 줄에 명시)
+  - 원문 확인으로 고친 것: D7 공고의 신규 지정은 21개 구이고 강남구는 현황표 '현행·좌동'(feedback 표의 "서울 25개 구"는 지정 후 현황) / D6 종료일 2026-12-31은 공고문에서 확인
+  - `collect`·`textify` 문서 8건, 추출 `extractions/D5~D8.json`(항목 1개씩), 근거는 쪽 텍스트 줄을 그대로 잘라 씀. 기간·면적·도면 근거는 `more_evidence`로 따로 붙여 같은 규칙으로 검사(D5 면적은 표 칸에서 '1,149,47 / 6'으로 줄바꿈된 원문 그대로)
+  - 투입 단계 5~8 추가, `change_events` 0건(사업 상태 변화 없음)
+- [x] F2 적용·배경: 모든 항목에 `tier`·`tier_class`·`applies_rank`·`reference_rank`·`tier_reason`(feedback §3-2 표대로, 요약·근거를 다시 읽고 확정, 바꾼 것 없음), `extractor_version` claude-code-v1.1. DB 컬럼 추가(schema_version 2), 층 배치 = applies + 효력 중 + 층별 5개 상한, 응답에 `reference`(넘침·효력 끝남 → reference_rank 순, 최대 5개), 검수 `editable_fields`에 `tier`
+- [x] F3 지역생활권: SAENGHWAL 항목 전부 background, 층 배치에서 뺌, 참고에는 D2-11·D2-13만. 화면의 생활권 범위 배지 제거(정규화 줄에 '지역생활권(참고)'로만), coverage_note "2030 생활권계획(2018)은 참고로만 보여줍니다", 다른 생활권 안내 문구 삭제
+- [ ] F4 필지 층: `pipeline/fetch_buildings.py`(건축HUB 표제부, 동기 httpx, 원 응답 캐시·키 미출력·개인정보 칸 제외, 표제부에 지역·지구 칸이 없으면 기본개요에서 읽음) 작성, `buildings` 테이블·`parcel.building`/`building_note`·용도지역 우선순위(사업 문서 → 건축물대장 → 없음)·거리 기준 문구("사업 중심 근사값: 인접 필지 OSM 좌표") 완료
+  - **키 대기**: 다른 폴더 `.env`에서 `DATA_GO_KR_SERVICE_KEY` 한 줄을 복사하는 작업이 권한 확인에서 막힘 → HUMAN_TODO 14. 지금은 모든 필지가 "건축물대장을 조회하지 않았습니다"로 나오고 M15 미달
+- [x] F5 정답셋(초안 유지)·평가·테스트·화면·문서
+  - `scope_labels.yaml`: D5~D8 범위·효력 기간 + 모든 항목 tier 라벨(rank 포함) / `addresses.yaml`: `expect_regulations`(A1~A5 법정동 D5, 강남구 전부 서울 전역 D6·D7·D8)
+  - 평가: M6·M7 기대 집합 = applies + 효력 중 + 층별 상한 후, M4 note에 tier 일치, 새 지표 M13 층별 상한·M14 효력 중 고시·M15 건축물 처리
+  - 테스트: test_lookup(상한·배경 제외·D5/D6 위치·참고·효력 기간·끝남/시작 전), test_api(ITEM 키·reference·투입 8단계), test_review(tier 수정), test_db_build(D5~D8·tier), test_wording(target_note·tier_reason·효력 문구), 새 test_buildings
+  - 화면: 효력 기간 배지·대상 기준·근거 여러 개, 참고 접기 상자, 건축물 요약 표, 문서 DB tier 배지·분류 이유, 검수 tier 선택, 시작 화면 반영 범위 8행·원칙 한 줄, 띠 문구 "공개 문서 8종"
+  - 문서: agents.md(§1-2, §3, §6, §7, §9-2, §10-4, §11-3, §13-2, §17-2, §21), README, DEMO(A1 장면·예상 질문 2개)
+- 확인: `pytest -q` 87 passed, 1 skipped(seed/buildings.json 없음) / `run_eval` M1~M14 통과, **M15 0/9 미달(키 대기)** — M2 근거 79/79, M13 9/9, M14 32/32 / `pipeline.check` P1 19/19·P2 21/21·P3 10/10 / `tests/ui_check.py` 로컬 40/40
+  - A1: 서울 전역 5(D6·D7·D8·D3-07·D3-08) / 자치구 2(D4-07·D4-08) + 단계 분포 / 법정동 3(D5·D1-01·D1-02) / 필지: 용도지역 + 건축물 안내 + 사업 카드 / 참고 4(D3-06·D4-03 넘침, D2-11·D2-13)
+  - A8: 서울 전역에 D6, 법정동 항목 없음

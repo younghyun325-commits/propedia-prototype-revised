@@ -1,5 +1,6 @@
 """문서 DB·투입 이벤트·검수 목록·평가 조회 (agents.md §11-2 문서/이벤트/검수/평가 엔드포인트)."""
 from core.db import loads, meta, source
+from core.timeutil import effective, today_kst
 
 FIELD_LABELS = {
     "gosi_no": "공고번호", "published_at": "공고일", "gazette_no": "구보 호수", "gazette_date": "구보 발행일",
@@ -17,7 +18,8 @@ REVIEW_TYPE_LABELS = {
 }
 EVENT_LABELS = {"new_project": "새 사업 카드", "stage_change": "단계 변경", "deadline_added": "기한 추가",
                 "doc_attached": "문서 연결"}
-DOC_KIND_LABELS = {"gongram": "공람·공고", "plan": "계획"}
+DOC_KIND_LABELS = {"gongram": "공람·공고", "plan": "계획", "designation": "지정 공고", "press": "보도참고자료"}
+TIER_LABELS = {"applies": "적용", "background": "배경"}
 MIN_CHARS = 30
 
 
@@ -59,13 +61,20 @@ def _items_of(con, doc_pk: int, pdf_page: int | None = None) -> list[dict]:
         sql += " AND pdf_page=?"
         args.append(pdf_page)
     out = []
+    today = today_kst()
     for a in con.execute(sql + " ORDER BY item_key", args):
         out.append({"item_key": a["item_key"], "item_type": a["item_type"],
                     "item_type_label": ITEM_TYPE_LABELS.get(a["item_type"], a["item_type"]), "title": a["title"],
                     "summary": a["summary"], "scope_type": a["scope_type"], "scope_ref": loads(a["scope_ref"], []),
                     "scope_note": a["scope_note"], "pdf_page": a["pdf_page"], "evidence": a["evidence"],
                     "evidence_ok": bool(a["evidence_ok"]), "confidence": a["confidence"],
-                    "needs_review": bool(a["needs_review"]), "source": source(con, doc_pk, a["pdf_page"])})
+                    "needs_review": bool(a["needs_review"]), "source": source(con, doc_pk, a["pdf_page"]),
+                    "more_evidence": loads(a["more_evidence"], []), "effective_from": a["effective_from"],
+                    "effective_to": a["effective_to"], **effective(a["effective_from"], a["effective_to"], today),
+                    "target_note": a["target_note"], "tier": a["tier"],
+                    "tier_label": TIER_LABELS.get(a["tier"], a["tier"]), "tier_class": a["tier_class"],
+                    "applies_rank": a["applies_rank"], "reference_rank": a["reference_rank"],
+                    "tier_reason": a["tier_reason"]})
     return out
 
 
@@ -149,9 +158,10 @@ def page_detail(con, doc_id: str, pdf_page: int) -> dict | None:
     items = _items_of(con, d["id"], pdf_page)
     fields = _fields_of(con, d["id"], payload, pdf_page)
     proj_ev = [e for e in _project_evidences(payload) if e["pdf_page"] == pdf_page]
+    more_ev = [m["evidence"] for it in _items_of(con, d["id"]) for m in it["more_evidence"] if m["pdf_page"] == pdf_page]
     evidences = []
     for e in [i["evidence"] for i in items] + [f["evidence"] for f in fields if f["evidence"]] + \
-             [e["evidence"] for e in proj_ev]:
+             [e["evidence"] for e in proj_ev] + more_ev:
         if e and e not in evidences:
             evidences.append(e)
     return {"doc_id": doc_id, "short_title": d["short_title"], "pdf_page": pdf_page, "page_label": p["page_label"],

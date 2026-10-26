@@ -8,9 +8,10 @@ from datetime import datetime
 from pipeline import build_projects, events, init_db, load_extractions, load_seed, review_queue
 from pipeline.common import connect_rw, log, setup_stdout
 
-COVERAGE_NOTE = ("프리토타입: 강남구, 문서 4종(D1 강남구 공고 제2026-2347호, D2 2030 생활권계획 강남구 일부, "
-                 "D3 2030 정비기본계획 재건축 부문 일부, D4 2040 서울도시기본계획 일부)만 반영했습니다. "
-                 "지역생활권 계획은 압구정·청담만 반영했습니다.")
+COVERAGE_NOTE = ("프리토타입: 강남구, 문서 8종(D1 강남구 공고 제2026-2347호, D2 2030 생활권계획 강남구 일부, "
+                 "D3 2030 정비기본계획 재건축 부문 일부, D4 2040 서울도시기본계획 일부, "
+                 "D5~D7 토지거래허가구역·조정대상지역 지정 공고, D8 국토교통부 보도참고자료)만 반영했습니다. "
+                 "2030 생활권계획(2018)은 참고로만 보여줍니다.")
 
 P3_SQL = [
     ("SELECT project_key, sub_stage_code, stage_as_of FROM projects", "apgujeong-6-1-hanyang7 | RB02 | 2026-10-06"),
@@ -44,7 +45,7 @@ def main() -> None:
     con = connect_rw()
     as_of = con.execute("SELECT max(published_at) FROM documents").fetchone()[0]
     meta = {"build_at": datetime.now().astimezone().isoformat(timespec="seconds"), "as_of": as_of,
-            "schema_version": "1", "coverage_note": COVERAGE_NOTE}
+            "schema_version": "2", "coverage_note": COVERAGE_NOTE}
     for k, v in meta.items():
         con.execute("INSERT OR REPLACE INTO meta(key, value) VALUES (?,?)", (k, v))
     con.commit()

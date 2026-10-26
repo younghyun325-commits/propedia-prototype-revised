@@ -1,6 +1,6 @@
 {
   "doc_id": "D4",
-  "extractor_version": "claude-code-v1",
+  "extractor_version": "claude-code-v1.1",
   "extracted_at": "2026-10-25T13:00:00+09:00",
   "document": {
     "title": "2040 서울도시기본계획",
@@ -24,7 +24,14 @@
       "evidence": "1-1-5 정비사업의 개발이익 환수를 강화하여 공공성 확보",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "목표·전략 나열"
     },
     {
       "item_key": "D4-02",
@@ -38,7 +45,14 @@
       "evidence": "아파트 재건축 및 리모델링 시 대규모 단지 유지에 따른 공간 단절을 해소하고 아파트단지 경계부",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "목표·전략 나열"
     },
     {
       "item_key": "D4-03",
@@ -52,7 +66,14 @@
       "evidence": "공동주택 재건축 시, 서울시 경관기본계획을 반영하고 주변 지역의 주거환경과 지역 경관을 고려하여",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "applies",
+      "tier_class": "b",
+      "applies_rank": 4,
+      "reference_rank": null,
+      "tier_reason": "공동주택 재건축 높이 기준 원칙"
     },
     {
       "item_key": "D4-04",
@@ -66,7 +87,14 @@
       "evidence": "재건축사업의 소형임대주택 의무화를 재적용하여 공공임대주택 등 공적자원 확보",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "목표·전략 나열"
     },
     {
       "item_key": "D4-05",
@@ -80,7 +108,14 @@
       "evidence": "수변 인접지역의 주택 개발사업 추진 시, 수변 공간을 중심으로 한 주민 생활환경이 조성될 수 있도록,",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "목표·전략 나열"
     },
     {
       "item_key": "D4-06",
@@ -94,7 +129,14 @@
       "evidence": "글로벌 경쟁력 강화 및 기존 주거지의 계획적 관리 도모",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "권역 비전"
     },
     {
       "item_key": "D4-07",
@@ -108,7 +150,14 @@
       "evidence": "재건축사업이 지역 내 주택시장에 미치는 파급효과를 면밀히 검토하고 필요 시 정비사업의 규모,",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "applies",
+      "tier_class": "c",
+      "applies_rank": 1,
+      "reference_rank": null,
+      "tier_reason": "권역 주거지 정비 방향 (노후 아파트 단지 정비)"
     },
     {
       "item_key": "D4-08",
@@ -122,7 +171,14 @@
       "evidence": "한강변, 탄천변, 양재천변 등 지천변 주거지역에 대해 수변 네트워크 조성을 위한 종합적인 관리",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "applies",
+      "tier_class": "c",
+      "applies_rank": 2,
+      "reference_rank": null,
+      "tier_reason": "한강변 주거지 관리 방향"
     }
   ],
   "projects": []

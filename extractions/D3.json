@@ -1,6 +1,6 @@
 {
   "doc_id": "D3",
-  "extractor_version": "claude-code-v1",
+  "extractor_version": "claude-code-v1.1",
   "extracted_at": "2026-10-25T12:00:00+09:00",
   "document": {
     "title": "2030 서울특별시 도시·주거환경정비기본계획 (2025.6.26 변경)",
@@ -24,7 +24,14 @@
       "evidence": "정비구역 지정, 추진위원회 승인, 사업시행계획인가 등의 재건축 절차가 제도화되었음",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "제도 연혁"
     },
     {
       "item_key": "D3-02",
@@ -38,7 +45,14 @@
       "evidence": "2012년 정비사업에 주민동의 등에 의한 조합설립 취소 및 구역해제제도가 도입되어",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "제도 연혁"
     },
     {
       "item_key": "D3-03",
@@ -52,7 +66,14 @@
       "evidence": "정비사업방식인 공공재건축사업이 도입되었음",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "제도 연혁"
     },
     {
       "item_key": "D3-04",
@@ -66,7 +87,14 @@
       "evidence": "총 173개가 추진 중임",
       "effective_from": null,
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "현황 통계 (2024.4)"
     },
     {
       "item_key": "D3-05",
@@ -80,7 +108,14 @@
       "evidence": "강남구 - 4 1 17 7 - -",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "현황 통계 (2024.4). 구 단위 사업 분포는 단계 분포 표가 대신함"
     },
     {
       "item_key": "D3-06",
@@ -94,7 +129,14 @@
       "evidence": "정비사업을 고려하여 지구단위계획이 수립된 기존 아파트지구와 택지개발지구의 경우",
       "effective_from": "2025-06-26",
       "confidence": 0.9,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "applies",
+      "tier_class": "b",
+      "applies_rank": 3,
+      "reference_rank": null,
+      "tier_reason": "압구정은 아파트지구 → 별도 지구단위계획 적용 원칙"
     },
     {
       "item_key": "D3-07",
@@ -108,7 +150,14 @@
       "evidence": "제3종일반주거지역 210% 230% 250% 300%",
       "effective_from": "2025-06-26",
       "confidence": 0.95,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "applies",
+      "tier_class": "b",
+      "applies_rank": 1,
+      "reference_rank": null,
+      "tier_reason": "제3종일반주거 기준/허용/상한/법적상한 용적률. D1의 230%·300%와 같은 체계"
     },
     {
       "item_key": "D3-08",
@@ -122,7 +171,14 @@
       "evidence": "⦁수변공간과 적극적 연계를 통한 수변친화 생활환경 조성",
       "effective_from": "2025-06-26",
       "confidence": 0.85,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "applies",
+      "tier_class": "b",
+      "applies_rank": 2,
+      "reference_rank": null,
+      "tier_reason": "허용용적률 인센티브 최대 20%p. D1 '허용용적률 인센티브 20%p'와 연결"
     },
     {
       "item_key": "D3-09",
@@ -136,7 +192,14 @@
       "evidence": "공공시설등 기부채납에 대한 상한용적률 인센티브 적용",
       "effective_from": "2025-06-26",
       "confidence": 0.85,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "상한용적률 산식 세부"
     }
   ],
   "projects": []

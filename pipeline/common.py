@@ -72,6 +72,11 @@ SOURCES = {
     "gangnam-gubo": {"name": "강남구 구보", "layer": "gu", "url": None},
     "seoul-urban-portal": {"name": "서울도시공간포털", "layer": "city", "url": "https://urban.seoul.go.kr"},
     "seoul-citybuild": {"name": "서울시 도시계획 소식", "layer": "city", "url": "https://news.seoul.go.kr/citybuild/"},
+    # P9 규제 고시 (feedback.md §2-2)
+    "gangnam-gongo": {"name": "강남구청 고시공고", "layer": "gu", "url": "https://www.gangnam.go.kr"},
+    "sdm-gongji": {"name": "서대문구청 공지", "layer": "gu", "url": "https://www.sdm.go.kr"},
+    "law-go-kr": {"name": "국가법령정보센터 행정규칙", "layer": "national", "url": "https://law.go.kr"},
+    "molit-press": {"name": "국토교통부 보도자료", "layer": "national", "url": None},
 }
 
 
@@ -92,7 +97,11 @@ def _label_d4(p: int) -> str | None:
     return str(p - 8)
 
 
-# ── 문서 4종 (§3-1 ~ §3-4) ─────────────────────────────────
+def _label_none(p: int) -> str | None:
+    return None   # 공고문: 쪽 아래 '- n -'이 읽히면 그 값을 쓴다
+
+
+# ── 문서 (§3-1 ~ §3-4, D5~D8은 P9) ─────────────────────────
 # D1 p1 공고 제목 그대로 [확인]
 D1_TITLE = (
     "도시관리계획(압구정 아파트지구 개발기본계획, 지구단위계획구역 및 지구단위계획) 결정(변경), "
@@ -165,13 +174,79 @@ DOCS = {
         "gosi_no": None,
         "published_at": "2023-01-05",
     },
+    # ── P9: 지금 효력이 있는 규제 고시 (feedback.md §2). 사업 상태를 바꾸지 않는다 ──
+    "D5": {
+        "glob": ("8.규제고시", "토지거래허가구역재지정및조정공고*.pdf"),
+        "ranges": [(1, 9)],
+        "selected_ranges": [(1, 2)],          # 3쪽은 안내 한 줄, 4~9쪽은 지형도면 (원문 보기용)
+        "ingest_step": 5,
+        "label_fn": _label_none,
+        "source_id": "gangnam-gongo",
+        "source_url": "https://www.gangnam.go.kr/board/B_000046/1075080/view.do?mid=ID05_0410",
+        "source_note": "강남구청 고시공고 게시물 붙임 공고문 (서울특별시 공고 제2026-1141호, 2026.4.9)",
+        "title": "토지거래허가구역 재지정 및 조정 공고",
+        "short_title": "압구정 아파트지구 토지거래허가구역 재지정",
+        "doc_kind": "designation",
+        "issuer": "서울특별시장",
+        "gosi_no": "서울특별시 공고 제2026-1141호",
+        "published_at": "2026-04-09",
+    },
+    "D6": {
+        "glob": ("8.규제고시", "토지거래허가구역지정공고*.pdf"),
+        "ranges": [(1, 4)],
+        "selected_ranges": [(1, 2)],          # 3쪽 지형도면, 4쪽 붙임2 단지 목록(강남구 없음)
+        "ingest_step": 6,
+        "label_fn": _label_none,
+        "source_id": "sdm-gongji",
+        "source_url": "https://www.sdm.go.kr/news/notice/notice.do?mode=view&sdmBoardSeq=305997",
+        "source_note": "서대문구청 공지 게시물 첨부 공고문 (국토교통부공고 제2025-1219호, 2025.10.15)",
+        "title": "토지거래허가구역 지정 공고문",
+        "short_title": "서울 전역 아파트 토지거래허가구역 지정",
+        "doc_kind": "designation",
+        "issuer": "국토교통부장관",
+        "gosi_no": "국토교통부공고 제2025-1219호",
+        "published_at": "2025-10-15",
+    },
+    "D7": {
+        "glob": ("8.규제고시", "*제2025-1223호*조정대상지역*.pdf"),
+        "ranges": [(1, 2)],
+        "selected_ranges": [(1, 2)],
+        "ingest_step": 7,
+        "label_fn": _label_none,
+        "source_id": "law-go-kr",
+        "source_url": "https://law.go.kr/LSW/admRulInfoP.do?admRulSeq=2100000265026&chrClsCd=010201",
+        "source_note": "국가법령정보센터 행정규칙 (국토교통부공고 제2025-1223호, 2025.10.16)",
+        "title": "조정대상지역 지정",
+        "short_title": "조정대상지역 지정 (서울 21개 구 신규)",
+        "doc_kind": "designation",
+        "issuer": "국토교통부장관",
+        "gosi_no": "국토교통부공고 제2025-1223호",
+        "published_at": "2025-10-16",
+    },
+    "D8": {
+        # 투기과열지구 지정 공고문을 구하지 못해 국토교통부 보도참고자료의 현황표를 쓴다 (HUMAN_TODO)
+        "glob": ("8.규제고시", "*보도참고*투기과열지구*.pdf"),
+        "ranges": [(1, 5)],
+        "selected_ranges": [(1, 1), (5, 5)],  # 2쪽 향후 계획, 3~4쪽 규제 효과 표는 추출 대상 아님
+        "ingest_step": 8,
+        "label_fn": _label_none,
+        "source_id": "molit-press",
+        "source_url": None,
+        "source_note": "국토교통부 보도참고자료 (2026.6.30, 주택정책과) — 지정 공고문이 아님",
+        "title": "투기과열지구 및 조정대상지역 추가 지정 (보도참고자료)",
+        "short_title": "투기과열지구 현황 (국토부 보도참고자료)",
+        "doc_kind": "press",
+        "issuer": "국토교통부",
+        "gosi_no": None,
+        "published_at": "2026-06-30",
+    },
 }
 
-DOC_ORDER = ["D1", "D2", "D3", "D4"]
+DOC_ORDER = ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8"]
 
 
 def original_path(doc_id: str) -> Path:
-    """원본 PDF 경로. D1은 glob 결과가 정확히 1개여야 한다."""
+    """원본 PDF 경로. glob으로 찾는 문서(D1, D5~D8)는 결과가 정확히 1개여야 한다."""
     d = DOCS[doc_id]
     if "glob" in d:
         folder, pattern = d["glob"]

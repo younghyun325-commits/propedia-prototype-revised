@@ -1,7 +1,8 @@
 """검수 결정 적용 — 서버에 저장하지 않고 요청마다 받은 결정을 반영한다 (agents.md §10-7).
 
 결정 형식: {"review_id": 3, "action": "approve"|"reject"|"edit",
-           "edits": {"summary": "...", "scope_type": "...", "scope_ref": [...]}, "decided_at": "ISO"}
+           "edits": {"summary": "...", "scope_type": "...", "scope_ref": [...], "tier": "applies"|"background"},
+           "decided_at": "ISO"}
 """
 from dataclasses import dataclass, field
 
@@ -9,6 +10,7 @@ from core.db import loads
 
 ACTIONS = {"approve", "reject", "edit"}
 SCOPE_TYPES = {"SIDO", "SGG", "SAENGHWAL", "BJD", "PARCEL"}
+TIERS = {"applies", "background"}
 ITEM_TYPES = {"vision_item", "scope_uncertain", "evidence_mismatch"}
 ACTION_LABELS = {"approve": "승인", "reject": "반려", "edit": "수정"}
 
@@ -18,7 +20,7 @@ class Overrides:
     parcel: dict = field(default_factory=dict)          # (project_id, pnu) -> 'approve' | 'reject'
     items_rejected: set = field(default_factory=set)    # item_key
     items_approved: set = field(default_factory=set)    # item_key (검수 필요 표시 제거)
-    items_edits: dict = field(default_factory=dict)     # item_key -> {summary, scope_type, scope_ref}
+    items_edits: dict = field(default_factory=dict)     # item_key -> {summary, scope_type, scope_ref, tier}
     display: dict = field(default_factory=dict)         # 'D1:area_m2' / project_id -> action (문서 DB 화면용)
     review_applied: list = field(default_factory=list)
     events: list = field(default_factory=list)
@@ -42,6 +44,10 @@ def _clean_edits(edits, editable: list) -> tuple[dict, str | None]:
         elif k == "scope_ref":
             if not isinstance(v, list) or not v or not all(isinstance(x, str) and x for x in v):
                 return {}, "scope_ref는 문자열 배열이어야 함"
+            out[k] = v
+        elif k == "tier":
+            if v not in TIERS:
+                return {}, f"tier 값이 올바르지 않음: {v}"
             out[k] = v
     if not out:
         return {}, "수정할 수 있는 값이 없음"

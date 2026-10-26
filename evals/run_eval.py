@@ -1,7 +1,8 @@
-"""평가 (agents.md §13). 정답셋과 비교해 지표 12개를 계산하고 evals/report.md 와 meta.eval_report 에 저장한다.
+"""평가 (agents.md §13, feedback.md §6-2). 정답셋과 비교해 지표 15개를 계산하고 evals/report.md 와 meta.eval_report 에 저장한다.
 
 사용: python -m evals.run_eval
 - 층별 기대 항목(M6·M7)은 core/lookup.py 를 쓰지 않고 정답셋(addresses.yaml + scope_labels.yaml)으로 따로 배치해 만든다.
+  P9부터 기대 집합 = tier 'applies' + 효력 중 + 층별 5개 상한 적용 후 (정렬: tier_class → rank → 문서 날짜 최신).
 - 목표 미달이 있어도 종료 코드 0, 스크립트 오류는 1.
 """
 import hashlib
@@ -12,7 +13,7 @@ import sys
 import time
 import traceback
 import warnings
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -35,6 +36,10 @@ BANNED = ["예상", "예정", "전망", "지연", "늦", "위험", "안전", "�
 ALLOW = ["정비예정구역"]
 SKIP_KEYS = {"evidence", "how_to_submit", "places", "source_note", "payload", "text", "evidences", "query"}
 TIMING_ROUNDS = 20
+LAYER_CAP = 5                      # feedback.md §3-3: 서울 전역·자치구·법정동 층별 상한
+CAPPED = ("city", "gu", "dong")
+CLASS_ORDER = {"a": 0, "b": 1, "c": 2}
+BUILDING_NOT_FOUND = "조회되지 않았습니다"
 
 
 def sha8(p: Path) -> str:
@@ -57,21 +62,34 @@ def disp(n, d) -> str:
     return "—" if d == 0 else f"{n / d:.0%} ({n}/{d})"
 
 
+def gold_in_force(lab: dict, today: date) -> bool:
+    """정답 라벨의 효력 기간이 끝나지 않았는지 (기간이 없으면 효력 중으로 본다)."""
+    end = lab.get("effective_to")
+    return not end or today <= date.fromisoformat(str(end))
+
+
 # ── 정답셋으로 따로 만드는 층별 기대값 ─────────────────────────
-def expected_layers(addr: dict, labels: dict) -> dict[str, set]:
-    exp = {k: set() for k in LAYERS}
+def expected_layers(addr: dict, labels: dict, doc_dates: dict, today: date) -> dict[str, set]:
+    cand = {k: [] for k in LAYERS}
     for key, lab in labels.items():
+        if lab.get("tier") != "applies" or not gold_in_force(lab, today):
+            continue
         st, refs = lab["scope_type"], lab["scope_ref"]
         if st == "SIDO" and "11" in refs:
-            exp["city"].add(key)
+            cand["city"].append(key)
         elif st == "SGG" and addr["sgg_code"] in refs:
-            exp["gu"].add(key)
-        elif st == "SAENGHWAL" and addr.get("saenghwal") in refs:
-            exp["dong"].add(key)
+            cand["gu"].append(key)
         elif st == "BJD" and addr["bjd_code"] in refs:
-            exp["dong"].add(key)
+            cand["dong"].append(key)
         elif st == "PARCEL" and addr["pnu"] in refs:
-            exp["parcel"].add(key)
+            cand["parcel"].append(key)
+        # SAENGHWAL은 층에 두지 않는다 (feedback.md §4)
+    exp = {}
+    for k, keys in cand.items():
+        keys.sort()
+        keys.sort(key=lambda x: doc_dates.get(x.split("-")[0], ""), reverse=True)
+        keys.sort(key=lambda x: (CLASS_ORDER.get(labels[x].get("tier_class"), 3), labels[x].get("rank") or 999))
+        exp[k] = set(keys[:LAYER_CAP] if k in CAPPED else keys)
     for p in addr.get("projects", []):
         tag = f"project:{p['project_key']}"
         if p["inclusion"] in ("possible", "included", "nearby"):
@@ -158,6 +176,8 @@ def evaluate() -> dict:
     con = connect_ro()
     m = meta(con)
     keymap = {r["id"]: r["project_key"] for r in con.execute("SELECT id, project_key FROM projects")}
+    doc_dates = {r["doc_id"]: r["published_at"] or "" for r in con.execute("SELECT doc_id, published_at FROM documents")}
+    today = datetime.now(timezone(timedelta(hours=9))).date()
 
     # M1 텍스트화 성공률
     sel, ok = con.execute("SELECT count(*), sum(char_count >= 30) FROM pages WHERE selected=1").fetchone()
@@ -191,10 +211,10 @@ def evaluate() -> dict:
     metrics.append({"id": "M3", "name": "D1 필드 정확도", "value": pct(hit, len(gf)), "display": disp(hit, len(gf)),
                     "target": "≥ 90%", "pass": len(gf) > 0 and hit / len(gf) >= 0.9})
 
-    # M4 적용 범위 정확도
-    db_items = {r["item_key"]: (r["scope_type"], set(json.loads(r["scope_ref"]))) for r in
-                con.execute("SELECT item_key, scope_type, scope_ref FROM applicability_rules")}
-    hit = 0
+    # M4 적용 범위 정확도 (+ 층 분류 tier 일치는 참고로 note에)
+    db_items = {r["item_key"]: (r["scope_type"], set(json.loads(r["scope_ref"])), r["tier"]) for r in
+                con.execute("SELECT item_key, scope_type, scope_ref, tier FROM applicability_rules")}
+    hit = tier_hit = 0
     for key, lab in labels.items():
         got = db_items.get(key)
         if got and got[0] == lab["scope_type"] and got[1] == set(lab["scope_ref"]):
@@ -202,11 +222,17 @@ def evaluate() -> dict:
         else:
             errors.append({"type": "scope", "detail": f"{key}: 정답 {lab['scope_type']} {lab['scope_ref']}, "
                                                       f"응답 {got[0] + ' ' + str(sorted(got[1])) if got else '(항목 없음)'}"})
+        if got and got[2] == lab.get("tier"):
+            tier_hit += 1
+        else:
+            errors.append({"type": "scope", "detail": f"{key}: 층 분류 정답 {lab.get('tier')}, "
+                                                      f"응답 {got[2] if got else '(항목 없음)'}"})
     for key in sorted(set(db_items) - set(labels)):
         errors.append({"type": "scope", "detail": f"{key}: 정답 라벨 없음"})
     metrics.append({"id": "M4", "name": "적용 범위 정확도", "value": pct(hit, len(labels)),
                     "display": disp(hit, len(labels)), "target": "≥ 95%",
-                    "pass": len(labels) > 0 and hit / len(labels) >= 0.95})
+                    "pass": len(labels) > 0 and hit / len(labels) >= 0.95,
+                    "note": f"층 분류(적용/배경) 일치 {tier_hit}/{len(labels)}"})
 
     # M5 주소 정규화, M6·M7 층별, M8 포함 판정, M9 원문 링크
     addresses = g_addr.get("addresses", [])
@@ -216,12 +242,15 @@ def evaluate() -> dict:
     layer_hit = {k: 0 for k in LAYERS}
     pair_ok = pair_n = 0
     img_ok = img_n = 0
+    cap_ok = cap_n = 0                 # M13
+    reg_ok = reg_n = 0                 # M14
+    bld_ok = bld_n = bld_found = 0     # M15
     addr_rows = []
     responses = []
     for a in addresses:
         n = normalize(con, a["input"])
         row = {"addr_id": a["addr_id"], "input": a["input"], "status_ok": n["status"] == a["status"],
-               "pnu_ok": None, "layer_hits": {}, "inclusion_ok": None}
+               "pnu_ok": None, "layer_hits": {}, "inclusion_ok": None, "regulations": None, "building": None}
         good = row["status_ok"]
         if a["status"] == "ok":
             row["pnu_ok"] = n["pnu"] == a["pnu"]
@@ -234,8 +263,44 @@ def evaluate() -> dict:
         if a["status"] == "ok" and n["status"] == "ok":
             resp = lookup(con, a["input"])
             responses.append(resp)
-            exp = expected_layers(a, labels)
+            exp = expected_layers(a, labels, doc_dates, today)
             ret = returned_layers(resp, keymap)
+            L = resp["layers"]
+            # M13 층별 상한
+            sizes = {"city": len(L["city"]), "gu": len(L["gu"]["items"]), "dong": len(L["dong"]["items"])}
+            cap_n += 1
+            if all(v <= LAYER_CAP for v in sizes.values()):
+                cap_ok += 1
+            else:
+                errors.append({"type": "other", "detail": f"{a['addr_id']} 층별 상한 초과: {sizes}"})
+            # M14 효력 중 고시 표시
+            got_by_layer = {"city": {i["item_key"] for i in L["city"]}, "gu": {i["item_key"] for i in L["gu"]["items"]},
+                            "dong": {i["item_key"] for i in L["dong"]["items"]},
+                            "parcel": {i["item_key"] for i in L["parcel"]["items"]}}
+            r_hit = r_tot = 0
+            for layer, keys in (a.get("expect_regulations") or {}).items():
+                for key in keys:
+                    r_tot += 1
+                    if key in got_by_layer.get(layer, set()):
+                        r_hit += 1
+                    else:
+                        errors.append({"type": "scope", "detail": f"{a['addr_id']} {LAYER_KO[layer]}: 효력 중 고시 {key} 없음"})
+            reg_ok += r_hit
+            reg_n += r_tot
+            row["regulations"] = f"{r_hit}/{r_tot}" if r_tot else None
+            # M15 건축물 정보 처리
+            P = L["parcel"]
+            bld_n += 1
+            if P.get("building"):
+                bld_ok += 1
+                bld_found += 1
+                row["building"] = "있음"
+            elif BUILDING_NOT_FOUND in (P.get("building_note") or ""):
+                bld_ok += 1
+                row["building"] = "미조회 안내"
+            else:
+                row["building"] = "처리 안 됨"
+                errors.append({"type": "other", "detail": f"{a['addr_id']} 건축물: {P.get('building_note')}"})
             for k in LAYERS:
                 h = len(exp[k] & ret[k])
                 layer_exp[k] += len(exp[k])
@@ -259,8 +324,8 @@ def evaluate() -> dict:
                     errors.append({"type": "inclusion", "detail": f"{a['addr_id']} {key}: 정답 {gold_inc.get(key)}, "
                                                                   f"응답 {got_inc.get(key)}"})
             row["inclusion_ok"] = this_ok if keys else None
-            L = resp["layers"]
-            for it in L["city"] + L["gu"]["items"] + L["dong"]["items"] + L["parcel"]["items"]:
+            for it in L["city"] + L["gu"]["items"] + L["dong"]["items"] + L["parcel"]["items"] + \
+                    resp["reference"]["items"]:
                 img_n += 1
                 pi = (it.get("source") or {}).get("page_image")
                 if pi and (ROOT / "public" / pi.lstrip("/")).exists():
@@ -290,12 +355,13 @@ def evaluate() -> dict:
                     "note": f"주변(500m) 판정 쌍 {sum(p['inclusion'] == 'nearby' for a in addresses for p in a.get('projects', []))}개 "
                             "— 사업 중심은 인접 필지 좌표 근사"})
     metrics.append({"id": "M9", "name": "원문 링크 유효율", "value": pct(img_ok, img_n), "display": disp(img_ok, img_n),
-                    "target": "100%", "pass": img_n > 0 and img_ok == img_n})
+                    "target": "100%", "pass": img_n > 0 and img_ok == img_n, "note": "4개 층 + 참고 섹션 항목"})
 
     # M11 금지어 (우리가 만든 문장)
     hits = []
-    for r in con.execute("SELECT item_key, title, summary FROM applicability_rules"):
-        hits += [f"{r['item_key']}: {w}" for w in banned_hits(r["title"] + " " + r["summary"])]
+    for r in con.execute("SELECT item_key, title, summary, target_note, tier_reason FROM applicability_rules"):
+        text = " ".join(x or "" for x in (r["title"], r["summary"], r["target_note"], r["tier_reason"]))
+        hits += [f"{r['item_key']}: {w}" for w in banned_hits(text)]
     for r in con.execute("SELECT label FROM related_history"):
         hits += [f"관련 이력: {w}" for w in banned_hits(r["label"])]
     for r in con.execute("SELECT title, reason FROM review_queue"):
@@ -320,6 +386,17 @@ def evaluate() -> dict:
         errors.append({"type": "other", "detail": f"단계: 정답 {gold_stage}, 응답 {got_stage}"})
     metrics.append({"id": "M12", "name": "단계 판정", "value": got_stage == gold_stage,
                     "display": f"{got_stage} (정답 {gold_stage})", "target": "일치", "pass": got_stage == gold_stage})
+
+    # M13~M15 (feedback.md §6-2)
+    metrics.append({"id": "M13", "name": "층별 상한 준수", "value": pct(cap_ok, cap_n), "display": disp(cap_ok, cap_n),
+                    "target": "100%", "pass": cap_n > 0 and cap_ok == cap_n,
+                    "note": f"서울 전역·자치구·법정동 층 항목 {LAYER_CAP}개 이하인 주소 비율"})
+    metrics.append({"id": "M14", "name": "효력 중 고시 표시", "value": pct(reg_ok, reg_n), "display": disp(reg_ok, reg_n),
+                    "target": "100%", "pass": reg_n > 0 and reg_ok == reg_n,
+                    "note": "정답셋 expect_regulations의 고시가 해당 층에 나온 비율"})
+    metrics.append({"id": "M15", "name": "건축물 정보 처리율", "value": pct(bld_ok, bld_n), "display": disp(bld_ok, bld_n),
+                    "target": "100%", "pass": bld_n > 0 and bld_ok == bld_n,
+                    "note": f"건축물대장 표제부가 조회된 주소(참고 값) {disp(bld_found, bld_n)}"})
     demo_inputs = [r["input_text"] for r in con.execute("SELECT input_text FROM demo_addresses") if r["input_text"]]
     con.close()
 
@@ -373,13 +450,15 @@ def write_report_md(rep: dict) -> None:
     for r in rep["layers"]:
         f = lambda v: "—" if v is None else f"{v:.0%}"  # noqa: E731
         lines.append(f"| {LAYER_KO[r['layer']]} | {f(r['recall'])} | {f(r['precision'])} | {r['expected']} | {r['returned']} |")
-    lines += ["", "## 주소별 결과", "", "| 주소 | 입력 | 상태 | PNU | 서울 전역 | 자치구 | 법정동 | 필지 | 포함 판정 |",
-              "|---|---|---|---|---|---|---|---|---|"]
+    lines += ["", "## 주소별 결과", "",
+              "| 주소 | 입력 | 상태 | PNU | 서울 전역 | 자치구 | 법정동 | 필지 | 포함 판정 | 효력 중 고시 | 건축물 |",
+              "|---|---|---|---|---|---|---|---|---|---|---|"]
     o = lambda v: "—" if v is None else ("일치" if v else "불일치")  # noqa: E731
     for a in rep["addresses"]:
         h = a["layer_hits"]
         lines.append(f"| {a['addr_id']} | {a['input']} | {o(a['status_ok'])} | {o(a['pnu_ok'])} | "
-                     + " | ".join(h.get(k, "—") for k in LAYERS) + f" | {o(a['inclusion_ok'])} |")
+                     + " | ".join(h.get(k, "—") for k in LAYERS) + f" | {o(a['inclusion_ok'])} | "
+                     f"{a.get('regulations') or '—'} | {a.get('building') or '—'} |")
     if rep["excluded_addresses"]:
         lines.append(f"\n정답셋에서 뺀 주소: {', '.join(rep['excluded_addresses'])} (도로명주소 API 키 재발급 후 확정)")
     lines += ["", "## 오류 목록", ""]

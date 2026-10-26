@@ -1,6 +1,6 @@
 {
   "doc_id": "D1",
-  "extractor_version": "claude-code-v1",
+  "extractor_version": "claude-code-v1.1",
   "extracted_at": "2026-10-25T10:00:00+09:00",
   "document": {
     "title": "도시관리계획(압구정 아파트지구 개발기본계획, 지구단위계획구역 및 지구단위계획) 결정(변경), 압구정 아파트지구 특별계획구역⑥-1 한양7차아파트 재건축 정비구역·정비계획 결정(변경)(안) 공람·공고",
@@ -44,7 +44,14 @@
       "evidence": "주택용지 678,983.6 81.2 677,347.5 81.0 감)1,636.1",
       "effective_from": null,
       "confidence": 0.85,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "applies",
+      "tier_class": "a",
+      "applies_rank": 2,
+      "reference_rank": null,
+      "tier_reason": "공람 중인 결정(안) (공람기간 2026.10.6~11.6)"
     },
     {
       "item_key": "D1-02",
@@ -58,7 +65,14 @@
       "evidence": "- 중로 3-A 고려하여, 한강변 접근성 및 개방감 확대를 위한",
       "effective_from": null,
       "confidence": 0.8,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "applies",
+      "tier_class": "a",
+      "applies_rank": 3,
+      "reference_rank": null,
+      "tier_reason": "공람 중인 결정(안) (공람기간 2026.10.6~11.6)"
     },
     {
       "item_key": "D1-03",
@@ -72,7 +86,14 @@
       "evidence": "Ⅲ. 압구정아파트지구 지구단위계획 결정(변경) : 생략 (정비계획 결정(변경)(안) 참고)",
       "effective_from": null,
       "confidence": 0.8,
-      "needs_review": false
+      "needs_review": false,
+      "effective_to": null,
+      "target_note": null,
+      "tier": "background",
+      "tier_class": null,
+      "applies_rank": null,
+      "reference_rank": null,
+      "tier_reason": "공고에서 내용이 생략됨 (정비계획 결정(변경)(안) 참고)"
     }
   ],
   "projects": [

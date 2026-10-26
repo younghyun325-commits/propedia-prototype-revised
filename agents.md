@@ -80,7 +80,7 @@
 |---|---|---|
 | 서울 전역 (`city`) | 시도코드 `11` | 서울 전체에 적용되는 정책·계획 |
 | 자치구 (`gu`) | 시군구코드 5자리 (강남구 `11680`) | 구 전체에 적용되는 계획·고시, 구 안 사업의 단계 분포 |
-| 법정동 (`dong`) | 법정동코드 10자리. **프리토타입은 지역생활권도 이 층에 넣는다** | 동 안의 진행 사업, 진행 중 기한, 동·생활권 단위 계획 |
+| 법정동 (`dong`) | 법정동코드 10자리. 지역생활권은 층에 넣지 않고 '참고'로만 보여준다 (P9) | 동 안의 진행 사업, 진행 중 기한, 동 단위 고시·계획 |
 | 필지 (`parcel`) | PNU 19자리, 반경 500m | 용도지역, 포함 사업과 진행상황, 주변 500m 사업 |
 
 - 같은 사업이 여러 층에 걸리면 **가장 좁은 층에만** 표시한다 (필지 > 법정동 > 자치구 > 서울 전역 순으로 좁다).
@@ -164,8 +164,13 @@
 | D2 | 2030 서울생활권계획 — 강남구 (2018-03) | `../data/2.생활권계획/강남구.pdf` (269쪽, 약 31MB) | 자치구 + 지역생활권 | 3 |
 | D3 | 2030 서울특별시 도시·주거환경정비기본계획 (2025-06-26 변경, 서울특별시고시 제2025-348호) | `../data/3.도시주거환경정비기본계획.pdf` (396쪽) | 서울 전역 (+ 자치구 통계) | 2 |
 | D4 | 2040 서울도시기본계획 (2023-02) | `../data/1.2040서울도시기본계획.pdf` (205쪽) | 서울 전역 + 동남권(자치구) | 1 |
+| D5 | 서울특별시 공고 제2026-1141호 토지거래허가구역 재지정 및 조정 공고 (2026-04-09) | `../data/8.규제고시/토지거래허가구역재지정및조정공고.pdf` (9쪽, 4~9쪽 지형도면) | 법정동 (압구정동) | 5 |
+| D6 | 국토교통부공고 제2025-1219호 토지거래허가구역 지정 공고 (2025-10-15) | `../data/8.규제고시/토지거래허가구역지정공고.pdf` (4쪽) | 서울 전역 | 6 |
+| D7 | 국토교통부공고 제2025-1223호 조정대상지역 지정 (2025-10-16) | `../data/8.규제고시/(국토교통부공고 제2025-1223호) 조정대상지역 지정 공고.pdf` (2쪽) | 서울 전역 | 7 |
+| D8 | 국토교통부 보도참고자료 "투기과열지구 및 조정대상지역 추가 지정" (2026-06-30) — 투기과열지구 **지정 공고문이 아님** (공고문을 구하지 못해 5쪽 현황표를 씀, HUMAN_TODO) | `../data/8.규제고시/260630(보도참고) 투기과열지구 및 조정대상지역 추가 지정(주택정책과).pdf` (5쪽) | 서울 전역 | 8 |
 
-투입 순서는 "문서 1건씩 투입" 시연(§8-10)에서 쓴다. D4 → D3 → D2 → D1 순서로 들어오며, 사업 상태가 바뀌는 건 D1뿐이다.
+투입 순서는 "문서 1건씩 투입" 시연(§8-10)에서 쓴다. D4 → D3 → D2 → D1 → D5 → D6 → D7 → D8 순서로 들어오며, 사업 상태가 바뀌는 건 D1뿐이다 (규제 고시 D5~D8은 `change_events` 0건).
+- D5~D8은 P9(`feedback.md`)에서 추가했다. `doc_kind`는 D5~D7 `designation`, D8 `press`. 쓰는 쪽: D5 1~2(선택)·3~9(원문 보기용), D6 1~2(선택)·3~4, D7 1~2, D8 1·5(선택)·2~4. 원문 확인 결과 D7 공고의 신규 지정은 21개 구이고 강남구는 현황표에 '현행·좌동'으로만 나온다 `[확인 2026-10-26]`. D6 지정기간 종료일은 2026-12-31 `[확인: 공고문]`.
 
 ### 3-2. 쓰는 쪽 (pdf_page 기준) `[확인: 2026-10-24 쪽별 제목 확인]`
 | ID | 쪽 | 내용 | 텍스트 상태 |
@@ -192,6 +197,10 @@
 | D2 | `seoul-urban-portal` | 서울도시공간포털 | `https://urban.seoul.go.kr/view/html/PMNU3040000001` | "2030 서울생활권계획 (2018.3)" |
 | D3 | `seoul-citybuild` | 서울시 도시계획 소식 | `https://news.seoul.go.kr/citybuild/?p=528131` | "2030 정비기본계획 변경 (서울특별시고시 제2025-348호, 2025.6.26)" |
 | D4 | `seoul-urban-portal` | 서울도시공간포털 | `https://urban.seoul.go.kr/view/html/PMNU2020000000` | "2040 서울도시기본계획 (2023.2)" |
+| D5 | `gangnam-gongo` | 강남구청 고시공고 | `https://www.gangnam.go.kr/board/B_000046/1075080/view.do?mid=ID05_0410` | "강남구청 고시공고 게시물 붙임 공고문 (서울특별시 공고 제2026-1141호, 2026.4.9)" |
+| D6 | `sdm-gongji` | 서대문구청 공지 | `https://www.sdm.go.kr/news/notice/notice.do?mode=view&sdmBoardSeq=305997` | "서대문구청 공지 게시물 첨부 공고문 (국토교통부공고 제2025-1219호, 2025.10.15)" |
+| D7 | `law-go-kr` | 국가법령정보센터 행정규칙 | `https://law.go.kr/LSW/admRulInfoP.do?admRulSeq=2100000265026&chrClsCd=010201` | "국가법령정보센터 행정규칙 (국토교통부공고 제2025-1223호, 2025.10.16)" |
+| D8 | `molit-press` | 국토교통부 보도자료 | `null` ※ | "국토교통부 보도참고자료 (2026.6.30, 주택정책과) — 지정 공고문이 아님" |
 
 ### 3-4. 문서 메타데이터 (DB `documents`에 넣을 값)
 | ID | title | short_title | doc_kind | issuer | gosi_no | published_at |
@@ -200,6 +209,10 @@
 | D2 | 2030 서울생활권계획 (강남구) | 2030 생활권계획 강남구 | `plan` | 서울특별시 | null | 2018-03-08 ※ (표지·공고일 확인) |
 | D3 | 2030 서울특별시 도시·주거환경정비기본계획 (2025.6.26 변경) | 2030 정비기본계획 | `plan` | 서울특별시 | 서울특별시고시 제2025-348호 | 2025-06-26 |
 | D4 | 2040 서울도시기본계획 | 2040 서울도시기본계획 | `plan` | 서울특별시 | null | 2023-01-05 ※ (공고일, 발간 2023-02) |
+| D5 | 토지거래허가구역 재지정 및 조정 공고 | 압구정 아파트지구 토지거래허가구역 재지정 | `designation` | 서울특별시장 | 서울특별시 공고 제2026-1141호 | 2026-04-09 |
+| D6 | 토지거래허가구역 지정 공고문 | 서울 전역 아파트 토지거래허가구역 지정 | `designation` | 국토교통부장관 | 국토교통부공고 제2025-1219호 | 2025-10-15 |
+| D7 | 조정대상지역 지정 | 조정대상지역 지정 (서울 21개 구 신규) | `designation` | 국토교통부장관 | 국토교통부공고 제2025-1223호 | 2025-10-16 |
+| D8 | 투기과열지구 및 조정대상지역 추가 지정 (보도참고자료) | 투기과열지구 현황 (국토부 보도참고자료) | `press` | 국토교통부 | null | 2026-06-30 |
 
 ### 3-5. D1에서 확인된 사실 (정답셋 초안의 근거) `[확인: pdftotext]`
 | 항목 | 값 | pdf_page |
@@ -310,13 +323,14 @@ pretotype/
   seed/                   # 커밋함
     bjd_codes.csv         # 강남구 법정동코드 + 지역생활권 (§8-6)
     demo_addresses.csv    # 시연 주소 10건 (§8-7)
+    buildings.json        # 건축물대장 표제부 요약 (P9, pipeline/fetch_buildings.py)
     d2_selected_pages.yaml# D2 이미지 쪽 선택 결과와 이유 (§8-4)
     transcripts/D2/p###.txt # Claude Code 전사 원본 (build/는 커밋 안 하므로 여기 둔다. textify가 build/text로 합친다)
     stage_templates.yaml  # 재건축 단계 템플릿 (§9-5, 원 계획서 표 그대로)
     stage_rules.yaml      # 문서 제목 → 단계 판정 규칙 (§10-5)
   pipeline/               # 빌드 스크립트 (§8). 시연 코드에서 import 금지
     __init__.py, common.py, collect.py, textify.py, contact_sheet.py,
-    resolve_addresses.py, geocode.py, init_db.py, load_seed.py, load_extractions.py,
+    resolve_addresses.py, geocode.py, fetch_buildings.py(P9), init_db.py, load_seed.py, load_extractions.py,
     build_projects.py, events.py, review_queue.py, run_all.py, check.py
   db/
     schema.sql
@@ -428,8 +442,21 @@ CREATE TABLE applicability_rules (     -- 4개 층에 나가는 '항목'
   evidence_ok INTEGER NOT NULL,
   effective_from TEXT,
   confidence REAL NOT NULL,
-  needs_review INTEGER NOT NULL
+  needs_review INTEGER NOT NULL,
+  -- P9 (feedback.md §2-2, §3)
+  effective_to TEXT,                   -- 원문에 적힌 효력 종료일. 없으면 NULL ('지정 해제시까지' 등)
+  target_note TEXT,                    -- 대상 기준 (원문 그대로 짧게)
+  more_evidence TEXT NOT NULL DEFAULT '[]',  -- JSON: [{label, evidence, pdf_page, evidence_ok}] 기간·면적·도면 근거
+  tier TEXT NOT NULL DEFAULT 'applies',      -- 'applies'(층에 표시) | 'background'(참고·문서 DB)
+  tier_class TEXT,                     -- 'a' 효력 고시 | 'b' 수치 기준 | 'c' 구·권역 방향 | NULL
+  applies_rank INTEGER,                -- 같은 class 안 순서
+  reference_rank INTEGER,              -- 참고 섹션에 내보낼 background 항목 순서 (없으면 문서 DB에서만)
+  tier_reason TEXT
 );
+
+-- P9: CREATE TABLE buildings (pnu TEXT PRIMARY KEY, payload TEXT NOT NULL, fetched_at TEXT NOT NULL)
+--     건축HUB 건축물대장 표제부 요약 (seed/buildings.json). sources.layer에 'national', documents.doc_kind에
+--     'designation'·'press'를 더했다. meta.schema_version = '2'.
 
 CREATE TABLE doc_locations (
   document_id INTEGER NOT NULL REFERENCES documents(id),
@@ -773,7 +800,8 @@ D1 추출 JSON의 `projects` 배열로 사업 카드를 만든다 (프리토타�
 }
 ```
 - 위 JSON 속 값은 **형식 예시**다. 실제 값은 쪽 텍스트에서 확인해 적는다.
-- `items`는 모든 문서에 있다. `fields`·`projects`는 D1에만 있다 (D2~D4는 빈 객체·빈 배열).
+- `items`는 모든 문서에 있다. `fields`·`projects`는 D1에만 있다 (D2~D8은 빈 객체·빈 배열).
+- P9(`claude-code-v1.1`): 모든 항목에 `effective_from`, `effective_to`(원문 날짜만, 없으면 null), `target_note`, `tier`(`applies`|`background`), `tier_class`(`a`|`b`|`c`|null), `applies_rank`, `reference_rank`, `tier_reason`를 넣는다. 기간·면적·도면처럼 근거가 여러 곳이면 `more_evidence: [{label, evidence, pdf_page}]`를 붙이고 같은 규칙(§9-4)으로 검사한다.
 - `item_key`는 `{doc_id}-{두 자리 순번}`. 한 번 정하면 바꾸지 않는다 (정답셋이 이 키를 쓴다).
 - `item_type`: `policy`(정책 방향·원칙) | `plan`(구체 계획 내용) | `notice`(고시·공고 내용) | `stat`(현황 수치).
 - `scope_type`·`scope_ref`
@@ -897,17 +925,19 @@ def d_day(due: date, today: date) -> tuple[int, str]:
 2. **항목 배치**: `applicability_rules`를 읽어
    - `SIDO` & `"11"` ∈ scope_ref → `city`
    - `SGG` & sgg_code ∈ scope_ref → `gu.items`
-   - `SAENGHWAL` & saenghwal ∈ scope_ref → `dong.items` (`scope_label` = "지역생활권 압구정·청담")
    - `BJD` & bjd_code ∈ scope_ref → `dong.items` (`scope_label` = "법정동 압구정동")
    - `PARCEL` & pnu ∈ scope_ref → `parcel.items`
-   - 검수 결정으로 `reject`된 항목은 뺀다. `edit`된 항목은 바뀐 값으로 배치한다(§10-7).
-   - 정렬: 문서 날짜 최신 → `item_key` 순.
+   - (P9) 층에는 `tier = applies`이면서 효력이 끝나지 않은(`effective_status != ended`) 항목만 놓는다. 기간이 없는 항목은 효력 중으로 본다.
+   - (P9) 정렬: `tier_class` a → b → c → `applies_rank` → 문서 날짜 최신 → `item_key`. 서울 전역·자치구·법정동은 층별 **5개 상한**.
+   - (P9) `reference` 섹션(최대 5개): 넘친 항목(`층별 5개 초과`)·효력이 끝난 항목 → `reference_rank`가 있는 이 주소 범위의 배경 항목 순. 지역생활권(`SAENGHWAL`) 항목은 층에 두지 않고 여기에만 나온다.
+   - 검수 결정으로 `reject`된 항목은 뺀다. `edit`된 항목은 바뀐 값(`tier` 포함)으로 배치한다(§10-7).
 3. **사업 배치**: 이 PNU의 `project_parcels`가 있으면 판정표(§1-4)로 `included`(verified=1 또는 검수 승인) / `possible`(representative_only, verified=0) → `parcel.included_projects`. 좌표가 둘 다 있고 거리 ≤ 500m이며 포함 사업이 아니면 → `parcel.nearby_projects`(거리 정수 m, 하버사인).
 4. **중복 제거**: `parcel`에 나온 사업은 `dong.projects`에서 뺀다. `dong.projects` = 같은 법정동의 나머지 사업. `dong.deadlines` = `dong.projects`의 진행 중 기한(`due_on ≥ today`).
 5. `gu.projects_by_stage` = 같은 구 사업을 단계 코드별로 셈: `{"RB02": {"title": "정비계획 입안·주민공람", "count": 1}}`.
-6. `parcel.land_use`: 포함(또는 포함될 수 있음) 사업의 `land_use`가 있으면 `{"value": "제3종일반주거지역", "basis": "사업 문서 기재 (D1 p5, 정비구역 기준)", "source": {...}}`. 없으면 `null` + `land_use_note` "필지별 용도지역은 프리토타입 범위 밖입니다 (브이월드 미연동)".
+6. `parcel.land_use`: 포함(또는 포함될 수 있음) 사업의 `land_use`가 있으면 `{"value": "제3종일반주거지역", "basis": "사업 문서 기재 (D1 p5, 정비구역 기준)", "source": {...}}`. (P9) 없으면 건축물대장에 적힌 지역·지구("건축물대장 기재 지역·지구 (YYYY.MM.DD 조회)"). 둘 다 없으면 `null` + `land_use_note` "필지별 용도지역은 프리토타입 범위 밖입니다 (브이월드 미연동)".
+   - (P9) `parcel.building` = 건축물대장 표제부 요약(빌드 때 시연 주소만 조회) 또는 `null` + `building_note`.
 7. 좌표가 없으면 `parcel.nearby_note` = "좌표가 없어 주변 500m 사업 판정을 생략했습니다".
-8. 지역생활권이 압구정·청담이 아니면 `coverage_note` 끝에 "{생활권} 지역생활권 장은 프리토타입 범위 밖입니다"를 붙인다.
+8. (P9에서 삭제) 다른 지역생활권 안내 문구는 붙이지 않는다. `coverage_note`는 "2030 생활권계획(2018)은 참고로만 보여줍니다"로 끝난다.
 9. `as_of` = `meta.as_of`. `disclaimer` 고정 문구(§11-3).
 
 ### 10-5. 단계 판정 규칙 `seed/stage_rules.yaml`
@@ -998,16 +1028,22 @@ D1 제목에는 "정비구역·정비계획 결정(변경)(안) 공람·공고"�
         "review_id": 1, "progress_url": "/api/v1/projects/1/progress", "source": SOURCE
       }],
       "nearby_projects": [],
-      "nearby_note": null
+      "nearby_note": null,
+      "building": {"pnu": "…", "found": true, "main_count": 12, "bld_names": ["…"], "main_purpose": "공동주택", "…": "…",
+                   "source": "건축HUB 건축물대장 표제부(getBrTitleInfo)", "fetched_label": "2026.10.26 조회"},
+      "building_note": null
     }
   },
+  "reference": {"items": [ITEM + {"layer": "city", "reference_reason": "층별 5개 초과"}],
+                "note": "배경 설명과 참고 계획입니다. 이 땅에 바로 적용되는 결정은 위 4개 층에 있습니다."},
   "review_applied": [],
   "events": [],
-  "coverage_note": "프리토타입: 강남구, 문서 4종 … ",
+  "coverage_note": "프리토타입: 강남구, 문서 8종 … ",
   "disclaimer": "공개된 고시·공식 데이터 기준 정보이며, 조합 공지와 다를 수 있습니다. 개별 권리 판단은 하지 않습니다."
 }
 ```
 - `ITEM` = `{"item_key","item_type","title","summary","scope_type","scope_label","needs_review","evidence","evidence_ok","source": SOURCE}`
+  + (P9) `effective_from`, `effective_to`, `effective_label`("효력 기간 2026.04.27 ~ 2027.04.26" / "효력 2025.10.20부터"), `effective_status`(`in_force`|`ended`|`not_started`, 기간이 없으면 null), `effective_status_label`("효력 기간 중"|"효력 기간 끝남"|"효력 시작 전"), `target_note`, `tier`, `tier_class`, `tier_reason`, `more_evidence`
 - `SOURCE` = `{"doc_id","short_title","published_at","pdf_page","page_label","page_image":"/pages/D3/p265.jpg","source_url","source_note"}`
 - 상태가 `not_found`/`out_of_scope`이면 `normalized`는 아는 값만, `layers`는 `null`, `message`에 안내 문구.
 
@@ -1168,6 +1204,11 @@ Claude Code는 **초안**만 쓰고 맨 위에 `draft: true`, `author: "claude-c
 | M10 | 응답 시간 p95 | `TestClient`로 주소 10건 × 20회 `/api/v1/lookup`, 95번째 백분위 (ms) | ≤ 3000ms |
 | M11 | 금지어 | 우리가 만든 문장(§9-6 적용 대상)의 금지어 개수 | 0 |
 | M12 | 단계 판정 | 사업 단계 코드가 정답(`RB02`)과 같음 | 일치 |
+| M13 | 층별 상한 준수 (P9) | 상태 ok 주소 중 서울 전역·자치구·법정동 층 항목이 5개 이하인 비율 | 100% |
+| M14 | 효력 중 고시 표시 (P9) | 정답셋 `expect_regulations`의 고시가 그 주소 응답의 해당 층에 나온 비율 | 100% |
+| M15 | 건축물 정보 처리율 (P9) | 범위 안 주소 중 `building`이 있거나 "조회되지 않았습니다" 안내가 있는 비율 (found 비율은 참고) | 100% |
+
+- (P9) M6·M7의 기대 집합 = 정답 라벨 기준 `tier = applies` + 효력 중 + 층별 5개 상한 적용 후. M4 note에 층 분류(tier) 일치 수를 함께 적는다.
 
 - **기대 항목 계산(M6·M7)**: 주소의 정답 코드(`addresses.yaml`)와 항목의 정답 범위(`scope_labels.yaml`)로 §10-4의 배치 규칙을 **평가 스크립트 안에서 따로** 적용해 층별 기대 항목 집합을 만든다 (`core/lookup.py`를 import 해서 쓰지 않는다 — 같은 코드로 채점하면 의미가 없다). 사업은 `projects` 정답으로 필지/법정동 층 기대값을 만든다.
 - 상태가 ok가 아닌 주소(A10)는 층 계산에서 빼고 M5에서만 본다.
@@ -1291,7 +1332,7 @@ pause
 
 ## 17. 절대 규칙
 1. `../data/` 원본 파일을 수정·이동·삭제하지 않는다. 발췌본만 `data_raw/`에 만든다.
-2. `.env`의 키 값을 출력·로그·커밋·Vercel 환경변수에 넣지 않는다. 키는 `pipeline/resolve_addresses.py`만 읽는다. 다른 폴더의 `.env`는 열지 않는다.
+2. `.env`의 키 값을 출력·로그·커밋·Vercel 환경변수에 넣지 않는다. 키는 `pipeline/resolve_addresses.py`(도로명주소)와 `pipeline/fetch_buildings.py`(P9, `DATA_GO_KR_SERVICE_KEY`)만 읽는다. 다른 폴더의 `.env`는 열지 않는다 (P9의 `DATA_GO_KR_SERVICE_KEY` 한 줄 복사는 사람이 한다).
 3. 사업 단계는 고시 근거(`stage_rules.yaml` + 문서 제목)로만 정한다. 추출값(`stage_candidate`)만으로 바꾸지 않는다.
 4. 단계 설명·소유자 안내 문구는 `seed/stage_templates.yaml`(원 계획서 표)에서만 나온다. Claude Code가 문구를 만들거나 고치지 않는다.
 5. 모든 근거 문장은 쪽 텍스트에 그대로 있어야 한다(§9-4). 없으면 검수 큐.
@@ -1450,6 +1491,7 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-10-26 | Claude Code (P9) | P9 보정 (feedback.md): 규제 고시 D5~D8 추가(§3, D8은 공고문이 없어 국토부 보도참고자료) / 항목을 적용·배경으로 나누고 층별 5개 상한·참고 섹션(§9-2, §10-4, §11-3) / 지역생활권을 층에서 빼고 참고로만(§1-2, §10-4) / 효력 기간·대상 기준·`more_evidence`(§7, §9-2) / 건축물대장 요약·용도지역 우선순위·거리 기준 표시(§10-4) / 지표 M13~M15(§13-2) / `fetch_buildings` 키 규칙(§17-2) |
 | 2026-10-26 | Claude Code (P8) | 새 도로명주소 키로 시연 주소 재확정: 압구정동 527은 도로명주소 없음 → A2를 인접 528 도로명 입력으로, A4를 갤러리아백화점(494)으로(§4) / 사업 중심 좌표를 인접 필지 526 근사로 허용, Nominatim 결과에 법정동 이름 확인 조건 추가(§8-8) / Vercel 배포 https://propedia-pretotype.vercel.app |
 | 2026-10-25 | Claude Code (P2) | D1 관련 고시 이력은 원문대로 5건(1977 건설부 승인 포함)(§8-11, §9-3) / 동남권 구성 근거를 D2 p12로 확인(§9-3) |
 | 2026-10-25 | Claude Code (P1) | 실제에 맞게 고침: D2 인쇄 쪽 환산 `−4` → `−6`(§3-2) / D2 p29 표지·p30 빈 쪽은 선택 제외, p31만 전사(§3-2, §8-3) / 텍스트 추출에 `dedupe_chars` 사용(§8-3) / 전사 원본을 커밋 대상인 `seed/transcripts/`에 두고 textify가 합침(§6, §8-3) / 도로명주소 API `E0014`도 예비 키 재시도 대상, 두 키 만료로 대체 모드(지번만) 작성(§8-7) / Nominatim 지번 질의 오매칭으로 제외, 경계·동네·정류장 결과 거부(§8-8) / D1 `title`은 공고 1쪽 제목 그대로 |

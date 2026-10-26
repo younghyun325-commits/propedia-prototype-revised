@@ -3,30 +3,72 @@
 
 let demoList = [];
 
-function itemCard(it) {
+const EFFECTIVE_KIND = { in_force: 'ok', not_started: 'info', ended: 'muted' };
+
+function effectiveBadge(it) {
+  if (!it.effective_status) return '';
+  return `<span class="effective">${badge(it.effective_status_label, EFFECTIVE_KIND[it.effective_status] || 'muted')}
+    <span class="small muted">${esc(it.effective_label)}</span></span>`;
+}
+
+function itemCard(it, extraBadge) {
+  const more = (it.more_evidence || []).map((m) => `<div class="evidence"><b>${esc(m.label)}</b> · ${esc(m.evidence)}
+      ${m.evidence_ok ? '' : badge('근거 확인 필요', 'warn')} ${pageButton(m.source, m.evidence, `원문 p${m.source ? m.source.pdf_page : ''}`)}</div>`).join('');
   return `<div class="item">
     <div class="row">
       <span class="item-title">${esc(it.title)}</span>
-      ${badge(it.scope_label, 'info')}
+      ${it.scope_type === 'SAENGHWAL' ? '' : badge(it.scope_label, 'info')}
+      ${extraBadge || ''}
       ${it.needs_review ? badge('검수 필요', 'warn') : ''}
       ${it.evidence_ok ? '' : badge('근거 확인 필요', 'warn')}
       ${it.edited ? badge('검수에서 수정됨', 'muted') : ''}
     </div>
+    ${effectiveBadge(it)}
     <p>${esc(it.summary)}</p>
+    ${it.target_note ? `<div class="target-note small">${esc(it.target_note)}</div>` : ''}
     <div class="src">출처 · ${esc(sourceLine(it.source))}</div>
     <div class="actions">
       ${pageButton(it.source, it.evidence)}
       <details><summary>근거 보기</summary>
         <div class="evidence">${esc(it.evidence)}</div>
+        ${more}
         ${it.scope_note ? `<div class="small muted">적용 범위 메모: ${esc(it.scope_note)}</div>` : ''}
       </details>
     </div>
   </div>`;
 }
 
+const LAYER_SHORT = { city: '서울 전역', gu: '자치구', dong: '법정동', parcel: '필지' };
+
+function referenceHtml(ref) {
+  if (!ref) return '';
+  const items = ref.items || [];
+  return `<details class="card soft reference" id="reference">
+    <summary><b>참고: 배경 설명과 참고 계획 (${items.length})</b></summary>
+    <p class="small muted">${esc(ref.note)}</p>
+    ${items.length ? items.map((it) => itemCard(it, badge(`${LAYER_SHORT[it.layer] || it.layer} · ${it.reference_reason}`, 'muted'))
+      + (it.tier_reason ? `<div class="small muted" style="margin:-4px 0 8px 4px">분류 이유: ${esc(it.tier_reason)}</div>` : '')).join('')
+      : '<div class="empty">참고로 보여줄 항목이 없습니다</div>'}
+  </details>`;
+}
+
+function buildingHtml(P) {
+  const b = P.building;
+  if (!b) return `<div class="item"><b>건축물 요약</b> <span class="muted">${esc(P.building_note || '')}</span></div>`;
+  return `<div class="item building">
+    <div class="row"><b>건축물 요약</b><span class="small muted">주건축물 ${b.main_count}동 기준</span></div>
+    <div class="table-wrap"><table><thead><tr><th>건물명</th><th>주용도</th><th>구조</th><th>최고 층수</th><th>세대수</th><th>연면적</th><th>사용승인일</th></tr></thead>
+    <tbody><tr><td>${esc((b.bld_names || []).join(', ') || '—')}</td><td>${esc(b.main_purpose || '—')}</td><td>${esc(b.structure || '—')}</td>
+      <td>지상 ${b.max_grnd_flr ?? '—'}층${b.max_ugrnd_flr ? ` · 지하 ${b.max_ugrnd_flr}층` : ''}</td>
+      <td>${b.total_hhld ? fmtNum(b.total_hhld) : '—'}</td><td>${b.total_area ? `${fmtNum(b.total_area)}㎡` : '—'}</td>
+      <td>${b.use_apr_day ? fmtDate(b.use_apr_day) : '—'}</td></tr></tbody></table></div>
+    <div class="src">출처 · ${esc(b.source)} · ${esc(b.fetched_label)}</div>
+  </div>`;
+}
+
 function itemsHtml(items) {
   if (!items || !items.length) return '<div class="empty">이 층에 해당하는 항목이 없습니다</div>';
-  return items.map(itemCard).join('');
+  return items.map((it) => itemCard(it)).join('');
 }
 
 function layer(title, code, count, body, id) {
@@ -143,6 +185,7 @@ function parcelHtml(P, normalized) {
     ? `<div class="item"><b>용도지역</b> ${esc(P.land_use.value)} <span class="small muted">— ${esc(P.land_use.basis)}</span>
          ${pageButton(P.land_use.source, null, '원문')}</div>`
     : `<div class="item"><b>용도지역</b> <span class="muted">${esc(P.land_use_note)}</span></div>`;
+  html += buildingHtml(P);
   html += itemsHtml(P.items).replace('<div class="empty">이 층에 해당하는 항목이 없습니다</div>', '');
   if (P.included_projects.length) {
     P.included_projects.forEach((p) => {
@@ -164,7 +207,7 @@ function parcelHtml(P, normalized) {
     html += P.nearby_projects.map((n) => `<div class="item"><div class="row">${badge(n.inclusion_label, 'info')}
       <b>${esc(n.name)}</b><span><b>${n.distance_m}m</b></span>
       <button class="btn small" type="button" data-progress="${n.project_id}">진행상황 보기</button></div>
-      <div class="small muted">거리 기준: ${esc(n.distance_basis || '')}</div>
+      <div class="small muted distance-basis">거리 기준: ${esc(n.distance_basis || '')}</div>
       <div id="progress-${n.project_id}" style="width:100%"></div></div>`).join('');
   } else {
     html += `<div class="empty">${esc(P.nearby_note || '주변 500m 안에서 진행 중인 사업이 없습니다')}</div>`;
@@ -193,7 +236,7 @@ function normLine(n) {
     ['도로명', n.road_address || '— (이 필지에 부여된 도로명주소 없음)'],
     ['PNU', n.pnu ? `<span class="mono">${esc(n.pnu)}</span>` : '—'],
     ['법정동', n.dong_name ? `${esc(n.dong_name)} <span class="mono small">${esc(n.bjd_code)}</span>` : '—'],
-    ['지역생활권', n.saenghwal || '—'],
+    ['지역생활권(참고)', n.saenghwal || '—'],
     ['좌표', n.coord_source ? `${n.lat.toFixed(5)}, ${n.lon.toFixed(5)} (${esc(n.coord_source)})` : '없음'],
   ];
   return `<div class="card soft norm-line">${parts.map(([k, v]) =>
@@ -235,12 +278,14 @@ async function run(text) {
     };
     html += `<div class="row small" style="margin:8px 0">바로가기
       <a href="#layer-city">서울 전역 ${counts.city}</a> · <a href="#layer-gu">자치구 ${counts.gu}</a> ·
-      <a href="#layer-dong">법정동 ${counts.dong}</a> · <a href="#layer-parcel">필지 ${counts.parcel}${L.parcel.included_projects.length ? ' (사업 카드)' : ''}</a></div>`;
+      <a href="#layer-dong">법정동 ${counts.dong}</a> · <a href="#layer-parcel">필지 ${counts.parcel}${L.parcel.included_projects.length ? ' (사업 카드)' : ''}</a>
+      · <a href="#reference">참고 ${(r.reference && r.reference.items.length) || 0}</a></div>`;
     html += layer('서울 전역', '시도 11', counts.city, itemsHtml(L.city), 'layer-city');
     html += layer(`자치구 · 강남구`, `시군구 ${n.sgg_code}`, counts.gu, itemsHtml(L.gu.items) + stageTable(L.gu.projects_by_stage), 'layer-gu');
-    html += layer(`법정동 · ${n.dong_name}`, `법정동 ${n.bjd_code} · 지역생활권 ${n.saenghwal || '—'}`,
+    html += layer(`법정동 · ${n.dong_name}`, `법정동 ${n.bjd_code}`,
       counts.dong, itemsHtml(L.dong.items) + dongExtras(L.dong), 'layer-dong');
     html += layer('필지', `PNU ${n.pnu}`, counts.parcel, parcelHtml(L.parcel, n), 'layer-parcel');
+    html += referenceHtml(r.reference);
   }
   html += `<p class="small muted">${esc(r.coverage_note || '')}</p><p class="small muted">${esc(r.disclaimer)}</p>`;
   html += apiViewer(method, shownUrl, body, r);

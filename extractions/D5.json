@@ -1,0 +1,55 @@
+{
+  "doc_id": "D5",
+  "extractor_version": "claude-code-v1.1",
+  "extracted_at": "2026-10-26T17:00:00+09:00",
+  "document": {
+    "title": "토지거래허가구역 재지정 및 조정 공고",
+    "issuer": "서울특별시장",
+    "gosi_no": "서울특별시 공고 제2026-1141호",
+    "published_at": "2026-04-09",
+    "gazette": null,
+    "doc_kind": "designation"
+  },
+  "fields": {},
+  "items": [
+    {
+      "item_key": "D5-01",
+      "item_type": "notice",
+      "title": "토지거래허가구역 재지정: 압구정 아파트지구",
+      "summary": "서울시가 강남구 압구정동 압구정 아파트지구 1,149,476㎡를 토지거래허가구역으로 재지정했다. 지정기간은 2026.4.27~2027.4.26이다.",
+      "scope_type": "BJD",
+      "scope_ref": ["1168011000"],
+      "scope_note": "압구정 아파트지구는 압구정동 일부. 경계 데이터가 없어 법정동 단위로 적용",
+      "pdf_page": 1,
+      "evidence": "강 남 구 압구정동 압구정 아파트지구",
+      "more_evidence": [
+        {
+          "label": "지정기간",
+          "evidence": "○ 지정기간 : 2026년 4월 27일부터 2027년 4월 26일까지",
+          "pdf_page": 1
+        },
+        {
+          "label": "면적 (표 칸 안에서 숫자가 줄바꿈됨)",
+          "evidence": "1,149,47\n강 남 구 압구정동 압구정 아파트지구\n6",
+          "pdf_page": 1
+        },
+        {
+          "label": "지형도면",
+          "evidence": "1. 강남구 압구정동 아파트지구",
+          "pdf_page": 4
+        }
+      ],
+      "effective_from": "2026-04-27",
+      "effective_to": "2027-04-26",
+      "target_note": "대상: 압구정 아파트지구 (1,149,476㎡). 이 필지가 아파트지구 안인지는 원문 도면(PDF 4쪽)으로 확인",
+      "confidence": 0.9,
+      "needs_review": false,
+      "tier_class": "a",
+      "applies_rank": 1,
+      "tier_reason": "지금 효력이 있는 지정 공고 (지정기간 2026.4.27~2027.4.26)",
+      "tier": "applies",
+      "reference_rank": null
+    }
+  ],
+  "projects": []
+}

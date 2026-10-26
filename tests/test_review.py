@@ -55,25 +55,31 @@ def _item_review(con, item_key):
 
 
 def test_item_reject_removed(con):
-    rid = _item_review(con, "D2-04")
-    keys = {i["item_key"] for i in lookup(con, A1, decisions=[{"review_id": rid, "action": "reject"}])
-            ["layers"]["dong"]["items"]}
-    assert "D2-04" not in keys and "D2-05" in keys
+    rid = _item_review(con, "D2-11")
+    ref = lookup(con, A1, decisions=[{"review_id": rid, "action": "reject"}])["reference"]["items"]
+    assert "D2-11" not in {i["item_key"] for i in ref} and "D2-13" in {i["item_key"] for i in ref}
 
 
 def test_item_approve_clears_flag(con):
-    rid = _item_review(con, "D2-04")
-    items = lookup(con, A1, decisions=[{"review_id": rid, "action": "approve"}])["layers"]["dong"]["items"]
-    d = next(i for i in items if i["item_key"] == "D2-04")
+    rid = _item_review(con, "D2-11")
+    ref = lookup(con, A1, decisions=[{"review_id": rid, "action": "approve"}])["reference"]["items"]
+    d = next(i for i in ref if i["item_key"] == "D2-11")
     assert d["needs_review"] is False
 
 
-def test_item_edit_moves_scope(con):
+def test_item_edit_moves_scope_and_tier(con):
+    # 배경(지역생활권) 항목을 검수에서 역삼동 범위 + '적용'으로 고치면 역삼동 법정동 층에 나온다
     rid = _item_review(con, "D2-04")
     dec = [{"review_id": rid, "action": "edit",
-            "edits": {"summary": "수정한 요약", "scope_type": "BJD", "scope_ref": ["1168010100"]}}]
+            "edits": {"summary": "수정한 요약", "scope_type": "BJD", "scope_ref": ["1168010100"], "tier": "applies"}}]
     a1 = lookup(con, A1, decisions=dec)["layers"]["dong"]["items"]
     assert "D2-04" not in {i["item_key"] for i in a1}
     yeoksam = lookup(con, "강남구 역삼동 737", decisions=dec)["layers"]["dong"]["items"]
     d = next(i for i in yeoksam if i["item_key"] == "D2-04")
-    assert d["summary"] == "수정한 요약" and d["edited"] is True
+    assert d["summary"] == "수정한 요약" and d["edited"] is True and d["tier"] == "applies"
+
+
+def test_item_edit_bad_tier_ignored(con):
+    rid = _item_review(con, "D2-04")
+    r = lookup(con, A1, decisions=[{"review_id": rid, "action": "edit", "edits": {"tier": "maybe"}}])
+    assert "tier" in r["review_applied"][0]["ignored"]

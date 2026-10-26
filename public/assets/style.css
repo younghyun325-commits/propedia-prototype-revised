@@ -155,6 +155,13 @@ pre {
 .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; align-items: center; }
 .evidence { background: var(--card); border-left: 3px solid var(--info); padding: 6px 10px; font-size: 13.5px; margin: 6px 0; }
 .empty { color: var(--muted); font-size: 14px; padding: 6px 0; }
+.effective { display: inline-flex; gap: 6px; align-items: center; margin-top: 4px; flex-wrap: wrap; }
+.target-note { background: #fff8eb; border-left: 3px solid var(--warn); padding: 5px 10px; margin: 6px 0; }
+.reference { margin: 18px 0; }
+.reference > summary { cursor: pointer; padding: 4px 0; }
+.reference .item { background: var(--card); }
+.building table { margin-top: 6px; }
+.distance-basis { width: 100%; }
 
 .project-card { border: 2px solid var(--info); border-radius: var(--radius); padding: 16px; margin: 12px 0; background: #fff; }
 .project-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }

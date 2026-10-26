@@ -19,3 +19,27 @@ def parse_date(s) -> date | None:
     if isinstance(s, date):
         return s
     return date.fromisoformat(str(s)[:10])
+
+
+def dot(s) -> str:
+    """'2026-04-27' → '2026.04.27'"""
+    return str(s)[:10].replace("-", ".")
+
+
+EFFECTIVE_STATUS_LABELS = {"in_force": "효력 기간 중", "ended": "효력 기간 끝남", "not_started": "효력 시작 전"}
+
+
+def effective(start, end, today: date) -> dict:
+    """원문에 적힌 효력 기간과 오늘을 비교한 사실 (feedback.md §2-2-5). 기간이 없으면 상태도 없다."""
+    s, e = parse_date(start), parse_date(end)
+    if s is None and e is None:
+        return {"effective_label": None, "effective_status": None, "effective_status_label": None}
+    if s and e:
+        label = f"효력 기간 {dot(s)} ~ {dot(e)}"
+    elif s:
+        label = f"효력 {dot(s)}부터"
+    else:
+        label = f"효력 {dot(e)}까지"
+    status = "not_started" if s and today < s else "ended" if e and today > e else "in_force"
+    return {"effective_label": label, "effective_status": status,
+            "effective_status_label": EFFECTIVE_STATUS_LABELS[status]}

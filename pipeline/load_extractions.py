@@ -1,4 +1,4 @@
-"""추출 결과(extractions/Dn.json) 적재 + 근거 문장 자동 검사 (agents.md §8-10, §9).
+"""추출 결과(extractions/Dn.json) 적재 + 근거 문장 자동 검사 (agents.md §8-10, §9, feedback.md §3-4).
 
 사용:
   python -m pipeline.load_extractions          # 적재
@@ -7,6 +7,7 @@
 import argparse
 import json
 import re
+from datetime import date
 
 from core.text import evidence_in
 from pipeline.common import DOC_ORDER, EXTRACTIONS, connect_rw, fail, log, setup_stdout
@@ -14,7 +15,12 @@ from pipeline.common import DOC_ORDER, EXTRACTIONS, connect_rw, fail, log, setup
 ITEM_TYPES = {"policy", "plan", "notice", "stat"}
 SCOPE_TYPES = {"SIDO", "SGG", "SAENGHWAL", "BJD", "PARCEL"}
 ITEM_REQUIRED = ["item_key", "item_type", "title", "summary", "scope_type", "scope_ref", "pdf_page", "evidence",
-                 "confidence", "needs_review"]
+                 "confidence", "needs_review",
+                 # P9: 효력·대상, 층 분류 (claude-code-v1.1)
+                 "effective_from", "effective_to", "target_note", "tier", "tier_class", "applies_rank",
+                 "reference_rank", "tier_reason"]
+TIERS = {"applies", "background"}
+TIER_CLASSES = {"a", "b", "c", None}
 FIELD_REQUIRED = ["value", "evidence", "pdf_page", "confidence"]
 TOP_REQUIRED = ["doc_id", "extractor_version", "extracted_at", "document", "fields", "items", "projects"]
 SUMMARY_MAX = 120
@@ -53,6 +59,29 @@ def validate(doc: str, data: dict, pages: dict[int, dict]) -> list[str]:
             errs.append(f"{key}: pdf_page {it.get('pdf_page')}는 추출 대상(selected) 쪽이 아님")
         if len(it.get("summary", "")) > SUMMARY_MAX:
             errs.append(f"{key}: summary {len(it['summary'])}자 > {SUMMARY_MAX}자")
+        if it.get("tier") not in TIERS:
+            errs.append(f"{key}: tier {it.get('tier')}")
+        if it.get("tier_class") not in TIER_CLASSES:
+            errs.append(f"{key}: tier_class {it.get('tier_class')}")
+        if it.get("tier") == "applies" and not it.get("tier_class"):
+            errs.append(f"{key}: applies 항목은 tier_class 필요")
+        if not it.get("tier_reason"):
+            errs.append(f"{key}: tier_reason 필요")
+        for k in ("applies_rank", "reference_rank"):
+            if it.get(k) is not None and not isinstance(it[k], int):
+                errs.append(f"{key}: {k}는 정수 또는 null")
+        for k in ("effective_from", "effective_to"):
+            v = it.get(k)
+            if v is not None:
+                try:
+                    date.fromisoformat(v)
+                except (TypeError, ValueError):
+                    errs.append(f"{key}: {k} 날짜 형식 YYYY-MM-DD")
+        if it.get("effective_from") and it.get("effective_to") and it["effective_from"] > it["effective_to"]:
+            errs.append(f"{key}: effective_from > effective_to")
+        for m in it.get("more_evidence", []):
+            if not m.get("label") or not m.get("evidence") or m.get("pdf_page") not in pages:
+                errs.append(f"{key}: more_evidence는 label·evidence·문서 쪽 범위 안 pdf_page 필요")
     for name, f in data["fields"].items():
         for k in FIELD_REQUIRED:
             if k not in f:
@@ -112,14 +141,27 @@ def load(con, only: list[str] | None = None) -> list[dict]:
             ok = ev_ok(it["evidence"], it["pdf_page"])
             ok_n += ok
             total += 1
+            more = []
+            for m in it.get("more_evidence", []):   # 기간·면적·도면 근거도 같은 규칙으로 검사한다
+                m_ok = ev_ok(m["evidence"], m["pdf_page"])
+                ok_n += m_ok
+                total += 1
+                more.append({**m, "evidence_ok": m_ok})
+                if not m_ok:
+                    mism.append(("applicability_rules", it["item_key"], f"{it['title']} ({m['label']})",
+                                 m["evidence"], m["pdf_page"]))
             con.execute(
                 """INSERT INTO applicability_rules(item_key, document_id, item_type, title, summary, scope_type,
-                   scope_ref, scope_note, pdf_page, evidence, evidence_ok, effective_from, confidence, needs_review)
-                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   scope_ref, scope_note, pdf_page, evidence, evidence_ok, effective_from, confidence, needs_review,
+                   effective_to, target_note, more_evidence, tier, tier_class, applies_rank, reference_rank,
+                   tier_reason)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (it["item_key"], doc_pk, it["item_type"], it["title"], it["summary"], it["scope_type"],
                  json.dumps(it["scope_ref"], ensure_ascii=False), it.get("scope_note"), it["pdf_page"],
-                 it["evidence"], int(ok), it.get("effective_from"), float(it["confidence"]),
-                 int(bool(it["needs_review"]))))
+                 it["evidence"], int(ok and all(m["evidence_ok"] for m in more)), it.get("effective_from"),
+                 float(it["confidence"]), int(bool(it["needs_review"])), it.get("effective_to"),
+                 it.get("target_note"), json.dumps(more, ensure_ascii=False), it["tier"], it.get("tier_class"),
+                 it.get("applies_rank"), it.get("reference_rank"), it["tier_reason"]))
             if not ok:
                 mism.append(("applicability_rules", it["item_key"], it["title"], it["evidence"], it["pdf_page"]))
         for name, f in data["fields"].items():
@@ -148,7 +190,7 @@ def load(con, only: list[str] | None = None) -> list[dict]:
                    VALUES ('evidence_mismatch',?,?,?,?,?,?,?)""",
                 (table, ref, f"{title} — 근거 확인 필요", "근거 문장이 쪽 텍스트에서 그대로 찾아지지 않음",
                  json.dumps({"current": {"evidence": ev, "pdf_page": pg}, "options": ["approve", "reject", "edit"],
-                             "editable_fields": ["summary", "scope_type", "scope_ref"]
+                             "editable_fields": ["summary", "scope_type", "scope_ref", "tier"]
                              if table == "applicability_rules" else []}, ensure_ascii=False),
                  doc_pk, pg))
         con.execute(

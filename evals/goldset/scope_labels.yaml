@@ -4,38 +4,45 @@ note: >
   P2 추출 후 각 항목의 쪽 텍스트를 다시 읽고 작성. 추출자와 같은 작성자 — 수치가 낙관적일 수 있음.
   규칙: 지번·구역명이 있으면 BJD/PARCEL, 서울 전역 제도·계획이면 SIDO, 구 전체면 SGG,
   생활권 장의 내용은 지번이 없으면 SAENGHWAL 유지(agents.md §1-2, §9-3).
-written_at: "2026-10-25"
+  P9(2026-10-26): D5~D8 범위·효력 기간(공고문 날짜 그대로)과 모든 항목의 tier 라벨 추가. tier는 feedback.md §3-1 기준
+  (a 효력 고시 · b 직접 쓰이는 수치 기준 · c 구·권역 주거지 정비 방향)으로 쪽 텍스트를 다시 읽고 붙였다.
+  rank는 같은 tier_class 안 순서. 추출자와 같은 작성자 — 수치가 낙관적일 수 있음.
+written_at: "2026-10-26"
 labels:
-  D1-01: {scope_type: BJD, scope_ref: ["1168011000"]}
-  D1-02: {scope_type: BJD, scope_ref: ["1168011000"]}
-  D1-03: {scope_type: BJD, scope_ref: ["1168011000"]}
-  D2-01: {scope_type: SGG, scope_ref: ["11650", "11680", "11710", "11740"]}
-  D2-02: {scope_type: SGG, scope_ref: ["11680"]}
-  D2-03: {scope_type: SGG, scope_ref: ["11680"]}
-  D2-04: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-05: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-06: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-07: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-08: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-09: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-10: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-11: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-12: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D2-13: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"]}
-  D3-01: {scope_type: SIDO, scope_ref: ["11"]}
-  D3-02: {scope_type: SIDO, scope_ref: ["11"]}
-  D3-03: {scope_type: SIDO, scope_ref: ["11"]}
-  D3-04: {scope_type: SIDO, scope_ref: ["11"]}
-  D3-05: {scope_type: SGG, scope_ref: ["11680"]}
-  D3-06: {scope_type: SIDO, scope_ref: ["11"]}
-  D3-07: {scope_type: SIDO, scope_ref: ["11"]}
-  D3-08: {scope_type: SIDO, scope_ref: ["11"]}
-  D3-09: {scope_type: SIDO, scope_ref: ["11"]}
-  D4-01: {scope_type: SIDO, scope_ref: ["11"]}
-  D4-02: {scope_type: SIDO, scope_ref: ["11"]}
-  D4-03: {scope_type: SIDO, scope_ref: ["11"]}
-  D4-04: {scope_type: SIDO, scope_ref: ["11"]}
-  D4-05: {scope_type: SIDO, scope_ref: ["11"]}
-  D4-06: {scope_type: SGG, scope_ref: ["11650", "11680", "11710", "11740"]}
-  D4-07: {scope_type: SGG, scope_ref: ["11650", "11680", "11710", "11740"]}
-  D4-08: {scope_type: SGG, scope_ref: ["11650", "11680", "11710", "11740"]}
+  D1-01: {scope_type: BJD, scope_ref: ["1168011000"], tier: applies, tier_class: a, rank: 2}
+  D1-02: {scope_type: BJD, scope_ref: ["1168011000"], tier: applies, tier_class: a, rank: 3}
+  D1-03: {scope_type: BJD, scope_ref: ["1168011000"], tier: background}
+  D2-01: {scope_type: SGG, scope_ref: ["11650", "11680", "11710", "11740"], tier: background}
+  D2-02: {scope_type: SGG, scope_ref: ["11680"], tier: background}
+  D2-03: {scope_type: SGG, scope_ref: ["11680"], tier: background}
+  D2-04: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-05: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-06: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-07: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-08: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-09: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-10: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-11: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-12: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D2-13: {scope_type: SAENGHWAL, scope_ref: ["압구정·청담"], tier: background}
+  D3-01: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D3-02: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D3-03: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D3-04: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D3-05: {scope_type: SGG, scope_ref: ["11680"], tier: background}
+  D3-06: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: b, rank: 3}
+  D3-07: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: b, rank: 1}
+  D3-08: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: b, rank: 2}
+  D3-09: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D4-01: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D4-02: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D4-03: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: b, rank: 4}
+  D4-04: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D4-05: {scope_type: SIDO, scope_ref: ["11"], tier: background}
+  D4-06: {scope_type: SGG, scope_ref: ["11650", "11680", "11710", "11740"], tier: background}
+  D4-07: {scope_type: SGG, scope_ref: ["11650", "11680", "11710", "11740"], tier: applies, tier_class: c, rank: 1}
+  D4-08: {scope_type: SGG, scope_ref: ["11650", "11680", "11710", "11740"], tier: applies, tier_class: c, rank: 2}
+  D5-01: {scope_type: BJD, scope_ref: ["1168011000"], tier: applies, tier_class: a, rank: 1, effective_from: "2026-04-27", effective_to: "2027-04-26"}
+  D6-01: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: a, rank: 1, effective_from: "2025-10-20", effective_to: "2026-12-31"}
+  D7-01: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: a, rank: 2, effective_from: "2025-10-16", effective_to: null}
+  D8-01: {scope_type: SIDO, scope_ref: ["11"], tier: applies, tier_class: a, rank: 3}

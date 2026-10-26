@@ -1,0 +1,55 @@
+{
+  "doc_id": "D6",
+  "extractor_version": "claude-code-v1.1",
+  "extracted_at": "2026-10-26T17:00:00+09:00",
+  "document": {
+    "title": "토지거래허가구역 지정 공고문",
+    "issuer": "국토교통부장관",
+    "gosi_no": "국토교통부공고 제2025-1219호",
+    "published_at": "2025-10-15",
+    "gazette": null,
+    "doc_kind": "designation"
+  },
+  "fields": {},
+  "items": [
+    {
+      "item_key": "D6-01",
+      "item_type": "notice",
+      "title": "토지거래허가구역 지정: 서울 전역 아파트",
+      "summary": "국토교통부가 서울 25개 구의 아파트·연립주택·다세대주택을 토지거래허가구역으로 지정했다. 지정기간은 2025.10.20~2026.12.31이다.",
+      "scope_type": "SIDO",
+      "scope_ref": ["11"],
+      "scope_note": "서울특별시 25개 구 전체가 대상지역",
+      "pdf_page": 1,
+      "evidence": "허가대상 용도: 아파트, 연립주택, 다세대주택",
+      "more_evidence": [
+        {
+          "label": "지정기간",
+          "evidence": "2. 허가구역 지정기간 : 2025년 10월 20일부터 2026년 12월 31일까지",
+          "pdf_page": 1
+        },
+        {
+          "label": "대상지역 (강남 포함)",
+          "evidence": "강남, 강동, 강북, 강서, 관악,",
+          "pdf_page": 1
+        },
+        {
+          "label": "연립·다세대 한정",
+          "evidence": "※ 연립주택 및 다세대주택은 건축물대장상 ‘붙임2’표에 나열된 지번이 표기된 주택에 한함",
+          "pdf_page": 1
+        }
+      ],
+      "effective_from": "2025-10-20",
+      "effective_to": "2026-12-31",
+      "target_note": "대상: 아파트, 연립주택, 다세대주택. 연립·다세대는 건축물대장상 공고 붙임2 표에 나열된 지번이 표기된 주택에 한함",
+      "confidence": 0.9,
+      "needs_review": false,
+      "tier_class": "a",
+      "applies_rank": 1,
+      "tier_reason": "지금 효력이 있는 지정 공고 (지정기간 2025.10.20~2026.12.31)",
+      "tier": "applies",
+      "reference_rank": null
+    }
+  ],
+  "projects": []
+}

@@ -1,0 +1,55 @@
+{
+  "doc_id": "D8",
+  "extractor_version": "claude-code-v1.1",
+  "extracted_at": "2026-10-26T17:00:00+09:00",
+  "document": {
+    "title": "투기과열지구 및 조정대상지역 추가 지정 (보도참고자료)",
+    "issuer": "국토교통부",
+    "gosi_no": null,
+    "published_at": "2026-06-30",
+    "gazette": null,
+    "doc_kind": "press"
+  },
+  "fields": {},
+  "items": [
+    {
+      "item_key": "D8-01",
+      "item_type": "stat",
+      "title": "투기과열지구 지정 현황: 서울 25개 구",
+      "summary": "국토교통부 보도참고자료(2026.6.30) 현황표에 서울 25곳이 투기과열지구로 적혀 있다. 강남·서초·송파·용산은 2017.8.3 지정이다.",
+      "scope_type": "SIDO",
+      "scope_ref": ["11"],
+      "scope_note": "현황표의 서울 (25곳)",
+      "pdf_page": 5,
+      "evidence": "강남·서초·송파·용산(’17.8.3) 강남·서초·송파·용산(’16.11.3)",
+      "more_evidence": [
+        {
+          "label": "현황표",
+          "evidence": "참고2 투기과열지구 및 조정대상지역 현황",
+          "pdf_page": 5
+        },
+        {
+          "label": "나머지 21개 구 지정일",
+          "evidence": "강북·도봉(‘25.10.16) 강북·도봉(‘25.10.16)",
+          "pdf_page": 5
+        },
+        {
+          "label": "추가 지정 후 (서울 25곳 그대로)",
+          "evidence": "□ 추가지정 후(7월 1일 이후)",
+          "pdf_page": 5
+        }
+      ],
+      "effective_from": null,
+      "effective_to": null,
+      "target_note": "현황표 기준: 강남·서초·송파·용산 2017.8.3, 나머지 21개 구 2025.10.16 지정. 2026.7.1 추가 지정 후에도 서울 25곳",
+      "confidence": 0.8,
+      "needs_review": false,
+      "tier_class": "a",
+      "applies_rank": 3,
+      "tier_reason": "지정 공고문이 아니라 국토교통부 보도참고자료의 현황표다. 투기과열지구 지정 공고문을 받으면 교체",
+      "tier": "applies",
+      "reference_rank": null
+    }
+  ],
+  "projects": []
+}

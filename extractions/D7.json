@@ -1,0 +1,55 @@
+{
+  "doc_id": "D7",
+  "extractor_version": "claude-code-v1.1",
+  "extracted_at": "2026-10-26T17:00:00+09:00",
+  "document": {
+    "title": "조정대상지역 지정",
+    "issuer": "국토교통부장관",
+    "gosi_no": "국토교통부공고 제2025-1223호",
+    "published_at": "2025-10-16",
+    "gazette": null,
+    "doc_kind": "designation"
+  },
+  "fields": {},
+  "items": [
+    {
+      "item_key": "D7-01",
+      "item_type": "notice",
+      "title": "조정대상지역 지정: 서울 25개 구",
+      "summary": "국토교통부공고 제2025-1223호로 서울 21개 구가 조정대상지역에 새로 지정되었다. 강남구·서초구·송파구·용산구는 기존 지정이 그대로다(현황표 '좌동').",
+      "scope_type": "SIDO",
+      "scope_ref": ["11"],
+      "scope_note": "신규 21개 구 + 기존 4개 구 = 서울 25개 구",
+      "pdf_page": 2,
+      "evidence": "강남구, 서초구, 송파구, 용산구 좌동",
+      "more_evidence": [
+        {
+          "label": "지정기간",
+          "evidence": "2. 지정기간 : 2025. 10. 16. ∼ 지정 해제시까지",
+          "pdf_page": 1
+        },
+        {
+          "label": "신규 지정 대상지역",
+          "evidence": "1. 대상지역 : 서울 성동구, 마포구, 강동구, 영등포구, 양천구, 동작구,",
+          "pdf_page": 1
+        },
+        {
+          "label": "지정효력",
+          "evidence": "ㅇ 「주택법」 제64조에 따른 분양권 전매 제한",
+          "pdf_page": 1
+        }
+      ],
+      "effective_from": "2025-10-16",
+      "effective_to": null,
+      "target_note": "대상: 지정 후 서울 25개 구 전역. 이 공고의 신규 지정은 21개 구이고, 강남구는 기존 지정(현황표 '현행' 칸)",
+      "confidence": 0.85,
+      "needs_review": false,
+      "tier_class": "a",
+      "applies_rank": 2,
+      "tier_reason": "지금 효력이 있는 지정 공고 (2025.10.16부터, 지정 해제시까지)",
+      "tier": "applies",
+      "reference_rank": null
+    }
+  ],
+  "projects": []
+}

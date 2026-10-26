@@ -2,7 +2,10 @@ from conftest import parcel_review_id
 
 A1 = "강남구 압구정동 527"
 ITEM_KEYS = {"item_key", "item_type", "title", "summary", "scope_type", "scope_label", "needs_review", "evidence",
-             "evidence_ok", "source"}
+             "evidence_ok", "source",
+             # P9 (feedback.md §2-2-5)
+             "effective_from", "effective_to", "effective_label", "effective_status", "effective_status_label",
+             "target_note", "tier"}
 SOURCE_KEYS = {"doc_id", "short_title", "published_at", "pdf_page", "page_label", "page_image", "source_url",
                "source_note"}
 
@@ -26,22 +29,30 @@ def test_404s(client):
 
 def test_health(client):
     h = client.get("/api/v1/health").json()
-    assert h["status"] == "ok" and h["as_of"] == "2026-10-06" and h["schema_version"] == "1"
+    assert h["status"] == "ok" and h["as_of"] == "2026-10-06" and h["schema_version"] == "2"
 
 
 def test_lookup_structure(client):
     d = client.get("/api/v1/lookup", params={"address": A1}).json()
-    assert set(d) >= {"query", "status", "message", "normalized", "as_of", "layers", "review_applied", "events",
-                      "coverage_note", "disclaimer"}
+    assert set(d) >= {"query", "status", "message", "normalized", "as_of", "layers", "reference", "review_applied",
+                      "events", "coverage_note", "disclaimer"}
     L = d["layers"]
     assert set(L) == {"city", "gu", "dong", "parcel"}
     assert set(L["gu"]) >= {"items", "projects_by_stage"}
     assert set(L["dong"]) >= {"items", "projects", "deadlines"}
-    assert set(L["parcel"]) >= {"items", "land_use", "land_use_note", "included_projects", "nearby_projects",
-                                "nearby_note"}
+    assert set(L["parcel"]) >= {"items", "land_use", "land_use_note", "building", "building_note",
+                                "included_projects", "nearby_projects", "nearby_note"}
     for it in L["city"] + L["gu"]["items"] + L["dong"]["items"]:
         assert set(it) >= ITEM_KEYS
         assert set(it["source"]) >= SOURCE_KEYS
+    assert set(d["reference"]) == {"items", "note"}
+    for it in d["reference"]["items"]:
+        assert set(it) >= ITEM_KEYS | {"layer", "reference_reason"}
+
+
+def test_lookup_not_ok_has_no_reference(client):
+    d = client.get("/api/v1/lookup", params={"address": "서초구 방배동 818-14"}).json()
+    assert d["status"] == "out_of_scope" and d["layers"] is None and d["reference"] is None
 
 
 def test_post_lookup_applies_decisions(client):
@@ -65,9 +76,9 @@ def test_progress_structure(client):
 
 def test_events_steps(client):
     ev = client.get("/api/v1/events").json()
-    assert [e["step"] for e in ev] == [1, 2, 3, 4]
-    assert [e["doc_id"] for e in ev] == ["D4", "D3", "D2", "D1"]
-    assert [len(e["events"]) for e in ev] == [0, 0, 0, 2]
+    assert [e["step"] for e in ev] == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert [e["doc_id"] for e in ev] == ["D4", "D3", "D2", "D1", "D5", "D6", "D7", "D8"]
+    assert [len(e["events"]) for e in ev] == [0, 0, 0, 2, 0, 0, 0, 0]   # 규제 고시는 사업 상태를 바꾸지 않는다
 
 
 def test_review_queue_parcel_first(client):
@@ -78,8 +89,16 @@ def test_review_queue_parcel_first(client):
 
 def test_documents_list(client):
     docs = client.get("/api/v1/documents").json()
-    assert [d["doc_id"] for d in docs] == ["D4", "D3", "D2", "D1"]
+    assert [d["doc_id"] for d in docs] == ["D4", "D3", "D2", "D1", "D5", "D6", "D7", "D8"]
     assert all(d["evidence_ok_rate"] == 1.0 for d in docs)
+    kinds = {d["doc_id"]: d["doc_kind"] for d in docs}
+    assert [kinds[k] for k in ("D5", "D6", "D7", "D8")] == ["designation"] * 3 + ["press"]
+
+
+def test_document_items_have_tier(client):
+    items = client.get("/api/v1/documents/D3").json()["items"]
+    assert {i["item_key"]: i["tier"] for i in items}["D3-07"] == "applies"
+    assert all(i["tier_label"] in ("적용", "배경") and i["tier_reason"] for i in items)
 
 
 def test_page_detail_evidences(client):

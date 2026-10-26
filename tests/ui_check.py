@@ -3,8 +3,9 @@
   python tests/ui_check.py            # 로컬 서버를 띄워 점검 (Playwright + 설치된 Edge 사용)
   python tests/ui_check.py --base https://xxx.vercel.app   # 배포 주소 점검
 
-점검: ① 시작 화면 링크 5개 ② A1 조회 4개 층·사업 카드·D-day·원문 보기 모달·API 응답 보기 ③ A8·A10 안내
-     ④ 문서 DB D1 1쪽 근거 하이라이트·투입 순서 1~4 ⑤ 검수 승인 → A1 "포함" → 초기화 → "포함될 수 있음" ⑥ 평가 화면
+점검: ① 시작 화면 링크 5개 ② A1 조회 4개 층·사업 카드·D-day·원문 보기 모달·API 응답 보기
+     ·효력 기간 배지·참고 접기 상자·건축물 요약(P9) ③ A8·A10 안내 ④ 문서 DB D1 1쪽 근거 하이라이트·투입 순서 1~8
+     ⑤ 검수 승인 → A1 "포함" → 초기화 → "포함될 수 있음" ⑥ 평가 화면
 """
 import argparse
 import os
@@ -72,7 +73,7 @@ def main() -> int:
             page.goto(f"{base}/index.html")
             page.wait_for_selector("#coverage-body tr td b")
             check("① 시작 화면 링크 5개", page.locator("#steps a").count() == 5)
-            check("① 반영 범위 4행", page.locator("#coverage-body tr").count() == 4)
+            check("① 반영 범위 8행", page.locator("#coverage-body tr").count() == 8)
             hrefs = [page.locator("#steps a").nth(i).get_attribute("href") for i in range(5)]
             check("① 링크 대상", hrefs == ["lookup.html?addr=A1", "docs.html?doc=D1", "docs.html#steps", "review.html",
                                          "eval.html"], str(hrefs))
@@ -90,6 +91,24 @@ def main() -> int:
             dday = re.search(r"D-\d+|D-day|마감\(", card)
             check("② D-day 표시", bool(dday), dday.group(0) if dday else "")
             check("② 남은 기간 문구", "비교할 사례가 부족합니다" in card)
+            # P9: 층별 5개 이하, 효력 기간 배지, 참고 접기 상자, 건축물 요약(또는 안내)
+            n_items = [page.locator(f"#layer-{k} .layer-body > .item").count() for k in ("city", "gu", "dong")]
+            check("② 서울 전역·자치구·법정동 5개 이하", all(n <= 5 for n in n_items), str(n_items))
+            city = page.inner_text("#layer-city")
+            check("② 효력 기간 배지 (D6)", "토지거래허가구역 지정: 서울 전역 아파트" in city and "효력 기간 중" in city
+                  and "효력 기간 2025.10.20 ~ 2026.12.31" in city)
+            dong = page.inner_text("#layer-dong")
+            check("② 법정동 D5 대상 기준", "압구정 아파트지구" in dong and "대상: 압구정 아파트지구" in dong)
+            check("② 생활권 배지 없음", "지역생활권 압구정·청담" not in page.inner_text("#result"))
+            ref = page.locator("#reference")
+            ref_title = ref.locator(":scope > summary").inner_text()
+            check("② 참고 접기 상자", ref.count() == 1 and ref_title.startswith("참고: 배경 설명과 참고 계획")
+                  and ref.get_attribute("open") is None, ref_title)
+            ref.locator(":scope > summary").click()
+            n_ref = ref.locator(":scope > .item").count()
+            check("② 참고 5개 이하", 0 < n_ref <= 5, f"{n_ref}개")
+            parcel = page.inner_text("#layer-parcel")
+            check("② 건축물 요약 또는 안내", "건축물 요약" in parcel, parcel.split("건축물 요약", 1)[-1][:40].strip())
             page.locator("[data-page-ref]").first.click()
             page.wait_for_selector("#page-modal.open")
             page.wait_for_function("document.getElementById('page-modal-img').naturalWidth > 0")
@@ -108,7 +127,8 @@ def main() -> int:
             page.goto(f"{base}/lookup.html?addr=A8")
             page.wait_for_selector("section.layer")
             body = page.inner_text("#result")
-            check("③ A8 범위 밖 안내", "역삼·논현 지역생활권 장은 프리토타입 범위 밖입니다" in body)
+            check("③ A8 서울 전역 D6", "토지거래허가구역 지정: 서울 전역 아파트" in page.inner_text("#layer-city"))
+            check("③ A8 법정동 압구정 항목 없음", "압구정" not in page.inner_text("#layer-dong"))
             check("③ A8 사업 없음 문구", "진행 중인 사업이 없습니다" in body)
             shot("03_lookup_A8.png")
             page.goto(f"{base}/lookup.html?addr=A4")
@@ -133,6 +153,9 @@ def main() -> int:
             check("④ 투입 1단계 변화 없음", "사업 상태 변화 없음" in page.inner_text("#step-detail"))
             page.locator('[data-step="4"]').click()
             check("④ 투입 4단계 변경 2건", page.locator("#step-detail tbody tr").count() == 2)
+            check("④ 투입 단계 8개", page.locator("[data-step]").count() == 8)
+            page.locator('[data-step="5"]').click()
+            check("④ 투입 5단계(규제 고시) 변화 없음", "사업 상태 변화 없음" in page.inner_text("#step-detail"))
             page.locator("#steps").scroll_into_view_if_needed()
             shot("04b_docs_steps.png")
 
@@ -146,14 +169,14 @@ def main() -> int:
             page.goto(f"{base}/lookup.html?addr=A1")
             page.wait_for_selector(".project-card", timeout=15000)
             res = page.inner_text("#result")
-            check("⑤ 승인 후 '포함'", page.locator(".badge.ok", has_text="포함").count() >= 1 and "이 필지는" in res)
+            check("⑤ 승인 후 '포함'", page.locator(".badge.ok", has_text="포함").count() >= 1 and "구역에 포함되어 있습니다" in res)
             check("⑤ 검수 결정 반영 알림", "검수 결정 반영" in page.inner_text("#notices"))
             check("⑤ 머리글 결정 1건 표시", "검수 결정 1건 반영 중" in page.inner_text("#site-header"))
             shot("06_lookup_after_review.png")
             page.locator("#reset-decisions").click()
             page.wait_for_selector(".project-card", timeout=15000)
             check("⑤ 초기화 후 '포함될 수 있음'", page.locator(".badge.warn", has_text="포함될 수 있음").count() >= 1
-                  and "이 필지는" not in page.inner_text("#result"))
+                  and "구역에 포함되어 있습니다" not in page.inner_text("#result"))
 
             # ⑥ 평가
             page.goto(f"{base}/eval.html")
@@ -161,7 +184,7 @@ def main() -> int:
             ev = page.inner_text("#eval-body")
             check("⑥ 평가 화면 표시", ("평가 전" in ev) or ("지표" in ev), ev[:40].replace("\n", " "))
             if "지표" in ev:
-                check("⑥ 지표 카드 12개", page.locator(".metric").count() == 12, str(page.locator(".metric").count()))
+                check("⑥ 지표 카드 15개", page.locator(".metric").count() == 15, str(page.locator(".metric").count()))
             shot("07_eval.png")
 
             # 좁은 화면(390px)에서 가로 스크롤 없음

@@ -47,7 +47,7 @@ def check_p1(c: Checker) -> None:
     if man.exists():
         with open(man, encoding="utf-8-sig", newline="") as f:
             n = len(list(csv.DictReader(f)))
-    c.add("manifest 4행", n == 4, f"{n}행")
+    c.add(f"manifest {len(DOC_ORDER)}행", n == len(DOC_ORDER), f"{n}행")
     for d in DOC_ORDER:
         c.add(f"{d} 발췌본", (DATA_RAW / f"{d}.pdf").exists())
 
@@ -106,7 +106,7 @@ def check_p2(c: Checker) -> None:
         c.add("DB 존재", False, "python -m pipeline.init_db && python -m pipeline.load_seed")
         return
     con = connect_rw()
-    min_items = {"D1": 2, "D2": 8, "D3": 5, "D4": 5}
+    min_items = {"D1": 2, "D2": 8, "D3": 5, "D4": 5, "D5": 1, "D6": 1, "D7": 1, "D8": 1}   # D5~D8: feedback.md §2-2-3
     all_keys = set()
     for doc in DOC_ORDER:
         p = EXTRACTIONS / f"{doc}.json"

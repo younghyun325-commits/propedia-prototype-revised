@@ -1,10 +1,12 @@
 """우리가 만든 문장에 금지어가 없는지 확인한다 (agents.md §9-6).
 
-적용: public/*.html, public/assets/*.js, DB의 summary·title, API가 만드는 문구.
+적용: public/*.html, public/assets/*.js, DB의 summary·title·target_note·tier_reason, API가 만드는 문구
+(effective_status_label·reference_reason·building_note 포함).
 제외: evidence(원문 인용), documents.title(원문 제목), 원문 문구 그대로인 how_to_submit·places·source_note.
 법정 용어 '정비예정구역'은 예측 표현이 아니므로 허용한다.
 """
 import json
+from datetime import date
 from pathlib import Path
 
 from core.lookup import lookup
@@ -48,8 +50,8 @@ def test_public_files():
 
 def test_db_summary_title(con):
     bad = []
-    for r in con.execute("SELECT item_key, title, summary FROM applicability_rules"):
-        for w in hits(r["title"] + " " + r["summary"]):
+    for r in con.execute("SELECT item_key, title, summary, target_note, tier_reason FROM applicability_rules"):
+        for w in hits(" ".join(x or "" for x in (r["title"], r["summary"], r["target_note"], r["tier_reason"]))):
             bad.append(f"{r['item_key']} '{w}'")
     for r in con.execute("SELECT label FROM related_history"):
         bad += [f"related_history '{w}'" for w in hits(r["label"])]
@@ -66,6 +68,8 @@ def test_api_generated_text(con):
     responses = [lookup(con, t) for t in texts]
     responses.append(lookup(con, texts[0], decisions=[{"review_id": rid, "action": "approve"}]))
     responses.append(progress(con, 1))
+    # 효력 상태 문구(기간 중·끝남·시작 전)가 모두 나오도록 날짜를 바꿔 본다
+    responses += [lookup(con, texts[0], today=date(2027, 5, 1)), lookup(con, texts[0], today=date(2026, 4, 20))]
     for resp in responses:
         for path, s in walk(resp):
             for w in hits(s):

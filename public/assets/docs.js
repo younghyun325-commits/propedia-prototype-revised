@@ -54,12 +54,18 @@ function projectsBox(projects) {
 function itemsList(items, title) {
   if (!items.length) return '';
   return `<h3 style="margin-top:16px">${esc(title)}</h3>
+    <p class="small muted">적용 = 주소 조회의 4개 층에 표시 · 배경 = 4개 층에서 빼고 문서 DB(일부는 참고 섹션)에서만 표시</p>
     ${items.map((it) => `<div class="item">
       <div class="row"><span class="mono small">${esc(it.item_key)}</span><span class="item-title">${esc(it.title)}</span>
+        ${badge(it.tier_label, it.tier === 'applies' ? 'ok' : 'muted')}
         ${badge(it.item_type_label, 'muted')}${badge(it.scope_type, 'info')}${it.needs_review ? badge('검수 필요', 'warn') : ''}
-        ${it.evidence_ok ? badge('근거 일치', 'ok') : badge('근거 불일치', 'warn')}</div>
+        ${it.evidence_ok ? badge('근거 일치', 'ok') : badge('근거 불일치', 'warn')}
+        ${it.effective_status ? badge(`${it.effective_status_label} · ${it.effective_label}`, it.effective_status === 'in_force' ? 'ok' : 'muted') : ''}</div>
       <p class="small">${esc(it.summary)}</p>
-      <div class="small muted">신뢰도 ${it.confidence} · <button class="linkbtn" type="button" data-goto-page="${it.pdf_page}">p${it.pdf_page}</button></div>
+      ${it.target_note ? `<div class="target-note small">${esc(it.target_note)}</div>` : ''}
+      <div class="small muted">분류 이유: ${esc(it.tier_reason || '—')}${it.tier_class ? ` (구분 ${esc(it.tier_class)}${it.applies_rank ? `·${it.applies_rank}` : ''})` : ''}${it.reference_rank ? ` · 참고 순서 ${it.reference_rank}` : ''}</div>
+      <div class="small muted">신뢰도 ${it.confidence} · <button class="linkbtn" type="button" data-goto-page="${it.pdf_page}">p${it.pdf_page}</button>
+        ${(it.more_evidence || []).map((m) => `· ${esc(m.label)} <button class="linkbtn" type="button" data-goto-page="${m.pdf_page}">p${m.pdf_page}</button>`).join(' ')}</div>
     </div>`).join('')}`;
 }
 
@@ -145,7 +151,9 @@ document.addEventListener('click', (e) => {
   steps = await api('/api/v1/events');
   el('step-buttons').innerHTML = steps.map((s) => `<button class="step-btn" type="button" data-step="${s.step}">
     <b>${s.step}단계 · ${esc(s.doc_id)}</b><small>${esc(s.short_title)} · 변경 ${s.events.length}건</small></button>`).join('');
-  stepDetail(steps.length ? steps[steps.length - 1].step : 1);
+  // 처음에는 변경 기록이 생긴 마지막 단계(D1 투입)를 보여준다. 5~8단계 규제 고시는 사업 상태를 바꾸지 않는다
+  const withEvents = steps.filter((s) => s.events.length);
+  stepDetail((withEvents[withEvents.length - 1] || steps[steps.length - 1] || { step: 1 }).step);
   const doc = qs('doc');
   if (doc) {
     await showDoc(doc, Number(qs('page')) || null);

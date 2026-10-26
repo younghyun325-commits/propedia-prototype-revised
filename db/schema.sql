@@ -1,12 +1,12 @@
 PRAGMA foreign_keys = ON;
 
 CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
--- keys: build_at(ISO), as_of(가장 최근 문서 날짜), schema_version('1'), eval_report(JSON), coverage_note
+-- keys: build_at(ISO), as_of(가장 최근 문서 날짜), schema_version('2'), eval_report(JSON), coverage_note
 
 CREATE TABLE sources (
-  id TEXT PRIMARY KEY,                 -- 'gangnam-gubo' | 'seoul-urban-portal' | 'seoul-citybuild'
+  id TEXT PRIMARY KEY,                 -- 'gangnam-gubo' | 'seoul-urban-portal' | 'seoul-citybuild' | 'gangnam-gongo' | 'sdm-gongji' | 'law-go-kr' | 'molit-press'
   name TEXT NOT NULL,
-  layer TEXT NOT NULL,                 -- 'city' | 'gu'
+  layer TEXT NOT NULL,                 -- 'city' | 'gu' | 'national'
   url TEXT
 );
 
@@ -16,7 +16,7 @@ CREATE TABLE documents (
   source_id TEXT NOT NULL REFERENCES sources(id),
   title TEXT NOT NULL,
   short_title TEXT NOT NULL,
-  doc_kind TEXT NOT NULL,              -- 'gongram' | 'plan'
+  doc_kind TEXT NOT NULL,              -- 'gongram' | 'plan' | 'designation' | 'press'
   issuer TEXT,
   gosi_no TEXT,
   published_at TEXT,
@@ -81,7 +81,16 @@ CREATE TABLE applicability_rules (     -- 4개 층에 나가는 '항목'
   evidence_ok INTEGER NOT NULL,
   effective_from TEXT,
   confidence REAL NOT NULL,
-  needs_review INTEGER NOT NULL
+  needs_review INTEGER NOT NULL,
+  -- P9 (feedback.md §2-2, §3)
+  effective_to TEXT,                   -- 원문에 적힌 효력 종료일. 없으면 NULL ('지정 해제시까지' 등)
+  target_note TEXT,                    -- 대상 기준 (원문 그대로 짧게)
+  more_evidence TEXT NOT NULL DEFAULT '[]',  -- JSON: [{label, evidence, pdf_page, evidence_ok}] 기간·면적·도면 근거
+  tier TEXT NOT NULL DEFAULT 'applies',      -- 'applies'(층에 표시) | 'background'(참고·문서 DB)
+  tier_class TEXT,                     -- 'a' 효력 고시 | 'b' 수치 기준 | 'c' 구·권역 방향 | NULL
+  applies_rank INTEGER,                -- 같은 class 안 순서
+  reference_rank INTEGER,              -- 참고 섹션에 내보낼 background 항목 순서 (없으면 문서 DB에서만)
+  tier_reason TEXT
 );
 
 CREATE TABLE doc_locations (
@@ -193,4 +202,10 @@ CREATE TABLE bjd_codes (
   saenghwal TEXT,                      -- 지역생활권 이름 ('압구정·청담')
   code_verified INTEGER NOT NULL,      -- 도로명주소 API admCd로 확인했으면 1
   saenghwal_verified INTEGER NOT NULL  -- D2로 확인했으면 1
+);
+
+CREATE TABLE buildings (               -- P9 건축HUB 건축물대장 표제부 요약 (pipeline/fetch_buildings.py → seed/buildings.json)
+  pnu TEXT PRIMARY KEY,
+  payload TEXT NOT NULL,               -- JSON 요약 (feedback.md §5-1)
+  fetched_at TEXT NOT NULL
 );

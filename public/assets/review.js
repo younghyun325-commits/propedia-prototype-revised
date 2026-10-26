@@ -6,7 +6,9 @@ const CURRENT_LABELS = {
   project: '사업', jibun: '지번', pnu: 'PNU', inclusion: '현재 판정', basis: '판정 근거', item_key: '항목 키',
   title: '제목', summary: '요약', scope_type: '적용 범위', scope_ref: '범위 값', scope_note: '범위 메모',
   confidence: '신뢰도', field: '필드', value: '값', rule: '단계 규칙', code: '단계', candidate: '추출 후보',
+  tier: '층 분류',
 };
+const TIER_TEXT = { applies: '적용 (4개 층에 표시)', background: '배경 (참고·문서 DB에만)' };
 const INCLUSION_TEXT = { possible: '포함될 수 있음', included: '포함' };
 const SCOPE_TYPES = ['SIDO', 'SGG', 'SAENGHWAL', 'BJD', 'PARCEL'];
 let queue = [];
@@ -30,6 +32,7 @@ function currentTable(cur) {
   return `<table>${rows.map(([k, v]) => {
     let val = Array.isArray(v) ? v.join(', ') : v;
     if (k === 'inclusion') val = INCLUSION_TEXT[v] || v;
+    if (k === 'tier') val = TIER_TEXT[v] || v;
     if (k === 'basis' && v === 'representative_only') val = '대표 지번만 있음 (representative_only)';
     return `<tr><th>${esc(CURRENT_LABELS[k] || k)}</th><td>${esc(val)}</td></tr>`;
   }).join('')}</table>`;
@@ -49,6 +52,11 @@ function editForm(q) {
       <label class="small muted">범위 값 (쉼표로 구분)</label>
       <input type="text" id="edit-scope-ref" value="${esc((e.scope_ref || cur.scope_ref || []).join(', '))}" style="min-width:260px">
     </div>
+    ${(q.proposed.editable_fields || []).includes('tier') ? `<div class="row" style="margin-top:8px">
+      <label class="small muted">층 분류</label>
+      <select id="edit-tier">${Object.entries(TIER_TEXT).map(([t, label]) =>
+        `<option value="${t}" ${(e.tier || cur.tier) === t ? 'selected' : ''}>${esc(label)}</option>`).join('')}</select>
+    </div>` : ''}
     <p class="small muted">범위 값 예: SIDO → 11 / SGG → 11680 / SAENGHWAL → 압구정·청담 / BJD → 1168011000 / PARCEL → PNU 19자리</p>
     <button class="btn primary" type="button" data-act="edit">수정 내용으로 확정</button>
   </details>`;
@@ -96,6 +104,7 @@ function decide(action) {
     if (action === 'edit') {
       const refs = el('edit-scope-ref').value.split(',').map((s) => s.trim()).filter(Boolean);
       d.edits = { summary: el('edit-summary').value.trim(), scope_type: el('edit-scope-type').value, scope_ref: refs };
+      if (el('edit-tier')) d.edits.tier = el('edit-tier').value;
       if (!d.edits.summary || !refs.length) { toast('요약과 범위 값을 채워 주세요'); return; }
     }
     upsertDecision(d);

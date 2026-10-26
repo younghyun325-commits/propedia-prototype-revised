@@ -1,4 +1,4 @@
-"""시드 적재: sources, documents, pages, bjd_codes, demo_addresses, stage_templates (agents.md §8-9)."""
+"""시드 적재: sources, documents, pages, bjd_codes, demo_addresses, stage_templates, buildings (agents.md §8-9)."""
 import csv
 import json
 
@@ -81,6 +81,13 @@ def load(con) -> dict:
             (tpl["project_type"], s["seq"], s["code"], s.get("common_stage"), s["title"], s.get("issuer"),
              s.get("what_happens"), s.get("owner_actions"), s.get("legal_basis"), tpl["source"],
              tpl.get("reviewed_by"), tpl.get("reviewed_at")))
+
+    # 건축물대장 요약 (feedback.md §5-1). fetch_buildings를 아직 돌리지 않았으면 비어 있다
+    bpath = SEED / "buildings.json"
+    if bpath.exists():
+        for b in json.loads(bpath.read_text(encoding="utf-8")):
+            con.execute("INSERT INTO buildings(pnu, payload, fetched_at) VALUES (?,?,?)",
+                        (b["pnu"], json.dumps(b, ensure_ascii=False), b["fetched_at"]))
     return counts
 
 
@@ -91,9 +98,11 @@ def main() -> None:
     con.commit()
     n_addr = con.execute("SELECT count(*) FROM demo_addresses").fetchone()[0]
     n_tpl = con.execute("SELECT count(*) FROM stage_templates").fetchone()[0]
+    n_bld = con.execute("SELECT count(*) FROM buildings").fetchone()[0]
     st = dict(con.execute("SELECT doc_id, text_status FROM documents").fetchall())
     con.close()
-    log(f"load_seed: 문서 4건 (쪽 {counts}), text_status {st}, 시연 주소 {n_addr}건, 단계 템플릿 {n_tpl}개")
+    log(f"load_seed: 문서 {len(counts)}건 (쪽 {counts}), text_status {st}, 시연 주소 {n_addr}건, "
+        f"단계 템플릿 {n_tpl}개, 건축물대장 요약 {n_bld}건")
 
 
 if __name__ == "__main__":

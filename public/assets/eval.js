@@ -28,11 +28,12 @@ function render(rep) {
   const layers = `<table><thead><tr><th>층</th><th>재현율</th><th>정밀도</th><th>기대 항목 수</th><th>응답 항목 수</th></tr></thead><tbody>
     ${rep.layers.map((l) => `<tr><td>${esc(LAYER_NAMES[l.layer] || l.layer)}</td><td>${pctText(l.recall)}</td><td>${pctText(l.precision)}</td>
       <td>${l.expected}</td><td>${l.returned}</td></tr>`).join('')}</tbody></table>`;
-  const addrs = `<table><thead><tr><th>주소</th><th>입력</th><th>상태</th><th>PNU</th><th>서울 전역</th><th>자치구</th><th>법정동</th><th>필지</th><th>포함 판정</th></tr></thead><tbody>
+  const addrs = `<table><thead><tr><th>주소</th><th>입력</th><th>상태</th><th>PNU</th><th>서울 전역</th><th>자치구</th><th>법정동</th><th>필지</th><th>포함 판정</th><th>효력 중 고시</th><th>건축물</th></tr></thead><tbody>
     ${rep.addresses.map((a) => `<tr><td><b>${esc(a.addr_id)}</b></td><td class="small">${esc(a.input || '')}</td>
       <td>${okBadge(a.status_ok)}</td><td>${okBadge(a.pnu_ok)}</td>
       ${['city', 'gu', 'dong', 'parcel'].map((k) => `<td class="small">${esc((a.layer_hits || {})[k] || '—')}</td>`).join('')}
-      <td>${okBadge(a.inclusion_ok)}</td></tr>`).join('')}</tbody></table>`;
+      <td>${okBadge(a.inclusion_ok)}</td><td class="small">${esc(a.regulations || '—')}</td>
+      <td class="small">${esc(a.building || '—')}</td></tr>`).join('')}</tbody></table>`;
   const errGroups = {};
   (rep.errors || []).forEach((e) => { (errGroups[e.type] = errGroups[e.type] || []).push(e.detail); });
   const errs = Object.keys(errGroups).length
