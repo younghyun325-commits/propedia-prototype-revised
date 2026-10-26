@@ -168,16 +168,10 @@ function progressCard(p) {
 }
 
 async function loadProgress(projectId) {
-  const decisions = getDecisions();
+  // 검수 화면을 메뉴에서 뺐으므로 조회 화면은 검수 결정을 보내지 않는다 (API의 POST는 남아 있음)
   const url = `/api/v1/projects/${projectId}/progress`;
-  let p;
-  if (decisions.length) {
-    p = await api(url, { body: { decisions } });
-    Object.assign(p, { _method: 'POST', _url: url, _body: { decisions } });
-  } else {
-    p = await api(url);
-    Object.assign(p, { _method: 'GET', _url: url, _body: null });
-  }
+  const p = await api(url);
+  Object.assign(p, { _method: 'GET', _url: url, _body: null });
   return p;
 }
 
@@ -230,8 +224,7 @@ function parcelHtml(P, normalized) {
         <div class="row">${badge(p.inclusion_label, kind)}<span class="item-title">${esc(p.message)}</span></div>
         <p class="small">판정 근거: ${esc(p.basis_label)}</p>
         <div class="src">출처 · ${esc(sourceLine(p.source))}</div>
-        <div class="actions">${pageButton(p.source, null)}
-          ${p.review_id ? `<a class="btn small" href="review.html?id=${p.review_id}">검수 화면에서 확인</a>` : ''}</div>
+        <div class="actions">${pageButton(p.source, null)}</div>
       </div>
       <div id="progress-${p.project_id}"><div class="empty">사업 진행 카드를 불러오는 중…</div></div>`;
     });
@@ -280,24 +273,13 @@ function normLine(n) {
 }
 
 async function run(text) {
-  const decisions = getDecisions();
+  // 검수 결정 없이 GET으로만 조회한다 (검수 화면은 메뉴에서 뺐음)
   const url = `/api/v1/lookup?address=${encodeURIComponent(text)}`;
-  let r;
-  let method = 'GET';
-  let body = null;
-  if (decisions.length) {
-    method = 'POST';
-    body = { address: text, decisions };
-    r = await api('/api/v1/lookup', { body });
-  } else {
-    r = await api(url);
-  }
-  const shownUrl = method === 'POST' ? '/api/v1/lookup' : url;
-  // 알림: 검수 결정 반영
-  const notes = [];
-  (r.events || []).forEach((e) => notes.push(`검수 결정 반영: ${e.title} → ${e.action_label}`));
-  (r.review_applied || []).filter((a) => a.ignored).forEach((a) => notes.push(`반영하지 않은 결정 #${a.review_id}: ${a.ignored}`));
-  el('notices').innerHTML = notes.length ? `<div class="box warn">${notes.map(esc).join('<br>')}</div>` : '';
+  const r = await api(url);
+  const method = 'GET';
+  const body = null;
+  const shownUrl = url;
+  el('notices').innerHTML = '';
 
   document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c.dataset.text === text));
   let html = normLine(r.normalized);

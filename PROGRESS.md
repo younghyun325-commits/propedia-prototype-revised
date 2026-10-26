@@ -174,3 +174,10 @@
   - G3 대청마을 밖 지번 5건(세곡동 279·역삼동 823·논현동 100·삼성동 159·개포동 12): 5/5 토지 정보, 법정동 층 "확인된 고시가 없습니다"
   - `tests/ui_check.py --base https://propedia-pretotype.vercel.app --no-shots` 58/58 (자유 입력·여러 건 후보 포함)
   - 로컬: `pytest -q` 121 passed, `run_eval` M1~M17 + `--live` M18 20/20(p95 1,093ms) 오류 0, `pipeline.check` P1·P2·P3 통과, ui_check 58/58
+
+## 화면 정리 (동혁 요청, 2026-10-26) — 완료
+- 메뉴를 **시작 · 주소 조회 · 문서 DB** 3개로: 검수·평가 탭과 시작 화면 카드 2개, 조회 결과의 '검수 화면에서 확인' 버튼을 뺌
+- 백엔드는 그대로: `review.html`·`eval.html` 파일, `/api/v1/review-queue`·`/api/v1/eval`, POST 조회의 `decisions` 유지
+- 주소 조회는 검수 결정을 보내지 않고 GET으로만 조회 (브라우저에 예전 검수 결정이 남아 있어도 결과에 섞이지 않음), 머리글의 '검수 결정 n건 반영 중'도 뺌
+- 확인: `pytest -q` 121 passed, `tests/ui_check.py` 로컬 50/50 (메뉴 3개·검수/평가 링크 없음·남은 결정 무시 점검 추가, 검수·평가 화면 점검 제거), 지난 검수·평가 화면 캡처 3장 삭제
+

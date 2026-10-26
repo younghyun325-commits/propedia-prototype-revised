@@ -3,9 +3,9 @@
   python tests/ui_check.py            # 로컬 서버를 띄워 점검 (Playwright + 설치된 Edge 사용)
   python tests/ui_check.py --base https://xxx.vercel.app   # 배포 주소 점검
 
-점검: ① 시작 화면 링크 5개 ② A1 조회 4개 층·사업 카드·D-day·원문 보기 모달·API 응답 보기
-     ·효력 기간 배지·참고 접기 상자·건축물 요약(P9) ③ A8·A10 안내 ④ 문서 DB D1 1쪽 근거 하이라이트·투입 순서 1~8
-     ⑤ 검수 승인 → A1 "포함" → 초기화 → "포함될 수 있음" ⑥ 평가 화면
+점검: ① 시작 화면 링크 3개 ②-0 대청마을 B1·B2 ② A1 조회 4개 층·사업 카드·D-day·원문 보기 모달·API 응답 보기
+     ·효력 기간 배지·참고 접기 상자·건축물 요약 ③ A8·A10 안내 ④ 문서 DB D1 1쪽 근거 하이라이트·투입 순서 1~10
+     ⑤ 메뉴 3개(검수·평가 화면은 메뉴에서 뺌)·남은 검수 결정 무시 ⑤-3 자유 입력·여러 건 후보
 """
 import argparse
 import os
@@ -72,11 +72,10 @@ def main() -> int:
             # ① 시작 화면
             page.goto(f"{base}/index.html")
             page.wait_for_selector("#coverage-body tr td b")
-            check("① 시작 화면 링크 5개", page.locator("#steps a").count() == 5)
+            check("① 시작 화면 링크 3개", page.locator("#steps a").count() == 3)
             check("① 반영 범위 11행 (문서 10 + 브이월드)", page.locator("#coverage-body tr").count() == 11)
-            hrefs = [page.locator("#steps a").nth(i).get_attribute("href") for i in range(5)]
-            check("① 링크 대상", hrefs == ["lookup.html?addr=B1", "docs.html?doc=D9", "docs.html#steps", "review.html",
-                                         "eval.html"], str(hrefs))
+            hrefs = [page.locator("#steps a").nth(i).get_attribute("href") for i in range(3)]
+            check("① 링크 대상", hrefs == ["lookup.html?addr=B1", "docs.html?doc=D9", "docs.html#steps"], str(hrefs))
             check("① 땅 주소 소개", "땅 주소 하나로" in page.inner_text("h1"))
             shot("01_index.png")
 
@@ -190,38 +189,21 @@ def main() -> int:
             page.locator("#steps").scroll_into_view_if_needed()
             shot("04b_docs_steps.png")
 
-            # ⑤ 검수 → 조회 → 초기화
-            page.goto(f"{base}/review.html")
-            page.wait_for_selector("#detail [data-act='approve']")
-            check("⑤ 첫 항목이 포함 판정", "포함 판정" in page.inner_text("#queue-body tr:first-child"))
-            page.locator("#detail [data-act='approve']").click()
-            check("⑤ 결정 저장 안내", "결정이 저장되었습니다" in page.inner_text("#decided"))
-            shot("05_review.png")
+            # ⑤ 메뉴: 검수·평가 화면은 메뉴에서 뺐다 (2026-10-26). 조회는 검수 결정을 보내지 않는다
             page.goto(f"{base}/lookup.html?addr=A1")
             page.wait_for_selector(".project-card", timeout=15000)
-            res = page.inner_text("#result")
-            check("⑤ 승인 후 '포함'", page.locator(".badge.ok", has_text="포함").count() >= 1 and "구역에 포함되어 있습니다" in res)
-            check("⑤ 검수 결정 반영 알림", "검수 결정 반영" in page.inner_text("#notices"))
-            check("⑤ 머리글 결정 1건 표시", "검수 결정 1건 반영 중" in page.inner_text("#site-header"))
-            shot("06_lookup_after_review.png")
-            page.locator("#reset-decisions").click()
+            nav = [page.locator("#site-header nav a").nth(i).inner_text()
+                   for i in range(page.locator("#site-header nav a").count())]
+            check("⑤ 메뉴 3개 (시작·주소 조회·문서 DB)", nav == ["시작", "주소 조회", "문서 DB"], str(nav))
+            check("⑤ 검수·평가 링크 없음", page.locator("a[href^='review.html'], a[href^='eval.html']").count() == 0)
+            rid = page.evaluate("fetch('/api/v1/review-queue').then(r => r.json()).then(q => q[0].id)")
+            page.evaluate(f"localStorage.setItem('propedia.pretotype.decisions.v1', JSON.stringify([{{review_id: {rid}, action: 'approve'}}]))")
+            page.reload()
             page.wait_for_selector(".project-card", timeout=15000)
-            check("⑤ 초기화 후 '포함될 수 있음'", page.locator(".badge.warn", has_text="포함될 수 있음").count() >= 1
-                  and "구역에 포함되어 있습니다" not in page.inner_text("#result"))
-
-            # ⑤-2 지도 대조 후보 묶음 승인 → B2 '포함' → 초기화
-            page.goto(f"{base}/review.html")
-            page.wait_for_selector("#queue-body tr", timeout=15000)
-            page.locator("#queue-body tr", has_text="지도 대조 후보").first.click()
-            page.wait_for_selector("input.pg")
-            check("⑤-2 후보 필지 16개", page.locator("input.pg").count() == 16, str(page.locator("input.pg").count()))
-            page.locator("#detail [data-act='approve']").click()
-            page.goto(f"{base}/lookup.html?addr=B2")
-            page.wait_for_selector(".project-card", timeout=20000)
-            check("⑤-2 묶음 승인 후 B2 '포함'", "구역에 포함되어 있습니다" in page.inner_text("#layer-parcel"))
-            page.locator("#reset-decisions").click()
-            page.wait_for_selector(".project-card", timeout=20000)
-            check("⑤-2 초기화 후 B2 '포함된 것으로 보임'", page.locator(".badge", has_text="포함된 것으로 보임").count() >= 1)
+            check("⑤ 남아 있는 검수 결정은 조회에 쓰지 않음", page.locator(".badge.warn", has_text="포함될 수 있음").count() >= 1
+                  and "구역에 포함되어 있습니다" not in page.inner_text("#result")
+                  and "검수 결정" not in page.inner_text("#site-header"))
+            page.evaluate("localStorage.removeItem('propedia.pretotype.decisions.v1')")
 
             # ⑤-3 자유 입력(실시간 도로명 검색·토지 정보)과 여러 건 후보
             page.goto(f"{base}/lookup.html")
@@ -241,16 +223,6 @@ def main() -> int:
             page.wait_for_selector("#result .land-card", timeout=30000)
             check("⑤-3 여러 건 → 후보 고르기 → 조회", n_c >= 2 and "도곡동" in page.inner_text("#result"), f"후보 {n_c}개")
             shot("09_lookup_free_input.png")
-
-            # ⑥ 평가
-            page.goto(f"{base}/eval.html")
-            page.wait_for_function("!document.getElementById('eval-body').innerText.includes('불러오는 중')")
-            ev = page.inner_text("#eval-body")
-            check("⑥ 평가 화면 표시", ("평가 전" in ev) or ("지표" in ev), ev[:40].replace("\n", " "))
-            if "지표" in ev:
-                n_m = page.locator(".metric").count()
-                check("⑥ 지표 카드 17개 이상 (M18은 --live 실행 때)", n_m >= 17, str(n_m))
-            shot("07_eval.png")
 
             # 좁은 화면(390px)에서 가로 스크롤 없음
             m = browser.new_page(viewport={"width": 390, "height": 844})

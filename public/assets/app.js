@@ -239,13 +239,12 @@ document.addEventListener('click', (e) => {
   }
 });
 
-/* ── 공통 머리글 ── */
+/* ── 공통 머리글 ──
+   검수·평가 화면은 메뉴에서 뺐다 (2026-10-26 동혁 결정). 파일과 API(/api/v1/review-queue, /api/v1/eval)는 남아 있다 */
 const NAV = [
   ['index', 'index.html', '시작'],
   ['lookup', 'lookup.html', '주소 조회'],
   ['docs', 'docs.html', '문서 DB'],
-  ['review', 'review.html', '검수'],
-  ['eval', 'eval.html', '평가'],
 ];
 
 let healthCache = null;
@@ -275,11 +274,11 @@ async function initShell(active) {
         `<a href="${href}" class="${k === active ? 'active' : ''}">${label}</a>`).join('')}</nav>
       <div class="header-right"><span id="as-of"></span><span id="decision-status"></span></div>`;
   }
-  renderDecisionStatus();
+  if (active === 'review') renderDecisionStatus();   // 검수 결정 표시는 (메뉴에서 뺀) 검수 화면에서만
   try {
     const h = await health();
     el('as-of').textContent = `기준일 ${fmtDate(h.as_of)}`;
   } catch (e) { /* 오류 상자는 api()가 표시 */ }
 }
 
-window.addEventListener('storage', renderDecisionStatus);
+window.addEventListener('storage', () => { if (el('decision-status') && el('queue-body')) renderDecisionStatus(); });
