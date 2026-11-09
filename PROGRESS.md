@@ -1,5 +1,61 @@
 # 진행 기록
-현재 단계: P0~P10 완료 (2026-10-26). 남은 일은 HUMAN_TODO의 사람 확인 항목
+현재 단계: P11 작업 기반 완료 (2026-11-09, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P12 지도 셸
+
+## P11 작업 기반 — 완료 (2026-11-09)
+지도 대시보드(docs/map/PLAN.md P11~P20)의 첫 단계. `public/*.html`·`api/`·`core/`는 건드리지 않음.
+- [x] git: 이 폴더는 zip이라 저장소가 아니었음 → `git init` + `origin`(greekyogurt02/propedia-pretotype) fetch + `git reset origin/main`(작업 파일 유지)로 이력을 붙이고 `feat/map-console` 브랜치
+  - 11-09 로컬 작업(로고 머리글·SHP 경로·.env 문서 등, `public/*.html`·`agents.md`·`HUMAN_TODO.md` 등 11파일 + `logo/`·`data_raw/11.공간정보/`)은 origin/main에 없어 **P11 커밋에 넣지 않고 그대로 둠**
+- [x] Python 환경: `.venv` (Python 3.14.3) + requirements·requirements-build + playwright(chromium)
+- [x] `web/`: `npm create vite@latest web -- --template react-ts --no-interactive` (create-vite 9.3.4)
+- [x] `web/vite.config.ts`: base `/map/`, outDir `../public/map`, emptyOutDir, **port 3000 + strictPort**, `/api`·`/pages`·`/data` → 127.0.0.1:8000 프록시, vitest 설정
+- [x] 디자인: `web/src/styles/tokens.css`(PLAN 블록 그대로), `glass.css`(규칙 1~6), `ui/GlassPanel.tsx`, `ui/useLiquidGlass.ts`(크롬 계열 판별 `ui/browser.ts`), `ui/LiquidGlassFilter.tsx`(SVG `#lg`), 지도 이동 중 `html.map-moving`(blur 8px·굴절 끔), 투명도 줄이기 `html.reduce-transparency`(불투명)
+  - 지도 자리 회색은 새 색 없이 `color-mix(in srgb, var(--color-ink) 8%, white)` (2026-11-09 결정)
+  - `.glass`가 글자색을 잉크로 고정(규칙 4)하므로 선택된 작업 탭은 굵기로만 구분
+- [x] 로고: `pipeline/make_logo.py`(멱등 확인) → `web/public/brand/`
+- [x] 빈 틀 `web/src/app/App.tsx`: 지도 자리 전체 화면 + 글래스 4개(상단 바 56·좌 320·우 400·타임라인 44/200), 키보드 L·I·T·Esc(`app/keys.ts`, `app/useShellEffects.ts`), 상태 `state/useMapStore.ts`(zustand), 브랜드 문구 `copy/brand.ts`
+- [x] `tests/test_wording.py::test_web_src`: `web/src/**/*.ts(x)` 검사, 금지어 §9-6 + '시세', `web/src/copy/brand.ts`만 예외. 금지어를 넣은 임시 파일로 실패하는 것 확인 후 삭제
+- [x] `vercel.json` buildCommand 추가(regions icn1 유지), `.gitignore`에 `web/node_modules/`·`public/map/`, `.vercelignore`에 `web/node_modules/`·`logo/`
+- [ ] Preview 배포로 `/map/`·`/api/v1/health` 확인 — push가 필요해 아직 안 함
+
+설치 버전 (`npm ls --depth=0`, Node 24.15.0 / npm 11.12.1)
+
+| 패키지 | 버전 | 패키지 | 버전 |
+|---|---|---|---|
+| vite | 8.3.7 | react / react-dom | 19.3.1 |
+| @vitejs/plugin-react | 6.3.0 | typescript | 7.0.2 |
+| maplibre-gl | 6.17.0 | react-map-gl | 8.1.3 |
+| zustand | 5.1.0 | @tanstack/react-query | 5.107.1 |
+| tailwindcss / @tailwindcss/vite | 4.3.5 | lucide-react | 1.70.0 |
+| pretendard | 1.3.9 | d3-scale / d3-shape | 4.0.3 / 3.2.1 |
+| vitest | 5.1.0 | @types/d3-scale / @types/d3-shape | 4.0.9 / 3.2.0 |
+| @types/react / @types/react-dom | 19.3.0 | oxlint (템플릿) | 1.93.0 |
+
+로고 (`logo/` 원본 2개 모두 2348×586 RGBA 가로 워드마크·투명 배경, 정사각 심볼 없음, 반투명 잡점 많음)
+
+| 결과 | 원본 | 크기 | 용량 |
+|---|---|---|---|
+| `logo-wordmark.png` (상단 바) | propedia_logo_transparent.png | 480×114 | 41,502 B |
+| `logo-wordmark-white.png` (어두운 바탕) | propedia_logo_white.png | 480×114 | 14,732 B |
+| `logo-mark.png` (심볼) | transparent의 첫 글자 'p' | 512×512 | 79,234 B |
+| `favicon.png` | logo-mark | 64×64 | 3,107 B |
+
+로고 그라디언트 재측정 (2348px PNG, 각 위치 ±12px 열의 불투명 픽셀 중앙값, ΔE2000) → **토큰은 PLAN 값 유지 (2026-11-09 결정)**
+
+| 위치 | 측정 | PLAN 토큰 | ΔE2000 |
+|---|---|---|---|
+| 0% | #49BFFA | #4AB2E6 | 3.7 |
+| 28% | #4064B8 | #5171C5 | 5.1 |
+| 52% (글자 사이라 ±36px) | #592298 | #5D34A9 | 4.5 |
+| 76% | #5C1A7B | #6E289E | 6.5 |
+| 100% | #75105E | #7A2690 | 10.2 |
+
+- 완료 확인
+  - `npm --prefix web run build` 성공 → `public/map/index.html` 생성, 초기 JS 255.0kB(gzip 79.9kB)
+  - uvicorn 8000 + `npm --prefix web run dev` → http://localhost:3000/map/ 200, 프록시 `localhost:3000/api/v1/health` 200, 빌드본 `127.0.0.1:8000/map/`도 200
+  - strictPort: 3000번을 쓰는 중에 dev를 한 번 더 실행 → `Error: Port 3000 is already in use`로 종료(다른 포트로 넘어가지 않음)
+  - Playwright(1440×900) 13/13: 상단 바 56·좌 320·우 400·타임라인 44, 지도 자리 1440×900, 로고 로드, `html.liquid-glass`(Chromium), L·I·T 토글·복원, Esc, 투명도 줄이기 → backdrop-filter none, 콘솔 오류 0 → `docs/screens/map_00_shell.png`
+  - `pytest -q` 122 passed (기존 121 + test_web_src), `npm --prefix web run test` 5 passed
+- 남은 문제: Preview 배포 확인(push 필요), 정사각 심볼 원본 없음('p'를 잘라 임시로 씀)
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3

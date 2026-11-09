@@ -9,3 +9,5 @@ tests/
 seed/
 *.bat
 docs/
+web/node_modules/
+logo/

@@ -1,0 +1,27 @@
+@import "./tokens.css";
+@import "./glass.css";
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: rgb(255 255 255);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+
+/* 지도 자리 (P12에서 MapLibre로 바뀜). 새 색 없이 잉크 토큰을 흰색에 8% 섞는다. */
+.map-placeholder {
+  background: color-mix(in srgb, var(--color-ink) 8%, white);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-brand-indigo);
+  outline-offset: 2px;
+}

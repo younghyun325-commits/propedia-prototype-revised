@@ -1,3 +1,4 @@
 {
-  "regions": ["icn1"]
+  "regions": ["icn1"],
+  "buildCommand": "npm --prefix web ci && npm --prefix web run build"
 }

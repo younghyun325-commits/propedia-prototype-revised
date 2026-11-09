@@ -1,0 +1,25 @@
+/* web/src/styles/tokens.css — Tailwind v4 */
+@import "tailwindcss";
+
+@theme {
+  --color-brand-sky: #4ab2e6;
+  --color-brand-blue: #5171c5;
+  --color-brand-indigo: #5d34a9;   /* primary */
+  --color-brand-purple: #6e289e;
+  --color-brand-plum: #7a2690;
+  --color-ink: #1f2328;
+  --color-ink-muted: #5b6270;
+  --color-layer-project: #5d34a9;    /* 사업 구역·영향권 */
+  --color-layer-apartment: #e0567a;  /* 아파트 단지 */
+  --color-layer-regulation: #eda100; /* 규제 구역 (빗금과 함께) */
+  --font-sans: "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+}
+
+:root {
+  --brand-gradient: linear-gradient(90deg, #4ab2e6 0%, #5171c5 28%, #5d34a9 52%, #6e289e 76%, #7a2690 100%);
+  --glass-bg: rgb(255 255 255 / 0.62);
+  --glass-border: rgb(255 255 255 / 0.72);
+  --glass-blur: 18px;
+  --glass-radius: 20px;
+  --glass-shadow: 0 8px 32px rgb(31 35 40 / 0.12), inset 0 1px 0 rgb(255 255 255 / 0.85);
+}

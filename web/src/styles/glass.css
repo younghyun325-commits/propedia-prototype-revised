@@ -1,0 +1,55 @@
+/* 글래스·리퀴드 글래스 규칙 (docs/map/PLAN.md '글래스와 리퀴드 글래스 규칙' 1~6).
+   색·반경·그림자는 tokens.css 값만 쓴다. */
+
+/* 1. 기본 글래스 — 모든 브라우저 */
+.glass {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--glass-radius);
+  box-shadow: var(--glass-shadow);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: blur(var(--glass-blur)) saturate(160%);
+  /* 4. 읽힘: 패널 안 글자는 잉크색만 */
+  color: var(--color-ink);
+  transition: background-color 160ms ease, backdrop-filter 160ms ease;
+}
+
+/* 2. 리퀴드 글래스 — html.liquid-glass(크롬 계열, useLiquidGlass)일 때만, 작은 요소(.glass-liquid)에만.
+   Safari·Firefox는 url() 필터를 그리지 않고 @supports로도 걸러지지 않아 JS로 판별한다.
+   SVG 필터 #lg 는 ui/LiquidGlassFilter.tsx 가 body에 한 번만 넣는다. */
+html.liquid-glass .glass-liquid {
+  -webkit-backdrop-filter: url(#lg) blur(var(--glass-blur)) saturate(160%);
+  backdrop-filter: url(#lg) blur(var(--glass-blur)) saturate(160%);
+}
+
+/* 3. 지도 위 성능: 드래그·확대 중(html.map-moving)에는 blur 8px, 굴절 끔 */
+html.map-moving .glass,
+html.map-moving.liquid-glass .glass-liquid {
+  -webkit-backdrop-filter: blur(8px) saturate(160%);
+  backdrop-filter: blur(8px) saturate(160%);
+}
+
+/* 5. 투명도 줄이기 (설정 스위치 → html.reduce-transparency): 불투명 패널.
+   prefers-reduced-transparency는 Safari 미지원·Firefox 기본 꺼짐이라 스위치로 둔다. */
+html.reduce-transparency .glass,
+html.reduce-transparency.liquid-glass .glass-liquid {
+  background: rgb(255 255 255);
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+/* 6. 구현 함정: backdrop-filter는 포함 블록을 만들어 안쪽 position: fixed가 어긋난다.
+   툴팁·모달은 글래스 안에 두지 말고 body 직속 #portal-root 로 포털을 띄운다. */
+#portal-root {
+  position: relative;
+  z-index: 50;
+}

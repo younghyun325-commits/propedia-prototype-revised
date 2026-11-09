@@ -50,6 +50,29 @@ def test_public_files():
     assert not bad, bad
 
 
+# 지도 화면(web/src): §9-6 금지어 + '시세' (docs/map/PLAN.md '먼저 정해야 할 것'). 브랜드 문구 파일만 예외.
+WEB_BANNED = BANNED + ["시세"]
+WEB_SRC = ROOT / "web" / "src"
+WEB_EXEMPT = {WEB_SRC / "copy" / "brand.ts"}
+
+
+def web_hits(text: str) -> list[str]:
+    for a in ALLOW:
+        text = text.replace(a, "")
+    return [w for w in WEB_BANNED if w in text]
+
+
+def test_web_src():
+    files = [f for pat in ("*.ts", "*.tsx") for f in WEB_SRC.rglob(pat) if f not in WEB_EXEMPT]
+    assert files, "web/src 에 검사할 파일이 없습니다"
+    bad = []
+    for f in files:
+        for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+            for w in web_hits(line):
+                bad.append(f"{f.relative_to(ROOT).as_posix()}:{i} '{w}'")
+    assert not bad, bad
+
+
 def test_db_summary_title(con):
     bad = []
     for r in con.execute("SELECT item_key, title, summary, target_note, tier_reason FROM applicability_rules"):
