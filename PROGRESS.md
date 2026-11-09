@@ -1,5 +1,60 @@
 # 진행 기록
-현재 단계: P12 지도 셸 완료 (2026-11-09, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P13 Propedia 레이어 빌드
+현재 단계: P13 Propedia 레이어 빌드 완료 (2026-11-10, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P14 좌측 레이어 패널·상단 바
+
+## P13 Propedia 레이어 빌드 — 완료 (2026-11-10)
+고시 도면을 연속지적도와 맞춰 사업 구역 2·규제 구역 1의 경계를 만들고, 영향권·포함 판정 필지와 함께 `public/data/layers/`에 냈다. 좌표는 지오코더 결과 대신 필지 경계 중심점. 모든 도형은 사람 확인 전(`verified=0`, 지도 라벨 '확인 전').
+- [x] 0단계 회색 배경: 브이월드 `white`에 `raster-saturation -1`(`web/src/map/basemaps.ts` `GRAY_PAINT`), `tests/ui_check_map.py`에 채도 검사. 레이어를 올린 스크린샷을 보고 `raster-brightness-min` 0.08 → **0.2**(진한 도로·녹지가 보라색과 겹쳐 보여 어두운 쪽을 올림)
+- [x] 2 `pipeline/fetch_parcels.py`(+`pipeline/geo.py`): `project_parcels` 18 ∪ 범위 안 시연 주소 PNU(A10 서초구 제외) = **28필지**, 못 찾음 0. 528(A2) 포함. `LP_PA_CBND_BUBUN` `attrFilter=pnu:=:…` 1건씩, 원 응답 `build/vworld_raw/parcels/`. 면적·중심점(representative_point)은 EPSG:5186, 저장 4326 소수 6자리, `as_of`는 응답 `gosi_year·gosi_month`(2025-01). 2회 실행 sha256 `64a2d534…` 동일
+  - 확인: 대치동 506 필지(78,634.9㎡)가 서울플랜+ '대치선경'과 IoU 0.9997·0.1m → UQ120 `.prj`(Korean 1985 Modified Central Belt, Bessel)는 **EPSG:5174**로 읽으면 맞음 `[확인]`
+- [x] 3-0 `pipeline/drawing_align.py`: `daecheong_map.py`의 지적선 추출·필지선 래스터·FFT 상호상관을 함수로 옮김 + 2위 후보(1위와 위치 10m 이상 또는 배율 3% 이상 다른 것)·1위/2위 비율(<1.05 '모호함')·1위 둘레 재탐색·대조 그림(확대 인셋)·영역 추출. 기준점은 대표 필지 경계 중심점(지오코더 `CENTER` 삭제). 입력은 `data_raw/Dn.pdf`. 결과 `build/align/{doc}.json`, 필지 표 `build/align/{doc}_parcels.csv`
+  - 도면 이미지: D1·D10은 쪽 안 내장 이미지가 원본(1153×747, 818×578) — 3000px 렌더링은 같은 이미지를 늘릴 뿐이라 내장 이미지를 그대로 씀. D5는 지도가 벡터(내장 이미지 2개는 제목·범례 띠)라 4200px 렌더링. D9은 꼭짓점을 읽은 2000px 렌더링 유지
+  - **회귀 결과가 P10과 다름 (보고)**: P10 기록 0.79m/px는 탐색 범위(0.70~1.00)가 실제 배율을 넣지 못해 고른 틀린 봉우리였다. 0.79면 경계 면적 123,400㎡(고시 +36%). 경계 면적·둘레가 모두 서울플랜+ 구역과 **0.69m/px**를 가리켜 범위를 0.60~1.00으로 넓히고 옅은 지적선(채널 합 750)을 잡게 하자 **0.6777m/px, 상관 0.489(P10 조건 0.087), 1위/2위 2.0**으로 지적선이 블록 단위로 맞음(`build/overlay_D9.png`). P10에서 고른 16필지는 **모두 여전히 경계 안쪽**(경계 안 6m 이상 후보 324필지) → `seed/daecheong_map_reading.csv`·판정 그대로
+- [x] 3-1·3-2·4 경계: `pipeline/align_drawings.py` + `seed/boundaries/{D1,D10,D5}_px.yaml`(쪽·이미지·지도 틀·축척·꼭짓점·판독 메모), D9은 `daecheong_map.py --export-boundary`
+  - D1 p18: 축척 막대 0–10–25–50m = 0·28·71·141.5px → 0.3534m/px. 빨간 일점쇄선 꼭짓점 6개(동쪽 529도 옆 약 5m 꺾임 포함)
+  - D10 p3: 막대 없음. 결정 D3('A3 1/1000' → 0.5134m/px ±25%)로는 맞는 값이 없었음(1위/2위 1.02 모호함, 면적 −73%). 넓혀 본 진단에서 1.24m/px·상관 0.69·IoU 0.975 → **동혁 승인으로 시작값을 면적 기준 1.254m/px(±25%)로 바꿈**(이유는 `D10_px.yaml`에 기록). 둥근 남동 모서리는 파란 선 중심을 8px 간격으로 재서 꼭짓점 10개로 근사
+  - D5 p4: 막대 라벨 '0–10–250–500m'은 칸 길이(110/165/275px)상 0–**100**–250–500m의 오기로 보고 0.9091m/px. 빨간 경계·빗금 영역을 자동 추출(1/2 축소·닫힘·구멍 메움). 연속지적도 6×3 타일 **27회·3.4초·13,667필지**. 배율별 상관이 0.17~0.22로 평평해 봉우리가 없음(1위/2위 1.008 모호함, 면적 +12.08%) → **결정 D2대로 미채택**: 도형 없음, 규제 레이어에서 뺌, manifest에 'D5: 경계 확인 전, 법정동(압구정동) 단위로만 표시'. 의제처리구역 '압구정아파트지구'는 쓰지 않음
+- [x] 3-3 면적표 (EPSG:5186, 사업 구역 ±5% 안 → 멈추지 않음)
+
+  | 문서 | 계산 면적 | 고시 면적 | 차이 | 서울플랜+ 비교 (면적 · IoU · 하우스도르프) | 배율 | 상관 (1위/2위) | 판정 |
+  |---|---|---|---|---|---|---|---|
+  | D1 p18 한양7차 | 22,011.3㎡ | 22,123.6㎡ | −0.51% | (해당 구역 없음) | 0.3521 m/px (막대 −0.4%) | 0.459 (1.57) | 채택 |
+  | D9 p12 대청마을 | 90,829.9㎡ | 90,992.0㎡ | −0.18% | 93,493.0㎡ · 0.961 · 16.7m | 0.6777 m/px | 0.489 (2.00) | 채택 |
+  | D10 p3 대치동 506 | 77,423.3㎡ | 79,269.1㎡ | −2.33% | 78,634.9㎡ · 0.975 · 5.6m | 1.2394 m/px | 0.692 (1.50) | 채택 |
+  | D5 p4 압구정 토허 | 1,288,345.7㎡ | 1,149,476㎡ | +12.08% | (비교 안 함) | 1.0172 m/px (막대 +11.9%) | 0.147 (1.008 모호함) | 미채택 |
+
+  대조 그림: `build/overlay_D1.png`, `build/overlay_D9.png`, `build/overlay_D10.png`, `build/overlay_D5.png`
+- [x] D1 경계 안 필지 (`build/align/D1_parcels.csv`, 중심점이 경계 안 6m 이상 = 안쪽)
+
+  | 필지 | 판정 | 경계까지 | 겹침 |
+  |---|---|---|---|
+  | 528 대 | 안쪽 | 34.3m | 99.7% |
+  | 527 대 | 안쪽 | 28.9m | 99.4% |
+  | 505 공 | 안쪽 | 14.9m | 65.7% |
+  | 508 도 | 경계 걸침(밖) | 3.3m | 47.4% |
+  | 529-1 도 | 경계 걸침(밖) | 0.4m | 4.1% |
+  | 504 도 | 밖 | 10.3m | 0.0% (도면의 '504 도' 글자는 경계 안이지만 연속지적도의 504는 경계 북쪽 밖 — 도면 그 띠는 연속지적도의 505에 해당) |
+- [x] 5 `pipeline/build_map_layers.py` → `public/data/layers/` 사업 2·영향권 4(250·500m 면, note '표시 기준이며 영향의 크기를 뜻하지 않음')·필지 18(포함될 수 있음 2·포함된 것으로 보임 16)·규제 1(D10, 효력 2026.04.01~2028.04.01)·`manifest.json`(실행 시각 없음, 생성 기준일 = DB as_of). 합계 **24,451 B**. 2회 실행 sha256 동일. 라벨용 `short_name`(aliases 첫 값)
+- [x] 6 좌표: `fetch_land.py`가 지오코더를 부르지 않고 `seed/parcels.geojson` 중심점을 `location`에 넣음(missing·status 다시 계산). 이 PC `.env`에 운영 `VWORLD_API_KEY`가 비어 있어(HUMAN_TODO 31) 토지 3종을 다시 받지 않는 **`--relocate-only`**(네트워크 없음)로 실행 → 28필지 이동 **0.0~0.2m**, 좌표 밖 토지 값 변화 0건. `seed/project_coords.csv` = 대표 필지(527·619) 중심점
+  - `pipeline/patch_coords.py`: `db/propedia.db` → `build/propedia.db.bak` 후 `land_cache.payload`(load_seed와 같은 `json.dumps(land, ensure_ascii=False)`)·`projects.lat/lon/coord_source`(build_projects.project_center와 같은 float 변환)만 갱신 → 원본 PC에서 `run_all`을 돌려도 같은 seed에서 같은 값. 2회 실행 DB sha256 `f7a69960…` 동일. P13 전 DB는 `build/p13/propedia_before.db`
+  - 시연 15건 판정 전·후 **모두 같음**: A1·A3 한양7차 possible, A2 주변 66m, A4 주변 293m, B1 모아타운 possible, B2 likely, B3 주변 275m, 나머지 사업 없음, A10 범위 밖
+  - `tests/test_lookup.py` 좌표 출처 기대값을 `vworld-2d:LP_PA_CBND_BUBUN representative_point`로 고침 (실시간 조회 `core/live`는 지오코더를 실시간으로만 씀, 그대로)
+- [x] 6-4 528번지 불일치 (보고만, 판정·정답셋·DB 그대로): D1 본문 1~17쪽 텍스트에 '528'은 **한 번도 없음**. 위치 표기는 모두 527 — p4 '재건축 정비구역 527번지 일대', p6 '527 일원', p7 '특별계획구역6-1 527 일원'·'I1-1 527 일원', p13 '527번지 일대 (한양7차APT)'. 528은 p18 결정도 그림 속 글자('528 대')뿐인데 경계가 528 전체(겹침 99.7%)를 감쌈
+
+  | 필지 | 도면 대조(3-2) | project_parcels | A2 정답(addresses.yaml) | 지금 응답 |
+  |---|---|---|---|---|
+  | 압구정동 527 | 안쪽 | representative_only, verified 0 | (A1·A3) possible | possible |
+  | 압구정동 528 | 안쪽 | 없음 | nearby (66m) | nearby 66m |
+
+  검수 항목 초안 `seed/review_drafts/D1_parcel_528.json`(review_queue 열 형식, 파이프라인이 읽지 않음) + HUMAN_TODO 36
+- [x] 7 `evals/goldset/boundaries.yaml`(draft, 고시 면적 쪽 출처: D1 p4, D9 p2, D10 p1, D5 p1) + `evals/run_eval.py` M19 경계 면적 일치(만든 경계만, D5는 '대상 아님')·M20 GeoJSON 유효성(is_valid·강남구 bbox+600m·필수 속성)
+- [x] 8 지도: `web/src/map/layers.ts`(레이어 스펙·색 읽기·라벨·빗금 패턴, 순수 함수) + `MapView.tsx`. 사업 면 32%+선 2px / 영향권 면 8%+점선 1.5px / 규제 45° 빗금(`styleimagemissing`이면 다시 등록)+외곽선 #B07A00 / 필지 외곽선(줌 14 이상, likely 점선). 색은 `--color-layer-*`를 `getComputedStyle`로 읽음. 라벨은 HTML 마커(글리프 서버 없음), `verified=0`이면 '(확인 전)'. `window.__propediaMap`은 개발 서버 또는 `?debug=1`일 때만
+- 완료 확인
+  - 멱등: `fetch_parcels`(`64a2d534…`), `build_map_layers`(5파일), `patch_coords`(DB `f7a69960…`) 각 2회 sha256 동일. `shapely.ops.transform`(2.2에서 폐기 예정)을 `shapely.transform`으로 바꾼 뒤 경계·레이어 다시 만들어 바이트 동일 확인
+  - `python -m evals.run_eval`: M1~M17 이전과 같음(M10 시간 제외), **M19 3/3 (D1 −0.53%, D9 −0.20%, D10 −2.32%, D5 대상 아님)**, **M20 25/25**, 오류 0. M18(`--live`)은 이 PC에 운영 juso·브이월드 키가 없어 재지 않음(이전 기록 20/20)
+  - `pytest -q` 123 passed, `npm --prefix web run test` 21 passed(+layers 10), `npm --prefix web run build` 성공
+  - `tests/ui_check_map.py` 개발 서버 **27/27**, 빌드본(`--built`, `?debug=1`) **27/27**, 콘솔 오류 0: 레이어 8개(마스크 위·구 경계 아래), 강남구 전체에서 사업·영향권·규제 렌더, 라벨 3개 모두 '확인 전', 빗금 등록, 한양7차(줌 17.6)·대청마을(줌 16.2) 확대 시 필지 외곽선 렌더, 회색 배경 채도 검사
+  - 스크린샷 `docs/screens/map_02a_layers_preview.png`(강남구 전체), `map_02b_hanyang7.png`, `map_02c_daecheong.png`
+- 남은 문제: D5 경계 없음(HUMAN_TODO 37). 강남구 전체 화면에서 대청마을·D10 라벨이 가까이 붙음(P14 라벨 충돌 처리). 만든 경계 3개(D1·D9·D10) 모두 사람 확인 전(HUMAN_TODO 35)
 
 ## P12 지도 셸 — 완료 (2026-11-09)
 `/map/`에 강남구 지도: 브이월드 배경 4종, 구 밖 흐림, 법정동 경계·이름, 커서 위치, 3D 토글. `public/*.html`은 건드리지 않음.

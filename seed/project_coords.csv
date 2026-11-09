@@ -1,3 +1,3 @@
 ﻿project_key,lat,lon,coord_source,note
-apgujeong-6-1-hanyang7,37.5291058,127.0433142,vworld-geocoder:parcel (대표 지번 압구정동 527),고시의 대표 지번을 브이월드 지오코더로 찾은 좌표
-ilwon-daecheong-north-moatown,37.4940125,127.0813894,vworld-geocoder:parcel (대표 지번 일원동 619),고시의 대표 지번을 브이월드 지오코더로 찾은 좌표
+apgujeong-6-1-hanyang7,37.529106,127.043314,vworld-2d:LP_PA_CBND_BUBUN representative_point (대표 지번 압구정동 527),고시의 대표 지번 필지 경계(연속지적도)의 중심점
+ilwon-daecheong-north-moatown,37.494013,127.081389,vworld-2d:LP_PA_CBND_BUBUN representative_point (대표 지번 일원동 619),고시의 대표 지번 필지 경계(연속지적도)의 중심점

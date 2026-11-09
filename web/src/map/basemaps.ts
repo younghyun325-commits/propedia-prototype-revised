@@ -9,9 +9,26 @@ export type BasemapId = 'base' | 'gray' | 'satellite' | 'hybrid'
 
 type Layer = { name: string; ext: 'png' | 'jpeg' }
 
-export const BASEMAPS: Record<BasemapId, { label: string; layers: Layer[] }> = {
+/** 래스터 페인트 (MapLibre raster 레이어 paint). 회색 배경에만 쓴다. */
+export type RasterPaint = {
+  'raster-saturation'?: number
+  'raster-brightness-min'?: number
+  'raster-brightness-max'?: number
+}
+
+/**
+ * 'white' 레이어는 무채색에 가깝지만 녹지·물에 옅은 색이 남는다 → 채도를 -1로 빼서 완전한 회색으로 만든다 (P13).
+ * 채도를 빼면 살짝 어두워 보여 밝기 하한을 조금 올린다.
+ */
+export const GRAY_PAINT: RasterPaint = {
+  'raster-saturation': -1,
+  'raster-brightness-min': 0.2, // P13: 0.08 → 0.2 — 진한 도로·녹지가 보라색 사업 구역·점선과 겹쳐 보여 어두운 쪽을 올림
+  'raster-brightness-max': 1,
+}
+
+export const BASEMAPS: Record<BasemapId, { label: string; layers: Layer[]; paint?: RasterPaint }> = {
   base: { label: '기본', layers: [{ name: 'Base', ext: 'png' }] },
-  gray: { label: '회색', layers: [{ name: 'white', ext: 'png' }] },
+  gray: { label: '회색', layers: [{ name: 'white', ext: 'png' }], paint: GRAY_PAINT },
   satellite: { label: '위성', layers: [{ name: 'Satellite', ext: 'jpeg' }] },
   hybrid: {
     label: '하이브리드',

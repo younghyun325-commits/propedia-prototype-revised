@@ -183,8 +183,8 @@ def test_land_info_and_documented_land_use(con):
     assert land["source"].startswith("브이월드")
     assert P["land_use_documented"]["value"] == "제3종일반주거지역"
     assert P["land_use_documented"]["basis"].startswith("고시 기재")
-    # 좌표는 토지 정보(지오코더)를 쓴다
-    assert r["normalized"]["coord_source"] == "vworld-geocoder:parcel"
+    # 좌표는 토지 정보를 쓴다. 빌드 캐시 좌표는 지오코더가 아니라 필지 경계 중심점 (P13, 지오코더 결과 저장 금지)
+    assert r["normalized"]["coord_source"] == "vworld-2d:LP_PA_CBND_BUBUN representative_point"
     assert P["nearby_projects"] == [] and P["nearby_note"] is None
 
 

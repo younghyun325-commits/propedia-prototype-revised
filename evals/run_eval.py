@@ -1,7 +1,7 @@
 """평가 (agents.md §13, feedback.md §6-2, feedback2.md §8-2). 정답셋과 비교해 지표를 계산하고 evals/report.md 와
 meta.eval_report 에 저장한다.
 
-사용: python -m evals.run_eval          # 네트워크 없이 M1~M17
+사용: python -m evals.run_eval          # 네트워크 없이 M1~M17, M19·M20
       python -m evals.run_eval --live   # M18(실시간 조회 성공률·p95)을 더 잰다 (외부 서비스 상태에 좌우됨)
 - 층별 기대 항목(M6·M7)은 core/lookup.py 를 쓰지 않고 정답셋(addresses.yaml + scope_labels.yaml)으로 따로 배치해 만든다.
   P9부터 기대 집합 = tier 'applies' + 효력 중 + 층별 5개 상한 적용 후 (정렬: tier_class → rank → 문서 날짜 최신).
@@ -494,14 +494,19 @@ def evaluate(live: bool = False) -> dict:
                         "pass": n > 0 and ok_n / n >= 0.9 and lp95 is not None and lp95 <= 3000,
                         "note": "실시간 항목은 실행 시점의 외부 서비스(도로명주소·브이월드) 상태에 좌우됨"})
 
-    drafts = [g_ext.get("draft"), g_addr.get("draft"), g_scope.get("draft"), g_land.get("draft")]
+    # M19·M20 지도 경계·레이어 (docs/map/PLAN.md P13)
+    g_bnd = load_yaml("boundaries.yaml")
+    metrics += map_metrics(g_bnd, errors)
+
+    drafts = [g_ext.get("draft"), g_addr.get("draft"), g_scope.get("draft"), g_land.get("draft"), g_bnd.get("draft")]
     return {
         "run_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "build_at": m.get("build_at"),
         "goldset": {"draft": any(d is not False for d in drafts),
                     "files": {"extraction": sha8(GOLD / "extraction.yaml"), "addresses": sha8(GOLD / "addresses.yaml"),
                               "scope_labels": sha8(GOLD / "scope_labels.yaml"), "land": sha8(GOLD / "land.yaml"),
-                              "live_addresses": sha8(GOLD / "live_addresses.yaml")}},
+                              "live_addresses": sha8(GOLD / "live_addresses.yaml"),
+                              "boundaries": sha8(GOLD / "boundaries.yaml")}},
         "live": live,
         "live_rows": live_rows,
         "metrics": metrics,
@@ -510,6 +515,69 @@ def evaluate(live: bool = False) -> dict:
         "excluded_addresses": g_addr.get("excluded", []),
         "errors": errors,
     }
+
+
+LAYER_DIR = ROOT / "public" / "data" / "layers"
+BOUNDARY_DIR = ROOT / "seed" / "boundaries"
+COMMON_PROPS = ("id", "kind", "name", "basis", "verified", "doc_ids", "source_page", "as_of", "area_m2_geom")
+KIND_PROPS = {"project": ("stage_code", "stage_label", "area_m2_doc", "align_score"),
+              "impact": ("project_id", "buffer_m", "note"),
+              "parcel": ("pnu", "jibun", "inclusion"),
+              "regulation": ("area_m2_doc", "align_score", "effective_from", "effective_to")}
+BBOX_PAD_M = 600       # 영향권 500m가 구 경계를 조금 넘을 수 있어 여유
+
+
+def map_metrics(g_bnd: dict, errors: list) -> list[dict]:
+    """M19 경계 면적 일치, M20 GeoJSON 유효성. shapely·pyproj는 빌드 의존성 (평가는 빌드 PC에서 돈다)."""
+    from pyproj import Transformer
+    import shapely
+    from shapely.geometry import shape
+    tr = Transformer.from_crs("EPSG:4326", "EPSG:5186", always_xy=True)
+    tol = g_bnd.get("tolerance_pct", 5) / 100
+    rows, skipped = [], []
+    for b in g_bnd.get("boundaries", []):
+        path = BOUNDARY_DIR / f"{b['doc_id']}.geojson"
+        if not path.exists():
+            skipped.append(b["doc_id"])
+            continue
+        f = json.loads(path.read_text(encoding="utf-8"))["features"][0]
+        area = shapely.transform(shape(f["geometry"]), lambda x, y: tr.transform(x, y), interleaved=False).area
+        diff = area / b["area_m2"] - 1
+        rows.append((b["doc_id"], diff))
+        if abs(diff) > tol:
+            errors.append({"type": "boundary", "detail": f"{b['doc_id']} 경계 면적 {area:,.1f}㎡ / 고시 {b['area_m2']:,.1f}㎡ "
+                                                          f"= {diff * 100:+.2f}%"})
+    ok = sum(abs(d) <= tol for _, d in rows)
+    detail = ", ".join(f"{d} {v * 100:+.2f}%" for d, v in rows)
+    if skipped:
+        detail += " · 대상 아님(경계 미채택): " + ", ".join(skipped)
+    out = [{"id": "M19", "name": "경계 면적 일치", "value": pct(ok, len(rows)), "display": f"{disp(ok, len(rows))} — {detail}",
+            "target": f"고시 면적 ±{tol:.0%}", "pass": bool(rows) and ok == len(rows),
+            "note": "도면 정합으로 만든 경계만 셈 (evals/goldset/boundaries.yaml)"}]
+
+    gb = json.loads((ROOT / "public" / "data" / "base" / "gangnam.geojson").read_text(encoding="utf-8"))
+    x0, y0, x1, y1 = shape(gb["features"][0]["geometry"]).bounds
+    lat0 = (y0 + y1) / 2
+    dx, dy = BBOX_PAD_M / (111320 * math.cos(math.radians(lat0))), BBOX_PAD_M / 110540
+    n = good = 0
+    for path in sorted(LAYER_DIR.glob("propedia_*.geojson")):
+        for f in json.loads(path.read_text(encoding="utf-8"))["features"]:
+            n += 1
+            g = shape(f["geometry"])
+            p = f["properties"]
+            need = COMMON_PROPS + KIND_PROPS.get(p.get("kind"), ())
+            lack = [k for k in need if k not in p]
+            bx = g.bounds
+            inside = bx[0] >= x0 - dx and bx[1] >= y0 - dy and bx[2] <= x1 + dx and bx[3] <= y1 + dy
+            if g.is_valid and inside and not lack:
+                good += 1
+            else:
+                errors.append({"type": "geojson", "detail": f"{path.name} {p.get('id')}: valid={g.is_valid} "
+                                                            f"강남구 범위 안={inside} 빠진 속성={lack}"})
+    out.append({"id": "M20", "name": "GeoJSON 유효성", "value": pct(good, n), "display": disp(good, n), "target": "100%",
+                "pass": n > 0 and good == n,
+                "note": "public/data/layers 도형마다 is_valid · 강남구 경계 bbox(+600m) 안 · 필수 속성 보유"})
+    return out
 
 
 def write_report_md(rep: dict) -> None:

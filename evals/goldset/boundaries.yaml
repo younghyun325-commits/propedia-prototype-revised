@@ -1,0 +1,13 @@
+draft: true
+author: "claude-code (초안)"
+note: >-
+  M19 경계 면적 일치의 기준값 = 고시 원문에 적힌 구역 면적. 도면 정합으로 만든 경계(seed/boundaries/*.geojson)의
+  EPSG:5186 면적이 ±5% 안이어야 한다. 경계를 만들지 않은 문서(채택 안 함)는 '대상 아님'으로 세지 않는다.
+  사람 확인 전 (P13, 2026-11-10).
+written_at: "2026-11-10"
+tolerance_pct: 5
+boundaries:
+  - {doc_id: D1, kind: project, area_m2: 22123.6, source: "D1 p4 정비구역 면적 표 '변경 - 증) 22,123.6 22,123.6'"}
+  - {doc_id: D9, kind: project, area_m2: 90992.0, source: "D9 p2 '소규모주택정비 관리지역 지정 면적 : 90,992.0㎡'"}
+  - {doc_id: D10, kind: regulation, area_m2: 79269.1, source: "D10 p1 '대치동 506번지 일대 79,269.1 선경아파트 연장(2년)'"}
+  - {doc_id: D5, kind: regulation, area_m2: 1149476.0, source: "D5 p1 표 '압구정동 압구정 아파트지구' 면적 칸 (텍스트 추출은 '1,149,47'까지만 읽힘, 강남구청 게시물 본문 1,149,476㎡)"}

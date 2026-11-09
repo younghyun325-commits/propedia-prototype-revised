@@ -1,8 +1,10 @@
-"""지도 화면 점검 (docs/map/PLAN.md P12). Playwright(Chromium), pytest 수집 대상 아님.
+"""지도 화면 점검 (docs/map/PLAN.md P12·P13). Playwright(Chromium), pytest 수집 대상 아님.
 
 미리 띄울 것: uvicorn 8000 + `npm --prefix web run dev`(3000). 빌드본은 `npm --prefix web run build` 뒤 8000/map/.
 - 개발 서버는 항상 http://localhost:3000/map/ 으로 연다 (브이월드 개발 키 서비스 URL이 localhost:3000).
 - 키 값은 출력하지 않는다: 타일 주소의 키 자리는 *** 로 가린다.
+- 빌드본은 ?debug=1로 연다 (지도 객체 window.__propediaMap은 개발 서버 또는 ?debug=1일 때만 노출).
+- P13: Propedia 레이어 4종이 스타일에 있고 그려지는지, '확인 전' 라벨, 스크린샷 3장(--shot).
 
 사용: python tests/ui_check_map.py [--built] [--shot]
 """
@@ -15,7 +17,28 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
-SHOT = ROOT / "docs" / "screens" / "map_01_base.png"
+SCREENS = ROOT / "docs" / "screens"
+SHOT = SCREENS / "map_02a_layers_preview.png"
+SHOT_HANYANG = SCREENS / "map_02b_hanyang7.png"
+SHOT_DAECHEONG = SCREENS / "map_02c_daecheong.png"
+PROPEDIA_SOURCES = ["propedia-project", "propedia-impact", "propedia-parcel", "propedia-regulation"]
+PADDING = "{left: 380, right: 460, top: 130, bottom: 110}"
+COUNT_JS = """() => { const m = window.__propediaMap; if (!m) return null;
+  const out = {};
+  for (const s of %s) {
+    const ids = m.getStyle().layers.filter(l => l.source === s).map(l => l.id);
+    out[s] = ids.length ? m.queryRenderedFeatures({layers: ids}).length : -1;
+  }
+  return out }""" % PROPEDIA_SOURCES
+FIT_JS = """async (key) => { const m = window.__propediaMap;
+  const fc = await (await fetch('/data/layers/propedia_projects.geojson')).json();
+  const f = fc.features.find(x => x.properties.project_key === key);
+  let w = 999, s = 999, e = -999, n = -999;
+  const walk = c => typeof c[0] === 'number' ? (w = Math.min(w, c[0]), e = Math.max(e, c[0]), s = Math.min(s, c[1]), n = Math.max(n, c[1])) : c.forEach(walk);
+  walk(f.geometry.coordinates);
+  m.fitBounds([[w, s], [e, n]], {padding: %s, duration: 0});
+  await new Promise(r => m.once('idle', r));
+  return m.getZoom() }""" % PADDING
 KEY_RE = re.compile(r"(/req/wmts/1\.0\.0/)[^/]+/")
 WORKER_RE = re.compile(r"worker", re.I)
 
@@ -30,7 +53,7 @@ def main() -> int:
     ap.add_argument("--built", action="store_true", help="빌드본 http://127.0.0.1:8000/map/ 점검")
     ap.add_argument("--shot", action="store_true", help=f"스크린샷 저장 {SHOT.relative_to(ROOT)}")
     a = ap.parse_args()
-    url = "http://127.0.0.1:8000/map/" if a.built else "http://localhost:3000/map/"
+    url = "http://127.0.0.1:8000/map/?debug=1" if a.built else "http://localhost:3000/map/"
 
     results: list[tuple[str, bool, str]] = []
 
@@ -81,8 +104,28 @@ def main() -> int:
         inside = [bx for bx in boxes if bx and bx["x"] >= 344 and bx["x"] + bx["width"] <= vw - 424
                   and bx["y"] >= 80 and bx["y"] + bx["height"] <= vh - 68]
         check("첫 화면에 강남구 전체(라벨 14개가 보이는 영역 안)", len(inside) == 14, f"{len(inside)}/14")
+
+        # P13 Propedia 레이어: 스타일에 4종, 강남구 전체 화면에서 사업·영향권·규제가 그려짐 (필지는 줌 14 이상)
+        page.wait_for_function("() => window.__propediaMap && window.__propediaMap.loaded()", timeout=20000)
+        layers = page.get_attribute("[data-testid=map]", "data-layers") or ""
+        need_p = ["propedia-impact-fill", "propedia-impact-line", "propedia-regulation-fill", "propedia-regulation-line",
+                  "propedia-project-fill", "propedia-project-line", "propedia-parcel-line", "propedia-parcel-line-likely"]
+        check("Propedia 레이어 4종이 스타일에 있음", all(n in layers.split(",") for n in need_p),
+              ", ".join(n for n in need_p if n not in layers.split(",")) or "8개 레이어")
+        order = layers.split(",")
+        check("Propedia 레이어는 마스크 위·구 경계선 아래",
+              order.index("mask") < order.index("propedia-impact-fill") < order.index("gu-line"))
+        cnt = page.evaluate(COUNT_JS)
+        check("강남구 전체 화면: 사업·영향권·규제 도형이 그려짐",
+              bool(cnt) and all(cnt[s] > 0 for s in ["propedia-project", "propedia-impact", "propedia-regulation"]),
+              str(cnt))
+        area_labels = page.locator("[data-testid=area-label]").all_inner_texts()
+        check("사업·규제 라벨에 '확인 전'", len(area_labels) >= 3 and all("확인 전" in t for t in area_labels),
+              " | ".join(area_labels))
+        hatch = page.evaluate("() => window.__propediaMap.hasImage('propedia-hatch')")
+        check("규제 빗금 패턴 등록", hatch)
         if a.shot:
-            SHOT.parent.mkdir(parents=True, exist_ok=True)
+            SCREENS.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(SHOT))
 
         check("worker 오류 0", not [e for e in console_errors if WORKER_RE.search(e)],
@@ -139,6 +182,19 @@ def main() -> int:
                 check(f"배경 '{bid}' 전환·타일 200", on and st.count(200) > 0 and all(s == 200 for s in st),
                       f"{layer}: 200×{st.count(200)}, 기타 {[s for s in st if s != 200][:5]}")
 
+        # 회색 배경: white 레이어에 raster-saturation -1 (P13). 다른 배경에는 걸지 않는다.
+        sat_js = ("() => { const m = window.__propediaMap; if (!m) return null;"
+                  " return m.getStyle().layers.filter(l => l.type === 'raster')"
+                  ".map(l => [l.id, m.getPaintProperty(l.id, 'raster-saturation') ?? null]) }")
+        sat = page.evaluate(sat_js)
+        check("회색 배경 raster-saturation = -1", bool(sat) and all(v == -1 for _, v in sat), str(sat))
+        page.click("[data-basemap=base]")
+        page.wait_for_timeout(500)
+        sat_base = page.evaluate(sat_js)
+        check("기본 배경에는 채도 설정 없음", bool(sat_base) and all(v is None for _, v in sat_base), str(sat_base))
+        page.click("[data-basemap=gray]")
+        page.wait_for_timeout(500)
+
         # 3D 토글
         page.click("[data-testid=tilt-toggle]")
         page.wait_for_timeout(800)
@@ -154,6 +210,16 @@ def main() -> int:
         check("선택 탭 글자색 = 잉크", color == "rgb(31, 35, 40)", color)
         check("aria-selected 탭 1개", page.locator("[role=tab][aria-selected=true]").count() == 1)
 
+        # 사업 구역 확대: 필지 외곽선까지 그려지는지 + 스크린샷
+        for key, shot, label in [("apgujeong-6-1-hanyang7", SHOT_HANYANG, "한양7차"),
+                                 ("ilwon-daecheong-north-moatown", SHOT_DAECHEONG, "대청마을")]:
+            z = page.evaluate(FIT_JS, key)
+            page.wait_for_timeout(1200)
+            cnt = page.evaluate(COUNT_JS)
+            check(f"{label} 확대: 사업 구역·필지 외곽선 그려짐 (줌 {z:.1f})",
+                  cnt["propedia-project"] > 0 and cnt["propedia-parcel"] > 0, str(cnt))
+            if a.shot:
+                page.screenshot(path=str(shot))
 
         if a.built:
             other = [e for e in console_errors if "api.vworld.kr" not in e and "Failed to load resource" not in e]

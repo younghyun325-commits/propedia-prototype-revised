@@ -470,15 +470,15 @@ paths:
 
 DB의 사업·규제 고시를 지도 도형으로 바꿉니다: 사업 구역 2, 영향권 4(250m·500m × 2), 포함 판정 필지 18, 규제 구역 2.
 
-- [ ] `pipeline/fetch_parcels.py`: PNU 목록(사업 필지 18 + 시연 주소 15) → 2D 데이터 `LP_PA_CBND_BUBUN` → `seed/parcels.geojson` (원 응답은 `build/` 캐시)
-- [ ] 대청마을 경계: `daecheong_map.py`에 `--export-boundary` 옵션 — 이미 읽은 꼭짓점 10개를 경위도로 바꿔 `seed/boundaries/D9.geojson`
-- [ ] 한양7차 경계: D1 18\~21쪽 정비구역 결정도에 같은 정합 방법 → `seed/boundaries/D1.geojson`
-- [ ] 규제 구역: D10(2\~3쪽)·D5(4\~9쪽) 지형도면 정합. 안 되면 의제처리구역·서울플랜+ 경계로 대체하고 `basis`에 기록
-- [ ] 영향권: shapely로 EPSG:5186에서 250m·500m 버퍼 → EPSG:4326
-- [ ] `pipeline/build_map_layers.py` → `public/data/layers/propedia_*.geojson` + `manifest.json`
-- [ ] 좌표 정리: 지도·500m 판정 좌표를 필지 경계 중심점으로 바꾸고(`land_cache.location` 포함) `run_all` → `run_eval`로 판정 변화 확인
-- [ ] 새 지표: M19 경계 면적 일치(고시 면적 ±5%), M20 GeoJSON 유효성
-- [ ] HUMAN\_TODO: 도면 대조로 만든 경계 4개 사람 확인(그전까지 지도에 ‘확인 전’ 배지)
+- [x] `pipeline/fetch_parcels.py`: PNU 목록(사업 필지 18 + 시연 주소 15) → 2D 데이터 `LP_PA_CBND_BUBUN` → `seed/parcels.geojson` (원 응답은 `build/` 캐시) — 28필지(중복·범위 밖 A10 제외)
+- [x] 대청마을 경계: `daecheong_map.py`에 `--export-boundary` 옵션 — 이미 읽은 꼭짓점 10개를 경위도로 바꿔 `seed/boundaries/D9.geojson` — 실제 배율은 0.79가 아니라 **0.678m/px**(P10 탐색 범위 밖이었음, 면적 −0.18%)
+- [x] 한양7차 경계: D1 18\~21쪽 정비구역 결정도에 같은 정합 방법 → `seed/boundaries/D1.geojson` (18쪽, 면적 −0.51%)
+- [x] 규제 구역: D10(2\~3쪽)·D5(4\~9쪽) 지형도면 정합. 안 되면 의제처리구역·서울플랜+ 경계로 대체하고 `basis`에 기록 — D10 채택(−2.33%). D5는 정합이 모호해 미채택(대체 경계도 쓰지 않음, 동혁 결정), 법정동 단위로만 표시
+- [x] 영향권: shapely로 EPSG:5186에서 250m·500m 버퍼 → EPSG:4326
+- [x] `pipeline/build_map_layers.py` → `public/data/layers/propedia_*.geojson` + `manifest.json`
+- [x] 좌표 정리: 지도·500m 판정 좌표를 필지 경계 중심점으로 바꾸고(`land_cache.location` 포함) `run_all` → `run_eval`로 판정 변화 확인 — 원본 PDF가 없는 PC라 `run_all` 대신 `pipeline/patch_coords.py`, 시연 15건 판정 변화 없음
+- [x] 새 지표: M19 경계 면적 일치(고시 면적 ±5%), M20 GeoJSON 유효성
+- [x] HUMAN\_TODO: 도면 대조로 만든 경계 4개 사람 확인(그전까지 지도에 ‘확인 전’ 배지) — 만든 경계 3개(HUMAN_TODO 35), 528 검토(36), D5 경계(37)
 
 ```text
 @docs/map/PLAN.md 의 P13 'Propedia 레이어 빌드'를 진행해 줘. Plan 모드로 계획부터.

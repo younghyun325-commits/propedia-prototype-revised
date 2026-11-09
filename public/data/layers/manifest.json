@@ -1,0 +1,61 @@
+{
+ "coordinate_decimals": 6,
+ "crs": "EPSG:4326",
+ "generated_as_of": "2026-10-06",
+ "layers": {
+  "propedia_impact": {
+   "as_of": "2026-10-06",
+   "count": 4,
+   "doc_ids": [
+    "D1",
+    "D9"
+   ],
+   "file": "propedia_impact.geojson",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "source": "사업 구역 경계에서 EPSG:5186 버퍼",
+   "title": "영향권 250m·500m (표시 기준이며 영향의 크기를 뜻하지 않음)",
+   "verified": "사람 확인 전 (verified=0)"
+  },
+  "propedia_parcels": {
+   "as_of": "2025-01",
+   "count": 18,
+   "doc_ids": [
+    "D1",
+    "D9"
+   ],
+   "file": "propedia_parcels.geojson",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "source": "project_parcels + 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "title": "포함 판정 필지",
+   "verified": "사람 확인 전 (verified=0)"
+  },
+  "propedia_projects": {
+   "as_of": "2026-10-06",
+   "count": 2,
+   "doc_ids": [
+    "D1",
+    "D9"
+   ],
+   "file": "propedia_projects.geojson",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "source": "고시 도면 × 브이월드 연속지적도(LP_PA_CBND_BUBUN) 대조 — Propedia 판독, 사람 확인 전",
+   "title": "사업 구역 (고시 도면 정합)",
+   "verified": "사람 확인 전 (verified=0)"
+  },
+  "propedia_regulations": {
+   "as_of": "2026-04-10",
+   "count": 1,
+   "doc_ids": [
+    "D10"
+   ],
+   "file": "propedia_regulations.geojson",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "source": "고시 도면 × 브이월드 연속지적도(LP_PA_CBND_BUBUN) 대조 — Propedia 판독, 사람 확인 전",
+   "title": "규제 구역 (고시 도면 정합)",
+   "verified": "사람 확인 전 (verified=0)"
+  }
+ },
+ "notes": [
+  "D5: 경계 확인 전, 법정동(압구정동) 단위로만 표시"
+ ]
+}

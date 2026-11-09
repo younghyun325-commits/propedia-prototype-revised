@@ -1,0 +1,29 @@
+# 압구정 아파트지구 토지거래허가구역 지형도면 판독 (P13-4-2). Claude Code 판독 2026-11-10, 사람 확인 전.
+doc_id: D5
+pdf_page: 4
+title: "토지거래허가구역 지형도면: 재지정 — 1. 강남구 압구정동 아파트지구"
+image:
+  method: render            # 지도는 벡터(내장 이미지 2개는 제목·범례 띠) → 쪽 전체를 가로 4200px로 렌더링
+  render_w: 4200
+  size: [4200, 2970]
+map_box: [322, 717, 3873, 2221]
+scale_bar:
+  note: "막대 라벨 '0–10–250–500m'. 칸 길이 110/165/275px는 0–100–250–500m일 때만 맞음 (라벨 '10'은 '100'의 오기로 봄). 0=x3251, 500=x3801"
+  m_per_px: 0.9091          # 500m / 550px
+search:
+  range_pct: 25
+  angles: [-1.0, -0.5, 0.0, 0.5, 1.0]
+  line_dark: 600
+  exclude_colors: [red]
+  work: 2                   # 탐색은 1/2로 줄여서, 마지막에 원 해상도로 다시
+center_pnu: "1168011000105270000"   # 압구정동 527 (기준점일 뿐, 위치는 상관으로 찾음)
+cadastral_half_m: [2400, 1300]
+cadastral_tiles: [6, 3]
+boundary_color: red
+region:                     # 꼭짓점 대신 빨간 일점쇄선·빗금 영역을 면으로 만든다
+  method: red_region
+  downsample: 2
+  close_px: 12              # 빗금 사이(1/2 축소 기준 약 16px)를 메우는 닫힘 반경
+  simplify_px: 1.0
+notes:
+  - "빨간 일점쇄선과 45° 빗금 영역. 한강변을 따라 긴 띠"
