@@ -15,7 +15,9 @@
 - [x] 빈 틀 `web/src/app/App.tsx`: 지도 자리 전체 화면 + 글래스 4개(상단 바 56·좌 320·우 400·타임라인 44/200), 키보드 L·I·T·Esc(`app/keys.ts`, `app/useShellEffects.ts`), 상태 `state/useMapStore.ts`(zustand), 브랜드 문구 `copy/brand.ts`
 - [x] `tests/test_wording.py::test_web_src`: `web/src/**/*.ts(x)` 검사, 금지어 §9-6 + '시세', `web/src/copy/brand.ts`만 예외. 금지어를 넣은 임시 파일로 실패하는 것 확인 후 삭제
 - [x] `vercel.json` buildCommand 추가(regions icn1 유지), `.gitignore`에 `web/node_modules/`·`public/map/`, `.vercelignore`에 `web/node_modules/`·`logo/`
-- [ ] Preview 배포로 `/map/`·`/api/v1/health` 확인 — push가 필요해 아직 안 함
+- [x] 커밋 정리: 11-09 로컬 작업을 별도 커밋(b5cb3c1)으로. `data_raw/11.공간정보/`는 `.gitignore`(서울플랜+ SHP 공공누리 4유형 — 원격에 올리지 않음), 이력에 SHP 0건 확인. `.env.example`은 값 없는 키 + 공개 엔드포인트 URL뿐이라 커밋
+- [x] `feat/map-console` push → GitHub 커밋 상태 `Vercel=success "Deployment has completed"` (buildCommand 포함 Preview 빌드 성공, Production main은 그대로: 운영 `/api/v1/health` 200, 운영 `/map/` 404)
+- [ ] Preview의 `/map/`·`/api/v1/health` 200 확인 — Preview 주소(`propedia-pretotype-git-feat-map-console-hsp20.vercel.app`)가 Vercel Authentication으로 보호돼 302. 로그인한 브라우저에서 확인 필요 (HUMAN_TODO 32)
 
 설치 버전 (`npm ls --depth=0`, Node 24.15.0 / npm 11.12.1)
 
@@ -55,7 +57,7 @@
   - strictPort: 3000번을 쓰는 중에 dev를 한 번 더 실행 → `Error: Port 3000 is already in use`로 종료(다른 포트로 넘어가지 않음)
   - Playwright(1440×900) 13/13: 상단 바 56·좌 320·우 400·타임라인 44, 지도 자리 1440×900, 로고 로드, `html.liquid-glass`(Chromium), L·I·T 토글·복원, Esc, 투명도 줄이기 → backdrop-filter none, 콘솔 오류 0 → `docs/screens/map_00_shell.png`
   - `pytest -q` 122 passed (기존 121 + test_web_src), `npm --prefix web run test` 5 passed
-- 남은 문제: Preview 배포 확인(push 필요), 정사각 심볼 원본 없음('p'를 잘라 임시로 씀)
+- 남은 문제: Preview 화면 확인(Vercel 로그인 필요), 정사각 심볼 원본 없음('p'를 잘라 임시로 씀 — 원본을 받으면 교체), 선택된 작업 탭 2px 막대는 PLAN P12 항목으로
 
 ## P0 환경·뼈대 — 완료 (2026-10-24)
 - [x] `python --version` → Python 3.11.3
