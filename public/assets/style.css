@@ -35,7 +35,9 @@ code, .mono { font-family: Consolas, "D2Coding", ui-monospace, monospace; font-s
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 16px;
   padding: 12px 24px; border-bottom: 1px solid var(--line); background: #fff; position: sticky; top: 0; z-index: 20;
 }
-.logo { font-weight: 800; font-size: 17px; color: var(--text); white-space: nowrap; }
+.logo { display: inline-flex; align-items: center; gap: 8px; font-weight: 800; font-size: 15px; color: var(--text); white-space: nowrap; }
+.logo:hover { text-decoration: none; }
+.logo img { display: block; height: 23px; width: auto; }
 .logo span { color: var(--info); }
 .nav { display: flex; gap: 4px; flex-wrap: wrap; }
 .nav a { padding: 6px 12px; border-radius: 8px; color: var(--text); white-space: nowrap; }

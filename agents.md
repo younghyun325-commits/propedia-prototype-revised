@@ -220,6 +220,17 @@
 | D9 | 대청마을 북측구역(일원동 619번지 일원) 소규모주택정비 관리계획(모아타운 관리계획) 수립(안) 주민공람 공고 | 대청마을 북측 모아타운 관리계획(안) 공람 | `gongram` | 강남구청장 | 강남구 공고 제2026-1034호 | 2026-04-17 |
 | D10 | 개발행위허가 제한 연장 및 지형도면 고시 | 대치동 506 일대 개발행위허가 제한 연장 | `restriction` | 강남구청장 | 강남구 고시 제2026-69호 | 2026-04-10 |
 
+### 3-6. 공간정보 SHP (2026-11-09 추가)
+동혁이 서울 열린데이터광장에서 받아 **이 폴더 안** `data_raw/11.공간정보/`에 두었다 (처음 HUMAN_TODO에 적은 `../data/11.공간정보/`가 아님). 원본이므로 **수정·이동·삭제 금지**. 코드에서는 `pipeline/common.py`의 `SPATIAL`, `SHP_SEOULPLAN`, `SHP_UIJE`를 쓴다.
+
+| 데이터 | 폴더 | 레이어 파일 (.shp·.shx·.dbf·.prj·.sbn·.sbx·.shp.xml) |
+|---|---|---|
+| 서울플랜+ 사업현황 | `data_raw/11.공간정보/서울플랜_사업현황/` | `UPIS_C_UQ120` |
+| 의제처리구역 | `data_raw/11.공간정보/의제처리구역/` | `UPIS_C_UQ181` |
+
+- 좌표계·속성 열은 아직 확인하지 않았다 (`.prj`·`.shp.xml`을 읽어 확인한 뒤 `[확인]`으로 적는다).
+- `data_raw/`는 `.vercelignore` 대상이라 배포본에 올라가지 않는다. 시연 경로(`core/`, `api/`)는 SHP를 직접 읽지 않고, 빌드 스크립트가 필요한 결과만 DB로 옮긴다.
+
 ### 3-5. D1에서 확인된 사실 (정답셋 초안의 근거) `[확인: pdftotext]`
 | 항목 | 값 | pdf_page |
 |---|---|---|
@@ -333,6 +344,7 @@ pretotype/
   .vercelignore           # §15-2
   run_demo.bat            # 로컬 백업 실행 (§15-4)
   data_raw/               # 커밋함. D1~D4.pdf 발췌본 + manifest.csv
+    11.공간정보/          # SHP 원본 (§3-6, 수정 금지): 서울플랜_사업현황/UPIS_C_UQ120.*, 의제처리구역/UPIS_C_UQ181.*
   extractions/            # 커밋함. D1~D4.json (Claude Code 작성)
   seed/                   # 커밋함
     bjd_codes.csv         # 강남구 법정동코드 + 지역생활권 (§8-6)
@@ -1530,6 +1542,10 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-11-09 | Claude Code (P11) | 지도 대시보드 작업 기반 (docs/map/PLAN.md P11, 브랜치 `feat/map-console`): `web/`(Vite 8 + React 19 + TS, Tailwind v4 토큰·글래스) 추가 — 지도 화면 `/map/`은 §12-1의 '빌드 도구 금지' 예외로 Vite 빌드(`public/map/`, 외부 CDN은 계속 금지). 개발 서버 3000번 고정(strictPort), `vercel.json` buildCommand, `pipeline/make_logo.py`(→ `web/public/brand/`), `tests/test_wording.py`가 `web/src`도 검사(금지어 §9-6 + '시세', `web/src/copy/brand.ts` 예외) |
+| 2026-11-09 | Claude Code (동혁 요청) | 로고: 원본 `logo/propedia_logo_transparent.png`·`propedia_logo_white.png`(수정 금지)에서 배경의 반투명 점(알파 48 미만)을 지우고 가로 480px로 줄인 `public/assets/logo.png`(흰 배경용)·`logo-white.png`(어두운 배경용), 첫 글자 p로 `favicon.png`를 만듦. 머리글(§12-1)은 로고 이미지 + "프리토타입" 글자 |
+| 2026-11-09 | Claude Code (동혁 요청) | 공간정보 SHP 위치를 `data_raw/11.공간정보/`(서울플랜_사업현황 `UPIS_C_UQ120`, 의제처리구역 `UPIS_C_UQ181`)로 정함(§3-6, §6), `pipeline/common.py`에 `SPATIAL`·`SHP_SEOULPLAN`·`SHP_UIJE` 추가. HUMAN_TODO 30 닫음 |
+| 2026-11-09 | Claude Code (동혁 요청) | `.env` 키 추가(값은 기록하지 않음): 공공데이터포털 공용 키 `DATA_GO_KR_SERVICE_KEY`에 아파트 매매 실거래가 상세·공동주택 단지 목록·상가(상권)정보 엔드포인트(`DATA_GO_KR_APT_TRADE_URL`·`DATA_GO_KR_APT_LIST_URL`·`DATA_GO_KR_SDSC_URL`), 브이월드 개발 키 `VWORLD_API_KEY_DEV`(서비스 URL localhost:3000)·`VWORLD_DEV_DOMAIN`. 아직 이 키들을 읽는 코드는 없음. HUMAN_TODO 27~31 |
 | 2026-10-26 | Claude Code (동혁 요청) | 화면 메뉴를 시작·주소 조회·문서 DB 3개로 줄임: 검수·평가 화면은 메뉴·링크에서 빼고(파일·API는 유지), 주소 조회는 검수 결정 없이 GET으로만 조회(§12-1·§12-3·§12-5·§12-6, §2-2-1의 화면 5개 → 메뉴 3개) |
 | 2026-10-26 | Claude Code (P10) | P10 토지 중심 + 실시간 조회 (feedback2.md): `core/live/`(도로명주소·브이월드, §2-2-7·§17-8 수정) / 조회 흐름 ③ 실시간 검색·`ambiguous`(§10-3) / 토지 정보 `land`·`land_use_documented`·좌표 교체(§10-4·§11-3) / D9 대청마을 모아타운·D10 개발행위허가 제한(§3) / 모아타운 8단계 템플릿·규칙 M1·`project_facts`(§7·§10-6) / 지도 대조 후보 16필지 `map_reading`→`likely`·묶음 검수 / 시연 주소 B1~B5(§4) / M16~M18(§13-2) / 마감 표기 점 구분(§10-2). 확인: 국가중점 API 응답 키는 지시서 추정과 같음, 토지이용계획에 '관련 법률' 칸 없음 `[확인]`. D9 결정도 축척 막대(0.947m/px)는 실제와 달라 지적도와 맞춘 값 0.79m/px를 씀 `[확인]`. 한양7차 중심 = 527 지오코더 좌표(근사 해제) |
 | 2026-10-26 | Claude Code (P9) | P9 보정 (feedback.md): 규제 고시 D5~D8 추가(§3, D8은 공고문이 없어 국토부 보도참고자료) / 항목을 적용·배경으로 나누고 층별 5개 상한·참고 섹션(§9-2, §10-4, §11-3) / 지역생활권을 층에서 빼고 참고로만(§1-2, §10-4) / 효력 기간·대상 기준·`more_evidence`(§7, §9-2) / 건축물대장 요약·용도지역 우선순위·거리 기준 표시(§10-4) / 지표 M13~M15(§13-2) / `fetch_buildings` 키 규칙(§17-2) / 건축물대장 표제부에는 지역·지구 칸이 없어 기본개요(getBrBasisOulnInfo)에서 읽음 `[확인]`, 압구정동 527은 표제부 0건 |

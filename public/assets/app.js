@@ -269,7 +269,7 @@ async function initShell(active) {
   if (header) {
     header.className = 'site-header';
     header.innerHTML = `
-      <a class="logo" href="index.html">Propedia <span>프리토타입</span></a>
+      <a class="logo" href="index.html"><img src="assets/logo.png" alt="Propedia" width="96" height="23"><span>프리토타입</span></a>
       <nav class="nav">${NAV.map(([k, href, label]) =>
         `<a href="${href}" class="${k === active ? 'active' : ''}">${label}</a>`).join('')}</nav>
       <div class="header-right"><span id="as-of"></span><span id="decision-status"></span></div>`;

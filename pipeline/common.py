@@ -13,6 +13,10 @@ DB_PATH = ROOT / "db" / "propedia.db"
 PUBLIC = ROOT / "public"
 SEED = ROOT / "seed"
 DATA_RAW = ROOT / "data_raw"
+# 공간정보 SHP 원본 (동혁이 직접 둔 파일, 수정·이동 금지 — agents.md §3-6)
+SPATIAL = DATA_RAW / "11.공간정보"
+SHP_SEOULPLAN = SPATIAL / "서울플랜_사업현황" / "UPIS_C_UQ120.shp"   # 서울플랜+ 사업현황
+SHP_UIJE = SPATIAL / "의제처리구역" / "UPIS_C_UQ181.shp"            # 의제처리구역
 EXTRACTIONS = ROOT / "extractions"
 TEXT_DIR = BUILD / "text"
 PAGES_DIR = PUBLIC / "pages"
