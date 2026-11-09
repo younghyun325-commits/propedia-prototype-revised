@@ -15,10 +15,11 @@ import httpx
 from dotenv import load_dotenv
 
 from core.address import make_pnu
+from core.live.vworld import domain as vworld_domain
 from pipeline.common import BUILD, ROOT, fail, log, setup_stdout
 
 FIX = ROOT / "tests" / "fixtures"
-DOMAIN = "https://propedia-pretotype.vercel.app"
+DOMAIN = vworld_domain()          # VWORLD_DOMAIN, 없으면 운영 주소 (core/live/vworld.py)
 NED = "https://api.vworld.kr/ned/data"
 PNU_527 = "1168011000105270000"
 PNU_619 = make_pnu("1168011400", 619)            # 일원동 619

@@ -1542,6 +1542,7 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-11-09 | Claude Code (P12) | 지도 셸 (docs/map/PLAN.md P12): `core/live/vworld.py` domain을 `VWORLD_DOMAIN` 환경변수로(없으면 운영 주소), `.env`에 `VITE_VWORLD_KEY`·`VWORLD_DOMAIN` 추가(값은 기록하지 않음), `pipeline/build_map_base.py` → `public/data/base/gangnam.geojson`·`bjd.geojson`(브이월드 2D 데이터, 법정동 14개 = seed). 브이월드 WMTS에 `gray` 레이어가 없어 회색 배경은 `white` `[확인]`. MapLibre v6 worker는 `?url` + `setWorkerUrl` |
 | 2026-11-09 | Claude Code (P11) | 지도 대시보드 작업 기반 (docs/map/PLAN.md P11, 브랜치 `feat/map-console`): `web/`(Vite 8 + React 19 + TS, Tailwind v4 토큰·글래스) 추가 — 지도 화면 `/map/`은 §12-1의 '빌드 도구 금지' 예외로 Vite 빌드(`public/map/`, 외부 CDN은 계속 금지). 개발 서버 3000번 고정(strictPort), `vercel.json` buildCommand, `pipeline/make_logo.py`(→ `web/public/brand/`), `tests/test_wording.py`가 `web/src`도 검사(금지어 §9-6 + '시세', `web/src/copy/brand.ts` 예외) |
 | 2026-11-09 | Claude Code (동혁 요청) | 로고: 원본 `logo/propedia_logo_transparent.png`·`propedia_logo_white.png`(수정 금지)에서 배경의 반투명 점(알파 48 미만)을 지우고 가로 480px로 줄인 `public/assets/logo.png`(흰 배경용)·`logo-white.png`(어두운 배경용), 첫 글자 p로 `favicon.png`를 만듦. 머리글(§12-1)은 로고 이미지 + "프리토타입" 글자 |
 | 2026-11-09 | Claude Code (동혁 요청) | 공간정보 SHP 위치를 `data_raw/11.공간정보/`(서울플랜_사업현황 `UPIS_C_UQ120`, 의제처리구역 `UPIS_C_UQ181`)로 정함(§3-6, §6), `pipeline/common.py`에 `SPATIAL`·`SHP_SEOULPLAN`·`SHP_UIJE` 추가. HUMAN_TODO 30 닫음 |

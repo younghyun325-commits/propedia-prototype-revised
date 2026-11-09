@@ -7,6 +7,8 @@ import tailwindcss from '@tailwindcss/vite'
 // 브이월드 개발 키의 서비스 URL이 localhost:3000이라 다른 포트로 넘어가면 안 된다 (strictPort).
 export default defineConfig({
   base: '/map/',
+  // 루트 .env를 읽는다. 브라우저에는 VITE_ 접두어 변수(VITE_VWORLD_KEY)만 들어간다
+  envDir: '..',
   plugins: [react(), tailwindcss()],
   build: { outDir: '../public/map', emptyOutDir: true },
   server: {

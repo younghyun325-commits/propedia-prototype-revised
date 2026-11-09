@@ -1,3 +1,4 @@
+import { lazy, Suspense, useMemo } from 'react'
 import { ChevronDown, ChevronUp, Contrast, Search } from 'lucide-react'
 import { BRAND } from '../copy/brand'
 import { useMapStore, type Workspace } from '../state/useMapStore'
@@ -5,6 +6,10 @@ import { GlassPanel } from '../ui/GlassPanel'
 import { LiquidGlassFilter } from '../ui/LiquidGlassFilter'
 import { useLiquidGlass } from '../ui/useLiquidGlass'
 import { useShellEffects } from './useShellEffects'
+import type { Insets } from '../map/insets'
+
+// 지도(MapLibre)는 따로 묶어 셸 다음에 불러온다: 셸이 먼저 뜨고 초기 JS 예산(gzip 400KB)을 지킨다
+const MapView = lazy(() => import('../map/MapView'))
 
 const GAP = 12 // 패널과 화면 가장자리 사이
 const TOP_H = 56
@@ -25,19 +30,25 @@ export default function App() {
   const tlH = s.timelineOpen ? TL_OPEN : TL_CLOSED
   const sideTop = GAP + TOP_H + GAP
   const sideBottom = GAP + tlH + GAP
+  // 지도 위 보이는 영역 (패널을 뺀 곳): 첫 화면 맞춤·지도 컨트롤 위치에 쓴다
+  const insets: Insets = useMemo(
+    () => ({
+      top: sideTop,
+      bottom: sideBottom,
+      left: s.leftOpen ? GAP + LEFT_W + GAP : GAP,
+      right: s.rightOpen ? GAP + RIGHT_W + GAP : GAP,
+    }),
+    [sideTop, sideBottom, s.leftOpen, s.rightOpen],
+  )
 
   return (
     <div className="relative h-full w-full overflow-hidden">
       <LiquidGlassFilter />
 
-      {/* 지도 자리: 화면 전체 (P12에서 MapLibre로 교체) */}
-      <div
-        className="map-placeholder absolute inset-0 grid place-items-center text-sm text-ink-muted"
-        data-testid="map"
-        aria-label="지도 자리"
-      >
-        지도 (P12)
-      </div>
+      {/* 지도: 화면 전체. 패널은 그 위에 뜬 글래스 카드 */}
+      <Suspense fallback={<div className="map-loading absolute inset-0" data-testid="map-loading" />}>
+        <MapView insets={insets} />
+      </Suspense>
 
       {/* 상단 바 56px */}
       <GlassPanel
@@ -61,7 +72,7 @@ export default function App() {
                 role="tab"
                 aria-selected={on}
                 onClick={() => s.setWorkspace(t.id)}
-                className={`glass glass-liquid rounded-full px-3 py-1 text-sm ${on ? 'font-semibold' : ''}`}
+                className={`work-tab glass glass-liquid rounded-full px-3 py-1 text-sm ${on ? 'font-semibold' : ''}`}
                 style={{ borderRadius: 999 }}
               >
                 {t.label}

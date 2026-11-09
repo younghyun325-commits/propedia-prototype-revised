@@ -1,5 +1,27 @@
 # 진행 기록
-현재 단계: P11 작업 기반 완료 (2026-11-09, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P12 지도 셸
+현재 단계: P12 지도 셸 완료 (2026-11-09, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P13 Propedia 레이어 빌드
+
+## P12 지도 셸 — 완료 (2026-11-09)
+`/map/`에 강남구 지도: 브이월드 배경 4종, 구 밖 흐림, 법정동 경계·이름, 커서 위치, 3D 토글. `public/*.html`은 건드리지 않음.
+- [x] 0단계(P11 뒷정리) 확인: `data_raw/11.공간정보/`·`.env`는 `git status --ignored`에 `!!`로만 나오고 추적 0건·이력 0건. 11-09 로컬 작업은 이미 b5cb3c1(작성자 noreply, `.env.example` 키 값 없음)로 커밋·push돼 있어 새로 만들지 않음. Preview 확인(HUMAN_TODO 32)은 Vercel 로그인이 필요해 아직 열림
+- [x] 키·도메인: `core/live/vworld.py`의 고정 `DOMAIN` → `domain()` = `VWORLD_DOMAIN`, 없으면 운영 주소(`DEFAULT_DOMAIN`). `pipeline/check_keys.py`도 같은 함수. 테스트 `test_domain_from_env` 추가
+  - `.env`에 `VITE_VWORLD_KEY`(개발 키 값을 출력 없이 복사)·`VWORLD_DOMAIN=http://localhost:3000` 추가(동혁 결정), `.env.example`에 빈 항목. `VWORLD_API_KEY`(운영)는 비어 있음
+  - `web/vite.config.ts` `envDir: '..'`(루트 `.env`, 브라우저에는 `VITE_`만), `web/src/vite-env.d.ts`
+- [x] MapLibre v6 확인 (버전 그대로 6.17.0 + react-map-gl 8.1.3): v6은 worker를 `import.meta.url` 옆 `maplibre-gl-worker.mjs`에서 찾는데(`node_modules/maplibre-gl/build/readme.md`) Vite 번들에는 그 파일이 없음 → `import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'` + `setWorkerUrl(workerUrl)`, react-map-gl에는 `import * as maplibregl` 를 `mapLib`로. worker 번들은 import가 없는 단일 파일이라 그대로 동작. 개발 서버(3000)·빌드본(8000/map/) 모두 worker 오류 0 → 5.x로 내리지 않음
+- [x] `pipeline/build_map_base.py`: 브이월드 2D 데이터 `LT_C_ADSIGG_INFO`(sig_cd=11680)·`LT_C_ADEMD_INFO`(emd_cd like 11680) → `public/data/base/gangnam.geojson`(31,848 B)·`bjd.geojson`(94,344 B). 키 `VWORLD_API_KEY`→없으면 `VWORLD_API_KEY_DEV`, domain `VWORLD_DOMAIN`. 원 응답 `build/vworld_raw/` 캐시(`--refresh`로 다시 받음). 응답 속성 `emd_cd`(8자리)·`emd_kor_nm`·`sig_cd`·`sig_kor_nm` `[확인]`, 법정동코드 = emd_cd + "00". 14개 코드·이름이 `seed/bjd_codes.csv`와 같음
+  - 멱등: 캐시 2회 + `--refresh` 1회 sha256 동일 (gangnam `f9fbb4bf…`, bjd `ea172ccd…`). 합계 126KB라 단순화 안 함
+- [x] 배경지도: WMTS Capabilities 레이어 = `Base`·`midnight`·`Hybrid`(투명 겹침)·`Satellite`(jpeg)·`white` + 해외 도시. **`gray`는 없음**(요청 시 오류 XML) → '회색'은 무채색 `white`(z15 평균 RGB 226·227·225, 채도 차 4). 하이브리드 = Satellite + Hybrid. TileMatrix 6~18 → 소스 maxzoom 18, 지도 줌 11~19. https·CORS `*` 확인. 상수 `web/src/map/basemaps.ts`, 기본값 회색
+- [x] `web/src/map/MapView.tsx`(+`MapControls.tsx`, `geo.ts`, `insets.ts`): 첫 화면 fitBounds(패널을 뺀 영역), 줌 11~19, 3D(기울기 60°), 마스크(세계 사각형 − 강남구, 흰색 55%), 구 경계 1.5px, 법정동 0.75px + 이름(HTML 마커 — 외부 글리프 서버 없이 Pretendard), 커서 표시줄, 출처 '배경지도: 국토교통부 브이월드', `movestart/moveend` → `html.map-moving`
+  - **maxBounds 대신 중심 제한**: MapLibre maxBounds는 화면 전체(패널 밑 포함)를 경계+2km 안에 넣으려고 줌을 ~13.5로 올려 첫 화면에 강남구 10/14동만 보였음 → `setTransformConstrain`으로 지도 중심을 경계+2km 안에 묶음 (동쪽 끝 127.1242 + 0.0226 → 끌어도 중심 127.147에서 멈춤)
+  - 지도는 `lazy()`로 따로 묶음: 초기 JS gzip **81.2KB**(셸), 지도 청크 306.7KB, worker 520KB(비압축). 나누기 전 한 덩어리는 386.8KB였음
+- [x] P11 보완: 선택된 작업 탭 아래 `--color-brand-indigo` 2px 막대(`.work-tab[aria-selected=true]::after`), 글자색 잉크 유지, `aria-selected`는 P11부터 있음. '투명도 줄이기' 임시 토글은 그대로, PLAN.md P12·P20에 'P20에서 설정 메뉴로' 기록
+- 완료 확인
+  - `python -m pipeline.build_map_base` 반복 → sha256 동일
+  - `tests/ui_check_map.py`(새, Playwright 1440×900) http://localhost:3000/map/ **18/18**: 라벨 14개, 마스크·경계 레이어, 기본 회색, 첫 화면에 14동 모두 보이는 영역 안, worker 오류 0, 커서 표시줄(위도·경도·법정동), 드래그 중 `map-moving` 붙고 멈추면 떨어짐, 이동 범위, 배경 4종 전환·타일 200(취소 0), 3D, 탭 막대 `rgb(93,52,169)` 2px·글자 잉크, 콘솔 오류 0 → `docs/screens/map_01_base.png`
+  - 빌드본 http://127.0.0.1:8000/map/ (`--built`) **18/18**, worker 오류 0. 타일은 127.0.0.1:8000에서도 200(브이월드가 막지 않음, 기록만)
+  - `pytest -q` 123 passed (+test_domain_from_env), `npm --prefix web run test` 11 passed(geo·basemaps 6 추가), `npm --prefix web run build` 성공, `oxlint` 경고 0
+  - 금지어 검사가 주석의 '늦'을 잡아 고침
+- 남은 문제: Preview 확인(HUMAN_TODO 32). 배포 빌드에 `VITE_VWORLD_KEY`가 없으면 배경 없이 경계만 뜸(안내 문구 표시) → HUMAN_TODO 34. 브이월드 'white' 지도에도 지하철 노선 색은 남아 완전한 회색은 아님
 
 ## P11 작업 기반 — 완료 (2026-11-09)
 지도 대시보드(docs/map/PLAN.md P11~P20)의 첫 단계. `public/*.html`·`api/`·`core/`는 건드리지 않음.

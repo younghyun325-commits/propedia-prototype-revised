@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { DEFAULT_BASEMAP, type BasemapId } from '../map/basemaps'
 
 export type Workspace = 'gangnam' | 'project'
 
@@ -11,8 +12,12 @@ export type MapState = {
   workspace: Workspace
   /** '투명도 줄이기' — html.reduce-transparency */
   reduceTransparency: boolean
-  /** 지도 이동 중 — html.map-moving (P12에서 MapLibre movestart/moveend와 연결) */
+  /** 지도 이동 중 — html.map-moving (MapLibre movestart/moveend) */
   mapMoving: boolean
+  /** 배경지도 (기본 회색: 글래스 뒤 대비를 일정하게) */
+  basemap: BasemapId
+  /** 3D 기울기 */
+  tilt3d: boolean
   toggleLeft: () => void
   toggleRight: () => void
   toggleTimeline: () => void
@@ -21,6 +26,8 @@ export type MapState = {
   setWorkspace: (w: Workspace) => void
   toggleReduceTransparency: () => void
   setMapMoving: (v: boolean) => void
+  setBasemap: (b: BasemapId) => void
+  toggleTilt3d: () => void
 }
 
 export const useMapStore = create<MapState>()((set) => ({
@@ -31,6 +38,8 @@ export const useMapStore = create<MapState>()((set) => ({
   workspace: 'gangnam',
   reduceTransparency: false,
   mapMoving: false,
+  basemap: DEFAULT_BASEMAP,
+  tilt3d: false,
   toggleLeft: () => set((s) => ({ leftOpen: !s.leftOpen })),
   toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
   toggleTimeline: () => set((s) => ({ timelineOpen: !s.timelineOpen })),
@@ -39,4 +48,6 @@ export const useMapStore = create<MapState>()((set) => ({
   setWorkspace: (workspace) => set({ workspace }),
   toggleReduceTransparency: () => set((s) => ({ reduceTransparency: !s.reduceTransparency })),
   setMapMoving: (mapMoving) => set({ mapMoving }),
+  setBasemap: (basemap) => set({ basemap }),
+  toggleTilt3d: () => set((s) => ({ tilt3d: !s.tilt3d })),
 }))

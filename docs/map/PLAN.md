@@ -446,14 +446,15 @@ paths:
 
 화면 가운데 강남구가 떠 있는 지도를 만듭니다. 강남구 밖은 흐리게, 법정동은 얇은 경계와 이름으로.
 
-- [ ] `pipeline/build_map_base.py`: 2D 데이터 `lt_c_adsigg_info`(11680)·`lt_c_ademd_info`(강남구) → `public/data/base/gangnam.geojson`, `bjd.geojson`. 법정동 코드 14개가 `seed/bjd_codes.csv`와 같은지 검사
-- [ ] `MapView`: MapLibre + 브이월드 WMTS(기본·회색·위성·하이브리드) 전환. 레이어 이름은 Capabilities 응답으로 확인해 상수로
-- [ ] 첫 화면 fitBounds(강남구), maxBounds(경계 + 약 2km), 줌 11\~19, 3D 기울기 토글
-- [ ] 스포트라이트 마스크: 강남구 밖 흰색 55%, 구 경계선 1.5px
-- [ ] 커서 위치 표시줄(위도·경도·법정동), 우하단 출처 ‘배경지도: 국토교통부 브이월드’
-- [ ] localhost에서 타일이 막히면 브이월드에 개발용 URL을 등록하거나 Vite 프록시로 우회하고 PROGRESS에 기록
-- [ ] maplibre-gl v6 + react-map-gl 8.1 이상으로 시작: named/namespace import와 worker 설정이 개발 서버·빌드 모두에서 도는지 확인, 안 되면 maplibre-gl 5.x 고정
-- [ ] 상단 바 선택된 작업 탭: 글자색은 잉크 그대로(규칙 4), 탭 아래 브랜드색 2px 막대 추가 (P11에서는 굵기로만 구분돼 약했음)
+- [x] `pipeline/build_map_base.py`: 2D 데이터 `lt_c_adsigg_info`(11680)·`lt_c_ademd_info`(강남구) → `public/data/base/gangnam.geojson`, `bjd.geojson`. 법정동 코드 14개가 `seed/bjd_codes.csv`와 같은지 검사
+- [x] `MapView`: MapLibre + 브이월드 WMTS(기본·회색·위성·하이브리드) 전환. 레이어 이름은 Capabilities 응답으로 확인해 상수로 — Capabilities에 `gray`가 없어 회색은 무채색 `white` 레이어 (2026-11-09 확인)
+- [x] 첫 화면 fitBounds(강남구), maxBounds(경계 + 약 2km), 줌 11\~19, 3D 기울기 토글 — maxBounds는 패널 밑까지 화면 전체를 묶어 줌이 커져서, 지도 **중심**을 경계 + 2km 안으로 묶는 `setTransformConstrain`으로 구현
+- [x] 스포트라이트 마스크: 강남구 밖 흰색 55%, 구 경계선 1.5px
+- [x] 커서 위치 표시줄(위도·경도·법정동), 우하단 출처 ‘배경지도: 국토교통부 브이월드’
+- [x] localhost에서 타일이 막히면 브이월드에 개발용 URL을 등록하거나 Vite 프록시로 우회하고 PROGRESS에 기록 — 개발 키(서비스 URL localhost:3000)로 막히지 않음, 프록시 안 씀
+- [x] maplibre-gl v6 + react-map-gl 8.1 이상으로 시작: named/namespace import와 worker 설정이 개발 서버·빌드 모두에서 도는지 확인, 안 되면 maplibre-gl 5.x 고정
+- [x] 상단 바 선택된 작업 탭: 글자색은 잉크 그대로(규칙 4), 탭 아래 브랜드색 2px 막대 추가 (P11에서는 굵기로만 구분돼 약했음)
+- [x] 상단 바 ‘투명도 줄이기’ 임시 토글은 그대로 두고, P20에서 설정 메뉴로 옮긴다
 
 ```text
 @docs/map/PLAN.md 의 P12 '지도 셸'을 진행해 줘. Plan 모드로 계획부터.
@@ -622,7 +623,7 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 성능·접근성·반응형을 마무리하고 배포합니다.
 
 - [ ] 성능: 인스펙터 차트 지연 로딩, GeoJSON 좌표 6자리·gzip, 레이어별 줌 범위 제한
-- [ ] 접근성: 키보드 탐색·포커스 링, 대비 검사, ‘투명도 줄이기’ 설정, `prefers-reduced-motion`
+- [ ] 접근성: 키보드 탐색·포커스 링, 대비 검사, ‘투명도 줄이기’ 설정(P11 상단 바 임시 토글을 설정 메뉴로 옮김), `prefers-reduced-motion`
 - [ ] 반응형: 1280px 이상 기본, 1024\~1279px는 인스펙터를 지도 위에 겹침, 1024px 미만은 하단 시트(보기 전용)
 - [ ] 회귀: `pytest -q`, `python -m evals.run_eval`(M1\~M22), `tests/ui_check.py`(기존 50항목), `tests/ui_check_map.py`
 - [ ] 문서: README(지도 빌드 순서·환경변수), `DEMO_MAP.md` 5분 대본(강남구 전체 → 대청마을 사업 → 영향권 안 단지 → 실거래 → 타임라인 → 원문 근거), HUMAN\_TODO

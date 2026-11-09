@@ -15,7 +15,8 @@ NED = "https://api.vworld.kr/ned/data"
 ADDRESS_URL = "https://api.vworld.kr/req/address"
 SEARCH_URL = "https://api.vworld.kr/req/search"
 KEY_ENV = "VWORLD_API_KEY"
-DOMAIN = "https://propedia-pretotype.vercel.app"     # 인증키에 등록한 서비스 URL (로컬도 같은 값)
+DOMAIN_ENV = "VWORLD_DOMAIN"
+DEFAULT_DOMAIN = "https://propedia-pretotype.vercel.app"     # 운영 키에 등록한 서비스 URL (VWORLD_DOMAIN이 없을 때)
 SOURCE = "브이월드(국토교통부 공간정보 오픈플랫폼)"
 NOTE = "토지이음 토지이용계획확인서와 같은 원천 자료이며 참고용입니다"
 MISSING = "불러오지 못함"
@@ -26,8 +27,13 @@ NO_KEY_NOTE = "토지 정보 조회 키가 설정되지 않아 불러오지 못�
 _land_cache = TTLCache()
 
 
+def domain() -> str:
+    """요청의 domain 파라미터 = 인증키에 등록한 서비스 URL. 환경변수 VWORLD_DOMAIN, 없으면 운영 주소."""
+    return env_key(DOMAIN_ENV) or DEFAULT_DOMAIN
+
+
 def _params(key: str, **kw) -> dict:
-    return {"key": key, "domain": DOMAIN, "format": "json", **kw}
+    return {"key": key, "domain": domain(), "format": "json", **kw}
 
 
 def ned_records(j: dict) -> list[dict] | None:
@@ -93,7 +99,7 @@ def geocode_parcel(address: str, *, fetch=None, key: str | None = None, errors: 
     try:
         j = fetch(ADDRESS_URL, {"service": "address", "request": "getcoord", "version": "2.0", "crs": "epsg:4326",
                                 "type": "parcel", "address": address, "format": "json", "key": key,
-                                "domain": DOMAIN})
+                                "domain": domain()})
     except LiveError as e:
         if errors is not None:
             errors["getcoord"] = str(e)
@@ -122,7 +128,7 @@ def search_road(query: str, *, fetch=None, key: str | None = None, size: int = 5
     try:
         j = fetch(SEARCH_URL, {"service": "search", "request": "search", "version": "2.0", "query": query,
                                "type": "address", "category": "road", "format": "json", "size": size,
-                               "key": key, "domain": DOMAIN})
+                               "key": key, "domain": domain()})
     except LiveError:
         return None
     resp = (j or {}).get("response") or {}

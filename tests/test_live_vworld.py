@@ -96,3 +96,14 @@ def test_no_key_value_in_saved_fixtures():
         if f.exists():
             text = f.read_text(encoding="utf-8")
             assert not any(s in text for s in secrets), f.name
+
+
+def test_domain_from_env(monkeypatch):
+    """domain 파라미터: VWORLD_DOMAIN이 있으면 그 값, 비어 있으면 운영 주소 (P12)."""
+    import core.live.http as live_http
+    monkeypatch.setattr(live_http, "_ENV_LOADED", True)      # 로컬 .env 값이 끼어들지 않게
+    monkeypatch.setenv("VWORLD_DOMAIN", "")
+    assert vworld.domain() == vworld.DEFAULT_DOMAIN == "https://propedia-pretotype.vercel.app"
+    monkeypatch.setenv("VWORLD_DOMAIN", "http://localhost:3000")
+    assert vworld.domain() == "http://localhost:3000"
+    assert vworld._params("k")["domain"] == "http://localhost:3000"

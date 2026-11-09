@@ -16,9 +16,46 @@ body {
   overflow: hidden;
 }
 
-/* 지도 자리 (P12에서 MapLibre로 바뀜). 새 색 없이 잉크 토큰을 흰색에 8% 섞는다. */
-.map-placeholder {
+/* 지도 바탕 (타일이 오기 전) */
+.maplibregl-map,
+.map-loading {
   background: color-mix(in srgb, var(--color-ink) 8%, white);
+  font-family: var(--font-sans);
+}
+
+/* 선택된 작업 탭: 글자색은 잉크 그대로(규칙 4), 탭 아래 브랜드색 2px 막대 */
+.work-tab {
+  position: relative;
+}
+.work-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-brand-indigo);
+}
+
+/* 법정동 이름 (HTML 마커: 외부 글리프 서버 없이 Pretendard) */
+.map-dong-label {
+  display: block;
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-ink);
+  text-shadow:
+    0 0 2px #fff,
+    0 0 2px #fff,
+    0 0 4px #fff;
+}
+
+/* 배경지도·3D 칩에서 켜진 것 */
+.map-chip-on {
+  background: rgb(255 255 255 / 0.9);
+  box-shadow: inset 0 -2px 0 var(--color-brand-indigo);
 }
 
 :focus-visible {
