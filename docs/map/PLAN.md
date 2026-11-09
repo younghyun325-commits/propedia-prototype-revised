@@ -453,6 +453,7 @@ paths:
 - [ ] 커서 위치 표시줄(위도·경도·법정동), 우하단 출처 ‘배경지도: 국토교통부 브이월드’
 - [ ] localhost에서 타일이 막히면 브이월드에 개발용 URL을 등록하거나 Vite 프록시로 우회하고 PROGRESS에 기록
 - [ ] maplibre-gl v6 + react-map-gl 8.1 이상으로 시작: named/namespace import와 worker 설정이 개발 서버·빌드 모두에서 도는지 확인, 안 되면 maplibre-gl 5.x 고정
+- [ ] 상단 바 선택된 작업 탭: 글자색은 잉크 그대로(규칙 4), 탭 아래 브랜드색 2px 막대 추가 (P11에서는 굵기로만 구분돼 약했음)
 
 ```text
 @docs/map/PLAN.md 의 P12 '지도 셸'을 진행해 줘. Plan 모드로 계획부터.
