@@ -74,6 +74,7 @@ pip install -r requirements.txt -r requirements-build.txt
 | 12 | `python -m pipeline.run_all` | – | 캐시·좌표·건축물 요약을 DB에 넣으려고 한 번 더 |
 | 13 | `python -m evals.run_eval` | – | 지표 M1~M17 (네트워크 없음) → `evals/report.md`, `meta.eval_report` |
 | 14 | `python -m evals.run_eval --live` | **사용** | M18 실시간 조회(시연 목록 밖 강남구 도로명주소 20건)까지 |
+| 15 | `python -m pipeline.fetch_pois` | **사용** (상가 API 67회, 캐시 있으면 0회) | P18 생활 인프라: `data_raw/12.생활인프라/` CSV(학교·역·버스 3종, 커밋 안 함) + 상가(상권)정보 API(.env `DATA_GO_KR_SERVICE_KEY`, 원 응답 `build/pois_raw/`) → `public/data/layers/` 학교·역·정류장·노선·편의시설 6분류. `--offline`은 캐시만. 분류표 `seed/poi_categories.yaml` |
 
 ### 환경변수 (P10)
 

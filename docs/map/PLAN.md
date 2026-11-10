@@ -196,10 +196,12 @@ Nov 9, 2026 · @영현2
 | ② | 클릭한 필지의 토지 정보 | 2D 데이터 점 조회 → 기존 `core/live` 토지 3종 | 실시간 API | JSON | 토지 3종 있음 | P15 |
 | ③ | 아파트 단지(목록·세대수·사용승인일) | 국토부 공동주택 단지 목록 · [기본 정보(AptBasisInfoServiceV5)](https://www.data.go.kr/en/data/15058453/openapi.do) | 빌드(월 1회) | GeoJSON + DB | 없음 | P17 |
 | ③ | 아파트 매매 실거래가 | [국토부 아파트 매매 실거래가 상세 자료](https://www.data.go.kr/en/data/15126468/openapi.do): 지역코드 5자리(11680)·계약년월 6자리, 개발계정 10,000건, 이용허락 제한 없음 | 빌드(주 1회) | `db/market.db` | 없음 | P17 |
-| ③ | 학교(초·중·고) | [전국초중등학교위치표준데이터](https://www.data.go.kr/data/15021148/standard.do) (위도·경도 포함) | 빌드 | GeoJSON | 없음 | P18 |
-| ③ | 초등학교 통학구역(선택) | 한국교육시설안전원 학구도 SHP (매년 3월·9월 배포) | 빌드 | GeoJSON | 없음 | P18 |
-| ③ | 편의시설(마트·편의점·병원·약국·카페 등) | [소상공인시장진흥공단 상가(상권)정보](https://www.data.go.kr/catalog/15083033/fileData.json): 분기 갱신, 경도·위도·업종 포함, 이용허락 제한 없음 | 빌드 | GeoJSON | 없음 | P18 |
-| ③ | 지하철역 | 서울시 역사마스터 정보(좌표) | 빌드 | GeoJSON | 없음 | P18 |
+| ③ | 학교(초·중·고) | [전국초중등학교위치표준데이터](https://www.data.go.kr/data/15021148/standard.do) (data.go.kr 15021148, CSV·CP949, 위도·경도, 기준일 2026-10-01) — 이용허락범위 **확인 필요**(페이지에 안내 링크만, HUMAN_TODO) | 빌드(파일) | `schools.geojson` 79곳 | 있음 | P18 |
+| ③ | 초등학교 통학구역(선택) | 한국교육시설안전원 학구도 SHP (매년 3월·9월 배포) | 빌드 | GeoJSON | 없음(이번 범위 밖) | — |
+| ③ | 편의시설 6분류(슈퍼마켓·편의점·병원·의원·약국·카페·학원) | [소상공인시장진흥공단 상가(상권)정보 API](https://www.data.go.kr/data/15012005/openapi.do) (data.go.kr 15012005) `storeListInDong` divId=signguCd·key=11680, 강남구 66,722건, 기준 stdrYm 202609 — 이용허락범위 제한 없음. 분류표 `seed/poi_categories.yaml`(대형마트 코드·금융(은행)은 원자료에 없음) | 빌드(API) | `pois_*.geojson` 6개 9,895곳 | 있음 | P18 |
+| ③ | 지하철역 | [서울시 역사마스터 정보](https://data.seoul.go.kr/dataList/OA-21232/S/1/datasetView.do) (OA-21232) — 공공누리 1유형 출처표시 (상업적 이용·변경 가능). 파일 내 기준일 없음 → 내려받은 날 2026-11-11 | 빌드(파일) | `stations.geojson` 31개 역 | 있음 | P18 |
+| ③ | 버스정류장 | [서울시 정류장마스터 정보](https://data.seoul.go.kr/dataList/OA-21231/S/1/datasetView.do) (OA-21231, WGS84 위도·경도) — 공공누리 1유형 출처표시 (상업적 이용·변경 가능). 내려받은 날 2026-11-11 | 빌드(파일) | `bus_stops.geojson` 609곳 | 있음 | P18 |
+| ③ | 버스 노선 | [서울시 노선마스터 정보](https://data.seoul.go.kr/dataList/OA-21230/S/1/datasetView.do) (OA-21230) + [서울시 노선 정류장마스터 정보](https://data.seoul.go.kr/dataList/OA-21233/S/1/datasetView.do) (OA-21233) — 공공누리 1유형 출처표시 (상업적 이용·변경 가능). 기점·종점·방향 열 없음, 경로 선은 그리지 않음 | 빌드(파일) | `bus_routes.json` 288개 노선 | 있음 | P18 |
 
 모든 빌드 산출 GeoJSON은 `public/data/layers/`에 두고, 같은 폴더의 `manifest.json`에 레이어별 원천·기준일·건수·라이선스를 적습니다. Propedia 레이어의 도형 속성은 아래 형식을 지킵니다.
 
@@ -594,14 +596,17 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 
 ### P18 생활 인프라 (1\~2일)
 
-학교·지하철역·편의시설을 올리고, 영향권과 겹쳐 볼 수 있게 합니다.
+학교·지하철역·버스정류장(+노선)·편의시설을 올리고, 영향권과 겹쳐 보고, 반경 안 개수를 사실로 보여 줍니다. (2026-11-11 완료, 결정 D1~D6은 PROGRESS.md P18)
 
-- [ ] `pipeline/fetch_pois.py`: 학교(표준데이터, 강남구 주소만), 지하철역(역사마스터), 편의시설(상가정보 강남구) → `schools.geojson`, `stations.geojson`, `pois.geojson`
-- [ ] 편의시설 분류표 `seed/poi_categories.yaml`(대형마트·편의점·병원·약국·카페·학원 등 업종 코드 → 표시 이름·아이콘). 표에 없는 업종은 싣지 않음
-- [ ] (선택) 초등학교 통학구역 SHP → `school_zones.geojson`
-- [ ] 줌 15 미만은 클러스터, 16 이상은 이름 표시
-- [ ] 반경 측정 도구: 점을 찍으면 500m 원과 원 안 분류별 개수(사실만, 점수 없음)
-- [ ] 겹침 보기 연동: `within_impact` 속성을 빌드 때 계산
+- [x] 원천 확인(1단계): 상가 API `storeListInDong`(numOfRows 최대 1000)·업종 코드 오퍼레이션 3종(`pipeline/check_infra_api.py`), CSV 5종(CP949). 원본 `data_raw/12.생활인프라/`는 `.gitignore`
+- [x] `pipeline/fetch_pois.py`(멱등·이어받기, 원 응답 `build/pois_raw/`, 리포트 `build/pois_report.json`) → `schools.geojson`·`stations.geojson`·`bus_stops.geojson`·`bus_routes.json`·`pois_{분류}.geojson`(편의시설이 1MB를 넘어 6개로 나눔, 켠 분류만 불러옴)
+- [x] 편의시설 분류표 `seed/poi_categories.yaml` 확정(D1): 6분류 + 하위 분류(병원·의원: 병원/의원/치과/한방, 학원: 교과/외국어/예체능·기타), 싣지 않는 업종은 `excluded`
+- [x] 정류장: WGS84 그대로(D2), ARS마다 한 점(같은 이름도 따로), 가상정류장·선착장 제외(D4), 노선 연결은 서울 정류장 마스터에 있는 정류장만(D3). 지하철역: 괄호 뺀 이름이 같고 300m 안이면 한 역(D5, 삼성 = 삼성 + 삼성(무역센터))
+- [x] 지도: 흰 원형 칩 + lucide 아이콘(잉크 한 색), 학교·편의시설 줌 15 미만 클러스터·16 이상 이름, 역 이름 줌 13, 정류장 줌 15(이름 17), 중앙차로만 굵은 테두리. 학교·역 기본 켜짐
+- [x] 노선 선택 모드(`?route=`): 그 노선의 강남구 정류장만 강조, 상단 칩, 선 없음, 유형은 글자 배지
+- [x] 반경 보기(`?r=lon,lat,m`, 250·500m, 하버사인, 경계 포함): 학교(학교급별)·역·정류장 수·이름 수·노선 수(유형별)·편의시설(하위 분류 괄호)·단지 수·사업 구역
+- [x] 인스펙터(학교·역·정류장·편의시설), 검색(역·학교 / 5자리 정류장 번호 / 노선 번호), 겹침 보기 4종, 클릭 히트 반경 12px(정류장 8px)
+- [ ] (선택, 범위 밖) 초등학교 통학구역 SHP → `school_zones.geojson`
 
 ```text
 @docs/map/PLAN.md 의 P18 '생활 인프라'를 진행해 줘. Plan 모드로 계획부터.
@@ -610,7 +615,7 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 - 레이어마다 manifest.json에 원천·기준일·건수·라이선스를 적어.
 ```
 
-완료 확인: 레이어 건수 = 원자료의 강남구 건수 / 줌·이동 중 끊김 없음(Chrome 성능 패널) / 스크린샷 `map_05_poi.png`
+완료 확인: M24 원천 4종 100% / 줌·이동 프레임(GPU) 정류장·편의시설 모두 켬 평균 16.9ms·p95 16.8ms / 스크린샷 `map_06a_poi.png`~`map_06e_bus_route.png`
 
 ### P19 하단 타임라인·고시 피드 (2일)
 
@@ -675,6 +680,8 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 | M21 필지 클릭 조회 (`--live`) | 지번 5건을 누른 결과의 PNU가 정답과 같은 비율, 응답 p95 | 100%, p95 2초 이하 |
 | M22 단지 위치 매칭률 | 필지 경계를 찾은 실거래 단지 ÷ 실거래 단지 (aptSeq·PNU 기준) | 90% 이상 |
 | M23 거래 연결률 | 위치가 있는 단지에 연결된 거래 ÷ 강남구 아파트 거래 | 95% 이상 |
+| M24 생활 인프라 건수 일치 | 원천마다 레이어 건수 ÷ (원자료 강남구 건수 − 사유가 기록된 제외). 학교·지하철역·버스정류장·편의시설 | 4종 각각 100% |
+| (참고) 버스 노선 연결률 | 노선-정류장 행 중 서울 정류장 마스터에 있는 정류장 51.2% · 노선이 연결된 강남구 정류장 99.7%(607/609) | 목표 없음 |
 | (참고) 기본 정보 연결 | 기본 정보가 연결된 단지 수 / 공동주택 단지 목록 수(강남구 236) | 목표 없음 |
 
 | 리스크 | 나타나는 신호 | 대응 |
@@ -712,6 +719,14 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 - [MapLibre GL JS v6: WebGL2 필수·ESM 전용 (malagis)](https://geo.malagis.com/maplibre-gl-js-v6-mandatory-webgl-and-esm-only.html)
 - [MapLibre 뉴스레터 2026년 7월](https://maplibre.org/news/2026-08-02-maplibre-newsletter-jul-2026/)
 - [react-map-gl · What's new](https://visgl.github.io/react-map-gl/docs/whats-new) — 8.1 계열의 MapLibre v4·v5·v6 지원
+- [Vercel · Python runtime: Controlling what gets bundled](https://vercel.com/docs/functions/runtimes/python) — 빌드 때 닿는 파일을 모두 묶음, 한도 500MB(압축 해제)
+- [Vercel · vercel.json functions](https://vercel.com/docs/project-configuration/vercel-json#functions) — `excludeFiles` (P18-0: `web/**` 제외)
+
+**생활 인프라 (P18)**
+
+- [소상공인시장진흥공단 상가(상권)정보 API](https://www.data.go.kr/data/15012005/openapi.do) — 이용허락범위 제한 없음
+- [전국초중등학교위치표준데이터](https://www.data.go.kr/data/15021148/standard.do) — 이용허락범위 확인 필요
+- [서울시 역사마스터 정보 OA-21232](https://data.seoul.go.kr/dataList/OA-21232/S/1/datasetView.do) · [정류장마스터 OA-21231](https://data.seoul.go.kr/dataList/OA-21231/S/1/datasetView.do) · [노선마스터 OA-21230](https://data.seoul.go.kr/dataList/OA-21230/S/1/datasetView.do) · [노선 정류장마스터 OA-21233](https://data.seoul.go.kr/dataList/OA-21233/S/1/datasetView.do) — 공공누리 1유형 (2026-11-11 확인, 데이터 갱신일 2026.11.02)
 
 **Claude Code**
 
