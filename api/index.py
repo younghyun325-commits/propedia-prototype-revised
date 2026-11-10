@@ -93,19 +93,41 @@ def map_parcel_at(lat: float, lon: float):
         con.close()
 
 
+WMS_CACHE = "public, max-age=86400, s-maxage=604800"   # 성공 타일만 (브라우저 1일, CDN 7일)
+NO_STORE = {"Cache-Control": "no-store"}                # 오류는 캐시하지 않는다
+
+
 @app.get("/api/v1/map/wms/{layer}/{z}/{x}/{y}.png")
-def map_wms_tile(layer: str, z: int, x: int, y: int):
-    """공식 참고 WMS 타일 (P15). 브이월드 WMS는 CORS 헤더가 없어 서버 키로 받아 그대로 돌려준다. 저장하지 않는다."""
+def map_wms_tile(layer: str, z: int, x: int, y: int, size: int | None = None, format: str | None = None):
+    """공식 참고 WMS 타일 (P15·P16 0단계). 브이월드 WMS는 CORS 헤더가 없어 서버 키로 받아 그대로 돌려준다. 저장하지 않는다.
+    허용 목록(레이어 3종·강남구 경계 + 2km·크기 256/512·image/png·지적도 0.6m/px 이하) 밖이면 400. 응답에 키·원 URL을 넣지 않는다."""
+    bad = map_mod.wms_request_error(layer, z, x, y, size, format)
+    if bad:
+        raise HTTPException(status_code=400, detail=bad, headers=NO_STORE)
     live = live_mod.default()
     if live is None:
-        raise HTTPException(status_code=503, detail="실시간 조회를 쓰지 않는 설정입니다")
-    r = live.wms_tile(layer, z, x, y)
+        raise HTTPException(status_code=503, detail="실시간 조회를 쓰지 않는 설정입니다", headers=NO_STORE)
+    r = live.wms_tile(layer, z, x, y, size=size)
     if r["status"] == "bad_request":
-        raise HTTPException(status_code=400, detail=r["note"])
+        raise HTTPException(status_code=400, detail=r["note"], headers=NO_STORE)
     if r["status"] != "ok":
-        raise HTTPException(status_code=504 if r["status"] == "timeout" else 502, detail="참고 WMS 타일을 받지 못했습니다")
-    return Response(content=r["content"], media_type=r["content_type"],
-                    headers={"Cache-Control": "public, max-age=86400"})
+        raise HTTPException(status_code=504 if r["status"] == "timeout" else 502,
+                            detail="참고 WMS 타일을 받지 못했습니다", headers=NO_STORE)
+    return Response(content=r["content"], media_type=r["content_type"], headers={"Cache-Control": WMS_CACHE})
+
+
+@app.get("/api/v1/map/feature/{kind}/{fid}")
+def map_feature(kind: str, fid: str, as_of: str | None = None):
+    """인스펙터 내용 (P16). 사업 = progress(), 규제 = applicability_rules 항목, 필지 = /map/parcel과 같은 조립.
+    as_of(YYYY-MM-DD)를 주면 그날 기준 기한·효력 상태 (P19 타임라인)."""
+    day = _as_of(as_of)
+    con = _con()
+    try:
+        return map_mod.map_feature(con, kind, fid, live_mod.default() if kind == "parcel" else None, day)
+    except map_mod.FeatureNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e)) from None
+    finally:
+        con.close()
 
 
 @app.get("/api/v1/map/parcel")

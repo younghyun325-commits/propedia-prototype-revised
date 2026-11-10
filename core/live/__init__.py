@@ -28,9 +28,9 @@ class Live:
         from core.live import vworld
         return vworld.parcel_at(lat, lon, fetch=self.fetch, allowed_bjd=allowed_bjd)
 
-    def wms_tile(self, layer: str, z: int, x: int, y: int) -> dict:
+    def wms_tile(self, layer: str, z: int, x: int, y: int, size: int | None = None) -> dict:
         from core.live import vworld
-        return vworld.wms_tile(layer, z, x, y)
+        return vworld.wms_tile(layer, z, x, y, size=size)
 
     def parcel_by_pnu(self, pnu: str, allowed_bjd=None) -> dict:
         from core.live import vworld

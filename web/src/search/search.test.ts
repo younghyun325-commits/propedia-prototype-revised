@@ -4,7 +4,7 @@ import { addressQuery, normQuery, pushRecent, searchProjects } from './search'
 
 const base = {
   feature_id: '', aliases: [], project_type_label: '', position_label: '', stage_seq: 1, stage_total: 13,
-  stage_title: '', status_badge: '', deadline: null, representative_pnu: null, bbox: null,
+  stage_title: '', status_badge: '', status_badges: [], stage_note: null, deadline: null, representative_pnu: null, bbox: null,
   parcels: { included: 0, possible: 1, likely: 0 }, parcels_unverified: 1, unverified: true, hover_line: '',
 }
 const P: MapProject[] = [

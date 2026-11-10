@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { EvidenceItem } from '../api/feature'
 import type { ParcelAt } from '../api/parcel'
 import type { BasemapId } from '../map/basemaps'
 import {
@@ -47,6 +48,8 @@ export type MapState = {
   /** 현재 줌 (이동이 끝날 때) — 줌 조건이 있는 레이어 안내용 */
   zoom: number | null
   parcel: ParcelLookup
+  /** 원문 보기 모달 (P16): 근거 목록과 지금 보는 칸. 열린 동안 지도 단축키는 쉰다 */
+  evidence: { items: EvidenceItem[]; index: number } | null
 
   toggleLeft: () => void
   toggleRight: () => void
@@ -70,6 +73,9 @@ export type MapState = {
   setSearchHit: (h: Omit<NonNullable<SearchHit>, 'nonce'> | null) => void
   setZoom: (z: number) => void
   setParcel: (p: ParcelLookup) => void
+  openEvidence: (items: EvidenceItem[], index: number) => void
+  setEvidenceIndex: (index: number) => void
+  closeEvidence: () => void
 }
 
 function initialUrlState() {
@@ -99,6 +105,7 @@ export const useMapStore = create<MapState>()((set) => {
     searchHit: null,
     zoom: u.camera?.zoom ?? null,
     parcel: { status: 'idle', reqId: 0 },
+    evidence: null,
 
     toggleLeft: () => set((s) => ({ leftOpen: !s.leftOpen })),
     toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
@@ -136,5 +143,10 @@ export const useMapStore = create<MapState>()((set) => {
     setSearchHit: (h) => set({ searchHit: h ? { ...h, nonce: ++nonce } : null }),
     setZoom: (zoom) => set({ zoom }),
     setParcel: (parcel) => set({ parcel }),
+    openEvidence: (items, index) =>
+      set(items.length ? { evidence: { items, index: Math.max(0, Math.min(items.length - 1, index)) } } : {}),
+    setEvidenceIndex: (index) =>
+      set((s) => (s.evidence ? { evidence: { ...s.evidence, index: Math.max(0, Math.min(s.evidence.items.length - 1, index)) } } : {})),
+    closeEvidence: () => set({ evidence: null }),
   }
 })

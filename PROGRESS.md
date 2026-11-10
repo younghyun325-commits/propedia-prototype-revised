@@ -1,6 +1,54 @@
 # 진행 기록
-현재 단계: P15 공식 참고 레이어·필지 클릭 조회 완료 (2026-11-10, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P16 우측 인스펙터
+현재 단계: P16 우측 인스펙터 완료 (2026-11-10) — 첫 시연(관문 1) 가능. 다음은 docs/map/PLAN.md P17 아파트 단지·실거래
 
+
+## P16 우측 인스펙터 — 완료 (2026-11-10) · 첫 시연(관문 1) 가능
+지도에서 누른 사업 구역·규제 구역·필지의 사실을 근거(문서·쪽·기준일)와 함께 우측 인스펙터에 보여 준다. 새 계산 없이 사업 = `progress()`, 규제 = `load_items()`(효력 판정 `timeutil.effective`), 필지 = `parcel_by_pnu()`/`_assemble()`(→ `lookup_pnu`)을 고르고 묶기만 한다. 새로 계산하는 값은 지시된 '남은 단계 수 = 템플릿 단계 수 − 현재 단계 번호' 하나.
+
+### 0. 정리
+- **0-1 WMS 프록시** (`core/map.wms_request_error`, `core/live/vworld.wms_check`, `api/index.py`): 검사 먼저(400) → 실시간 설정(503). 허용 = 레이어 3종(`lt_c_uq111`·`lt_c_upisuq161`·`lp_pa_cbnd_bubun`) · 타일 경위도 범위가 강남구 경계 bbox(`public/data/base/gangnam.geojson`) + 2km 안 · `?size=` 256/512 · `?format=` image/png · 지적도 0.6m/px 이하(z17 + 512px). 성공만 `Cache-Control: public, max-age=86400, s-maxage=604800`, 오류(400/502/503/504)는 `no-store`. `LiveError` 메시지(원 URL·키 가능)를 응답 note에 넣던 것을 '참고 WMS 응답 오류/시간 초과'로 바꿈. 브라우저 WMS 소스에 `bounds`(강남구 bbox)를 넣어 범위 밖 타일을 요청하지 않음 — 강남구 bbox에 걸친 z14~17 타일은 모두 허용 범위 안 `[확인]`
+  - `tests/test_map_wms.py` 16개: 허용 밖 레이어·대소문자·강남구 밖(부산)·줌 미만·size 300·jpeg·지적도 z16·z17/256 → 400+한국어+no-store+브이월드 호출 0 / 정상 200·image/png·캐시 값 정확히 / 업스트림 시간 초과·오류·XML 응답 → 504/502 no-store / 가짜 키·도메인이 본문·헤더에 없음
+  - HUMAN_TODO 43: Vercel은 CDN에 없는 타일마다 함수 실행, Preview에서 같은 타일 두 번 요청해 `x-vercel-cache: HIT` 확인
+- **0-2 지표 번호** (PLAN.md): M21 = 필지 클릭 조회 확정, 단지 매칭률 M22·거래 연결률 M23 (P17 할 일·완료 확인, P20 회귀 M1~M23, 검증 문단 '지표 5개(M19~M23)', 지표 표에 M21 행 추가). 저장소에서 다른 M22·M23 언급 없음
+- **0-3 라이선스**: PLAN '먼저 정해야 할 것' ① → '서울플랜+·의제처리구역 SHP(둘 다 공공누리 4유형)'. manifest `ref_seoulplan`·`ref_uije` license 둘 다 '공공누리 4유형(출처표시·상업적 이용금지·변경금지)' — `tests/test_map.py`(기존)·ui_check_map 데이터 상태 탭 2행 확인
+- **0-4 HUMAN_TODO**: 44 추가(저장소 공개·이전 전 P10(d57a54b) 이후 이력의 지오코더 응답 정리), 41에 'P20 직전 교체 + import_reference IoU 비교 다시'
+
+### 1. API `GET /api/v1/map/feature/{kind}/{id}?as_of=` (`core/map.map_feature`)
+- 공통: `kind, id, title, subtitle, kind_label, badges[{text,tone}], unverified, as_of(요청 기준일, 기본 KST 오늘), data_as_of, bbox, sections, evidence[], disclaimer`. `evidence[]` = 화면의 모든 출처 줄을 (문서, 쪽, 근거 문장)으로 한 번씩: `doc_id, short_title, title, gosi_no, published_at, pdf_page, page_label, evidence, page_image, docs_url(/docs.html?doc=&page=), label` → 원문 모달 이전/다음
+- project: `sections.progress` = progress() 그대로(+ 단계별 템플릿 `what_happens`/안내·`template_status`), `stepper{total, current_seq, remaining_stages, position_label, next_title}`, `status_badges`, `boundary`(경계 근거 쪽 = GeoJSON `source_page`, D1 18쪽·D9 12쪽 결정도), `parcels`(필지마다 기존 `parcel_projects()` 판정·basis_label·review_id·source + 지번·bbox), `history`(단계 근거 + 묶인 문서 + 관련 고시, 날짜 내림차순)
+- regulation (`D10` 또는 `D10-01`, 문서 종류 designation·restriction·press만): 종류·고시번호·발행·효력 기간·상태(as_of 기준)·대상 기준·요약·근거 문장·more_evidence. 지도 경계 있으면 `boundary`, D5는 `boundary_note` = '경계 확인 전, 법정동(압구정동) 단위로만 표시'(기존 상수). D6·D7·D8(서울 전역)도 열림
+- parcel (19자리 PNU 또는 `사업:PNU`): `parcel_by_pnu()` 그대로. 실시간 조회가 없거나 unavailable·timeout이면 같은 `_assemble()`을 경계 없이(빌드 캐시) + `boundary_note`. 강남구 밖·없는 필지 → 404
+- `_assemble`(= /map/parcel-at에도)에 `layer_items`(층별 항목, lookup 결과에서 고르기만)·`project_banner`·`evidence` 추가. 기존 키는 그대로, lookup 스냅숏 15건 바이트 동일 테스트 통과
+- `map_projects`에 `status_badges` 추가(기존 `status_badge` 유지): 공람 기한 open → '공람 중', closed → '공람 마감', 단계 메모에 '승인'(확인 문서 없음) → '승인 고시 미확인'. 2026-11-10: 한양7차 [공람 마감] / 대청마을 [공람 마감, 승인 고시 미확인]
+- 없는 kind·id 404(한국어), as_of 형식 오류 400. 사업·규제 p95 ≤ 300ms(pytest 20회)
+
+### 2~6. 화면 (`web/src`)
+- `inspector/Inspector.tsx`(따로 불러오는 청크): 머리 sticky(종류 배지·이름·공식 이름·기준일·자료일·상태 배지·'확인 전'·링크 복사·닫기), 탭 role=tablist(←/→/Home/End, 사업 = 개요·근거·필지·이력 / 규제 = 개요·근거·이력 / 필지 = 개요·근거), 스켈레톤·오류·빈 상태, 패널 안 스크롤. 빈 곳 클릭·URL 복원 필지(`sel=parcel:{PNU}`)는 기존 parcel-at 결과(store) 그대로
+- `ProjectView`: 스테퍼 + 단계 근거 줄, 상태 배지·세부 상태·단계 메모, 지금/다음 단계(템플릿 문구 또는 '법령 대조 후 사람이 작성' 안내, '법령 대조 전 초안'), 기한 카드(D-n / 마감(YYYY.MM.DD)·기간·제출 방법·장소·출처), 남은 기간 '비교할 사례가 부족합니다' + 계산 방법 참고, 고시 수치 표(항목·값 tabular-nums·출처 줄), 구역 경계 근거 / 필지 탭(실선·점선 아이콘, '사람 확인 전 (검수 n)', 행 → 기존 검색 강조 레이어로 강조 + 그 필지로 이동, 선택은 사업 유지) / 이력 탭
+- `RegulationView`: 효력 기간 막대(`inspector/period.ts`, 시작~끝 + 오늘 선, 끝 없으면 열린 막대) + API 상태 배지, 종류·고시번호·적용 범위·대상 기준·요약·근거 문장·출처 줄, '지도에서 보기'(경계 bbox로 이동) 또는 경계 안내
+- `ParcelView`(P15 `ParcelLookupCard` 대체·삭제): 맨 위 사업 줄('한양7차아파트 재건축 사업 구역 필지 · 포함된 것으로 보임 · 사람 확인 전 (검수 17)'), 토지 정보 카드(출처 '브이월드… · 조회일'), 건축물 요약, 걸린 고시 층별 건수 → 펼치면 항목·효력·출처 줄, 주변 500m 사업(누르면 그 사업 선택·이동), 참고 구역(참고·비상업 배지·출처·라이선스)
+- `ui/EvidenceLine`('D1 · 4쪽 · 2026-10-06', 누르면 모달), `ui/EvidenceModal`(따로 불러오는 청크, #portal-root 포털, role=dialog aria-modal, 포커스 가두기·Esc(캡처 단계, 지도 선택 해제 안 함)·포커스 복귀, 휠·핀치·끌기·+/−/원래 크기·키보드 확대 이동, 근거 문장·문서 제목·고시번호·발행일·PDF/인쇄 쪽, '문서 DB에서 보기', 근거 목록 이전/다음), `ui/Stepper`(지난 = 채움, 현재 = 브랜드 색 강조, 남은 = 빈 칸 / 단계 툴팁 = 템플릿 설명·'법령 대조 전 초안'), 사업 목록 카드도 같은 `MiniStepper` + 상태 배지
+- `map/Callout.tsx` + `map/calloutPlace.ts`: 선택한 사업·규제 bbox 중심에 미니 카드(이름·단계·기한 / 효력 기간·상태)와 연결선, move마다 다시 배치, 보이는 영역 밖이면 숨김, 우측 패널과 겹치면 왼쪽. 선택한 도형의 지도 라벨은 콜아웃과 같은 내용이라 숨김
+- 상단 고시 칩 팝오버에 '인스펙터에서 보기' → `sel=regulation:D6` 등
+- 문구는 모두 `copy/ui.ts`(금지어 검사 통과). 파일 이름 대소문자 충돌(Windows): 콜아웃 순수 함수는 `calloutPlace.ts`
+
+### 7. `DEMO_MAP.md` 초안
+5분 6단계(고시 칩 → 레이어 패널·참고 레이어 → 대청마을 8단계 중 1번째·기한·D9 12쪽 결정도 → 한양7차 13단계 중 2번째·마감(2026.11.06)·필지 탭 528 → 역삼동 823 빈 곳 클릭 → 마무리). 단계마다 누를 곳·말할 것·안 될 때(브이월드 응답이 오래 걸리면 시연 주소 '일원동 619'·`?sel=…` 탭). 금지어 없음
+
+### 완료 확인 (2026-11-10)
+- 0단계: `pytest tests/test_map_wms.py` 16 passed. PLAN.md 지표 번호 diff는 위 0-2
+- `pytest -q` **198 passed** (전 156 + WMS 16 + 인스펙터 26, 기존 P15 WMS 테스트는 강남구 안 타일 번호로 바꿈)
+- `npm --prefix web run test` **72 passed** (8파일, 새 `ui/p16.test.ts`: Stepper 렌더 지난·현재·남은 / 모달 Tab 순환·키 / 확대·이동 / 효력 기간 막대 / 콜아웃 배치)
+- `npm --prefix web run build`: 초기 JS `index` **95.76 kB gzip**(예산 400KB), `Inspector` 29.5 kB(7.8 kB gzip)·`EvidenceModal` 9.8 kB(3.5 kB gzip) 따로 나뉜 청크, MapView 313 kB gzip(기존과 같은 지연 청크)
+- `python -m evals.run_eval`: M1~M20 직전과 같음(M10 시간만 7→6ms). `--live`: M18 20/20 p95 312ms, **M21 5/5 p95 224ms**. 커밋한 report.md는 기존처럼 비실시간 실행본
+- `tests/ui_check_map.py` 개발 서버 3000 **94/94**, `--built` 8000 **94/94**, 콘솔 오류 0. P16 점검 25개(한양7차 구역 클릭 → '재건축 13단계 중 2번째 · 앞으로 11단계 · 다음: 정비구역 지정 고시'·'마감(2026.11.06)', 스테퍼 13칸, 툴팁, 고시 수치, 콜아웃·겹침 없음, 탭 키보드, 대비 ≥4.5, 원문 모달 이미지·aria-modal·포커스 가두기·확대·다음·Esc·포커스 복귀, 필지 탭 528 → 강조·이동, 대청마을 '모아타운 8단계 중 1번째'·D9 12쪽, D10 효력 막대·오늘·'지도에서 보기', `sel=parcel:1:528` 사업 줄, 역삼동 823 정식 카드, `sel=project:1` 공유, 고시 칩 → 인스펙터, 상태 배지, 4유형 2행). P14 '자리표시(P16)' 점검은 '선택 → 인스펙터에 그 사업'으로 바꿈
+- 스크린샷: `docs/screens/map_04a_project_hanyang.png`, `map_04b_project_daecheong.png`, `map_04c_evidence_modal.png`, `map_04d_regulation_d10.png`, `map_04e_parcel_528.png` (기존 map_02*·03* 도 --shot으로 다시 찍힘)
+
+### 남은 것
+- Vercel Preview에서 WMS 타일 CDN 적중 확인(HUMAN_TODO 43), push 전 확인 받기
+- 인스펙터의 as_of 선택(타임라인)은 P19. API는 `?as_of=` 지원
+- URL `sel=parcel:1:{PNU}`로 처음 열 때는 지도가 그 필지로 이동하지 않음(카메라 `c`·`z`가 같이 공유되면 같은 화면). 필요하면 P20
+- 단계 설명 문구(what_happens)·법령 근거는 여전히 비어 있음(HUMAN_TODO 2) — 툴팁은 안내 문구로 표시
 
 ## P15 공식 참고 레이어·필지 클릭 조회 — 완료 (2026-11-10)
 서울시 공식 공간정보 2종과 브이월드 WMS 3종을 '참고' 레이어로 올리고, 지도 빈 곳을 누르면 그 필지의 토지 정보·걸린 고시·주변 사업·참고 구역이 나오게 했다. 카드 디자인 완성은 P16.

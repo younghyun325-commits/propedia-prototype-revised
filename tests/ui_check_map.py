@@ -277,7 +277,9 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     page.keyboard.press("Enter")
     ok = _wait_url(page, lambda u: _q(page, "sel") == "project:1")
     check("[P14] '한양' → 사업 결과 → sel=project:1", has_proj and ok, f"sel={_q(page, 'sel')}")
-    check("[P14] 선택 → 인스펙터 자리표시(P16)", "P16" in _text(page, "[data-testid=inspector-selected]"))
+    page.wait_for_selector("[data-testid=inspector-title]", timeout=8000)
+    check("[P14→P16] 선택 → 인스펙터에 그 사업", _text(page, "[data-testid=inspector-title]") == "한양7차아파트 재건축",
+          _text(page, "[data-testid=inspector-title]"))
     page.keyboard.press("Escape")
     check("[P14] Esc → 선택 해제", _wait_url(page, lambda u: _q(page, "sel") is None))
 
@@ -546,6 +548,258 @@ def p15_checks(page, url: str, check, shot: bool, tiles: dict, built: bool) -> N
           st3 == "ok" and any("은마아파트" in z and "참고" in z and "공공누리" in z for z in zones), f"{st3} {zones[:3]}")
 
 
+# ==== P16 우측 인스펙터 ====
+SHOT_P16 = {k: SCREENS / f"map_04{k}.png" for k in
+            ("a_project_hanyang", "b_project_daecheong", "c_evidence_modal", "d_regulation_d10", "e_parcel_528")}
+PNU_528 = "1168011000105280000"
+JS_CONTRAST = """(sels) => { const lum = (c) => { const m = c.match(/[\\d.]+/g).map(Number);
+    const f = v => (v /= 255) <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]) };
+  const out = {};
+  for (const s of sels) { const e = document.querySelector(s); if (!e) { out[s] = null; continue }
+    const L = lum(getComputedStyle(e).color); out[s] = Math.round((1.05 / (L + 0.05)) * 100) / 100 }
+  return out }"""
+
+
+def _p16_points() -> dict:
+    """사업 구역·규제 구역 안에서 다른 Propedia 도형과 겹치지 않는 점 (선택 목록 없이 바로 선택되게)."""
+    import json as _json
+
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+    lay = ROOT / "public" / "data" / "layers"
+
+    def fc(n):
+        return _json.loads((lay / f"{n}.geojson").read_text(encoding="utf-8"))["features"]
+    parcels = unary_union([shape(f["geometry"]) for f in fc("propedia_parcels")])
+    projs = {f["properties"]["id"]: shape(f["geometry"]) for f in fc("propedia_projects")}
+    regs = {f["properties"]["id"]: shape(f["geometry"]) for f in fc("propedia_regulations")}
+    others = unary_union(list(projs.values()) + [parcels])
+    p1 = projs["project:1"].difference(parcels.buffer(0.00003)).representative_point()
+    d10 = regs["regulation:D10"].difference(others.buffer(0.00003)).representative_point()
+    c528 = next(f["properties"] for f in fc("propedia_parcels") if f["properties"]["pnu"] == PNU_528)
+    return {"project1": (p1.x, p1.y), "d10": (d10.x, d10.y), "p528": (c528["centroid_lon"], c528["centroid_lat"])}
+
+
+def _inspector_ready(page, timeout=12000) -> bool:
+    try:
+        page.wait_for_selector("[data-testid=inspector-title]", timeout=timeout)
+        page.wait_for_function("() => !document.querySelector('[data-testid=inspector-loading]')", timeout=timeout)
+        return True
+    except Exception:
+        return False
+
+
+def _click_map(page, lon: float, lat: float, z: float, want: str) -> str | None:
+    """지도 점을 누르고, 겹친 도형 선택 목록이 뜨면 want를 고른다 → URL sel"""
+    page.evaluate(JS_JUMP, [lon, lat, z])
+    page.evaluate(JS_IDLE)
+    page.mouse.click(*page.evaluate(JS_PT, [lon, lat]))
+    page.wait_for_timeout(300)
+    if page.locator("[data-testid=pick-list]").count():
+        page.click(f"[data-testid=pick-item][data-id='{want}']")
+    _wait_url(page, lambda u: _q(page, "sel") == want, 4000)
+    return _q(page, "sel")
+
+
+def p16_checks(page, url: str, check, shot: bool) -> None:
+    pts = _click_points() | _p16_points()
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+
+    # ---- 1. 한양7차 구역 클릭 → 13단계 중 2번째, 마감(2026.11.06), 콜아웃
+    _open(page, home)
+    sel = _click_map(page, *pts["project1"], 16.2, "project:1")
+    ok = _inspector_ready(page)
+    line = _text(page, "[data-testid=stepper-line]")
+    dday = _text(page, "[data-testid=deadline-dday]")
+    check("[P16] 한양7차 구역 클릭 → 인스펙터 '재건축 13단계 중 2번째 · 앞으로 11단계 · 다음: 정비구역 지정 고시'",
+          ok and sel == "project:1" and "재건축 13단계 중 2번째 · 앞으로 11단계 · 다음: 정비구역 지정 고시" in line,
+          f"sel={sel} '{line}'")
+    check("[P16] 한양7차 기한 '마감(2026.11.06)'·남은 기간 '비교할 사례가 부족합니다'",
+          "마감(2026.11.06)" in dday and _text(page, "[data-testid=project-remaining]") == "비교할 사례가 부족합니다", dday)
+    cells = page.eval_on_selector_all("[data-testid=stepper-cell]", "es => es.map(e => e.dataset.state)")
+    check("[P16] 스테퍼 13칸: 지난 1 · 현재 1 · 남은 11", len(cells) == 13 and cells.count("done") == 1
+          and cells.index("current") == 1 and cells.count("upcoming") == 11, str(cells))
+    page.focus("[data-testid=stepper-cell] >> nth=1")
+    page.wait_for_timeout(200)
+    tip = _text(page, "[data-testid=stepper-tooltip]")
+    check("[P16] 단계 툴팁: 단계 설명 안내 + '법령 대조 전 초안'", "법령 대조 전 초안" in tip and "정비계획" in tip,
+          tip.replace("\n", " "))
+    facts = _text(page, "[data-testid=project-facts]")
+    check("[P16] 고시 수치 표: 항목·값·출처 줄", "D1 ·" in facts and "쪽" in facts and len(facts.splitlines()) >= 3, facts[:120])
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(300)
+    co = page.locator("[data-testid=callout]")
+    side = co.get_attribute("data-side") if co.count() else None
+    cot = _text(page, "[data-testid=callout]")
+    check("[P16] 지도 콜아웃: 이름·단계·기한", side in ("left", "right") and "13단계 중 2번째" in cot
+          and "마감(2026.11.06)" in cot, f"side={side} '{cot}'")
+    bx = co.bounding_box() if co.count() else None
+    rp = page.locator("[data-testid=right-panel]").bounding_box()
+    check("[P16] 콜아웃이 우측 인스펙터와 겹치지 않음", bool(bx and rp) and bx["x"] + bx["width"] <= rp["x"], f"{bx} {rp}")
+    tl = page.get_attribute("[data-testid=inspector-tabs]", "role")
+    tabs = page.eval_on_selector_all("[data-testid=inspector-tabs] [role=tab]",
+                                     "es => es.map(e => [e.textContent, e.getAttribute('aria-selected')])")
+    check("[P16] 탭 role=tablist: 개요·근거·필지·이력", tl == "tablist" and [t for t, _ in tabs] == ["개요", "근거", "필지", "이력"]
+          and tabs[0][1] == "true", str(tabs))
+    page.focus("[data-testid=inspector-tab-overview]")
+    page.keyboard.press("ArrowRight")
+    k1 = page.get_attribute("[data-testid=inspector-tab-evidence]", "aria-selected")
+    page.keyboard.press("End")
+    k2 = page.get_attribute("[data-testid=inspector-tab-history]", "aria-selected")
+    hist = _text(page, "[data-testid=history-list]")
+    check("[P16] 탭 키보드(→·End) + 이력 탭 시간순·출처 줄",
+          k1 == "true" and k2 == "true" and "2026.10.06" in hist and "D1 ·" in hist, f"{k1} {k2} {hist[:80]!r}")
+    page.keyboard.press("Home")
+    ratio = page.evaluate(JS_CONTRAST, ["[data-testid=stepper-line]", "[data-testid=inspector-as-of]",
+                                        "[data-testid=evidence-line]", "[data-testid=inspector-title]"])
+    check("[P16] 글자 대비 4.5:1 이상 (흰 바탕 기준)", all(v is not None and v >= 4.5 for v in ratio.values()), str(ratio))
+    if shot:
+        page.screenshot(path=str(SHOT_P16["a_project_hanyang"]))
+
+    # ---- 2. 출처 줄 → 원문 모달 (이미지·근거·문서 DB 링크·이전/다음·포커스 가두기·Esc·포커스 복귀)
+    page.locator("[data-testid=project-deadline] [data-testid=evidence-line]").first.click()
+    page.wait_for_selector("[data-testid=evidence-modal]", timeout=5000)
+    page.wait_for_function("() => document.querySelector('[data-testid=evidence-image]')?.dataset.state === 'ok'",
+                           timeout=8000)
+    nat = page.evaluate("() => document.querySelector('[data-testid=evidence-image]').naturalWidth")
+    am = page.get_attribute("[data-testid=evidence-modal]", "aria-modal")
+    dl = page.get_attribute("[data-testid=evidence-docs-link]", "href") or ""
+    src = page.get_attribute("[data-testid=evidence-image]", "src") or ""
+    check("[P16] 출처 줄 클릭 → 원문 모달(aria-modal)에 쪽 이미지·근거·'문서 DB에서 보기'",
+          am == "true" and nat > 0 and src.startswith("/pages/D1/") and dl.startswith("/docs.html?doc=D1&page="),
+          f"{am} {src} {dl}")
+    if shot:
+        page.screenshot(path=str(SHOT_P16["c_evidence_modal"]))
+    inside = True
+    for _ in range(12):
+        page.keyboard.press("Tab")
+        inside = inside and page.evaluate("() => !!document.activeElement.closest('[data-testid=evidence-modal]')")
+    page.keyboard.press("+")
+    z = _text(page, "[data-testid=evidence-zoom]")
+    pos0 = _text(page, "[data-testid=evidence-position]")
+    page.click("[data-testid=evidence-next]")
+    pos1 = _text(page, "[data-testid=evidence-position]")
+    check("[P16] 모달: Tab 포커스가 모달 안에 갇힘, + 확대, 다음 근거로 이동",
+          inside and z != "100%" and pos0 != pos1, f"{inside} {z} {pos0}→{pos1}")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(200)
+    gone = page.locator("[data-testid=evidence-modal]").count() == 0
+    back = page.evaluate("() => document.activeElement?.dataset?.testid")
+    check("[P16] Esc → 모달 닫힘, 선택 유지(sel=project:1), 포커스는 연 출처 줄로",
+          gone and _q(page, "sel") == "project:1" and back == "evidence-line", f"{gone} sel={_q(page, 'sel')} focus={back}")
+
+    # ---- 3. 필지 탭 528 행 → 지도 강조·이동
+    page.click("[data-testid=inspector-tab-parcels]")
+    row = page.locator(f"[data-testid=project-parcel-row][data-pnu='{PNU_528}']")
+    rtxt = row.inner_text() if row.count() else ""
+    page.evaluate(JS_JUMP, [127.06, 37.49, 13])
+    page.evaluate(JS_IDLE)
+    row.click()
+    page.wait_for_timeout(900)
+    page.evaluate(JS_IDLE)
+    flt = page.evaluate("() => window.__propediaMap.getFilter('propedia-parcel-search')")
+    c = page.evaluate(JS_CENTER)
+    plon, plat = pts["p528"]
+    near = abs(c[0] - plon) < 0.002 and abs(c[1] - plat) < 0.002 and c[2] >= 16
+    drawn = page.evaluate(JS_RENDERED, ["propedia-parcel-search"])
+    check("[P16] 필지 탭 528 행('포함된 것으로 보임 · 사람 확인 전 (검수 17)') → 지도 강조·이동",
+          "포함된 것으로 보임" in rtxt and "검수 17" in rtxt and PNU_528 in str(flt) and near and drawn > 0,
+          f"{rtxt!r} flt={flt} center={c} drawn={drawn}")
+
+    # ---- 4. 대청마을 구역 → 8단계 중 1번째
+    page.keyboard.press("Escape")
+    sel = _click_map(page, *pts["project2"], 16, "project:2")
+    _inspector_ready(page)
+    line2 = _text(page, "[data-testid=stepper-line]")
+    sub = _text(page, "[data-testid=project-sub-status]")
+    check("[P16] 대청마을 구역 클릭 → '모아타운 8단계 중 1번째'·세부 상태(마감)·단계 메모",
+          sel == "project:2" and "모아타운 8단계 중 1번째" in line2 and "앞으로 7단계" in line2 and "마감" in sub
+          and bool(_text(page, "[data-testid=project-stage-note]")), f"'{line2}' '{sub}'")
+    bev = page.locator("[data-testid=boundary-evidence]")
+    btxt = bev.inner_text() if bev.count() else ""
+    check("[P16] 대청마을 구역 경계 근거 = D9 12쪽 (결정도)", "D9 · 12쪽" in btxt, btxt)
+    if shot:
+        page.screenshot(path=str(SHOT_P16["b_project_daecheong"]))
+
+    # ---- 5. D10 규제 클릭 → 효력 기간 막대·오늘 표시
+    _open(page, with_q + "layers=projects,impact250,impact500,parcels,regulations")
+    sel = _click_map(page, *pts["d10"], 16, "regulation:D10")
+    _inspector_ready(page)
+    st = _text(page, "[data-testid=period-status]")
+    lbl = _text(page, "[data-testid=period-label]")
+    check("[P16] D10 규제 클릭 → 효력 기간 막대 + 오늘 표시 + '효력 기간 중'",
+          sel == "regulation:D10" and page.locator("[data-testid=period-bar]").count() == 1
+          and page.locator("[data-testid=period-today]").count() == 1 and st == "효력 기간 중"
+          and lbl == "효력 기간 2026.04.01 ~ 2028.04.01", f"sel={sel} '{st}' '{lbl}'")
+    if shot:
+        page.screenshot(path=str(SHOT_P16["d_regulation_d10"]))
+    page.evaluate(JS_JUMP, [127.06, 37.49, 13])
+    page.evaluate(JS_IDLE)
+    page.click("[data-testid=regulation-show-on-map]")
+    page.wait_for_timeout(900)
+    page.evaluate(JS_IDLE)
+    c = page.evaluate(JS_CENTER)
+    check("[P16] '지도에서 보기' → 규제 구역으로 이동", c[2] >= 15 and abs(c[0] - pts["d10"][0]) < 0.004, str(c))
+
+    # ---- 6. 사업 필지 528 (URL) → 필지 보기 맨 위 사업 줄
+    _open(page, with_q + f"sel=parcel:1:{PNU_528}")
+    _inspector_ready(page)
+    ban = _text(page, "[data-testid=parcel-banner-text]")
+    check("[P16] sel=parcel:1:528 → '한양7차아파트 재건축 사업 구역 필지 · 포함된 것으로 보임 · 사람 확인 전 (검수 17)'",
+          ban == "한양7차아파트 재건축 사업 구역 필지 · 포함된 것으로 보임 · 사람 확인 전 (검수 17)", ban)
+    if shot:
+        page.evaluate(JS_JUMP, [*pts["p528"], 17.3])
+        page.evaluate(JS_IDLE)
+        page.wait_for_timeout(400)
+        page.screenshot(path=str(SHOT_P16["e_parcel_528"]))
+
+    # ---- 7. 빈 곳 클릭(역삼동 823) → 필지 보기 정식 카드
+    _open(page, home)
+    yl, ya, ypnu = pts["yeoksam"]
+    page.evaluate(JS_JUMP, [yl, ya, 17])
+    page.evaluate(JS_IDLE)
+    page.mouse.click(*page.evaluate(JS_PT, [yl, ya]))
+    stc = _wait_card(page)
+    srcl = _text(page, "[data-testid=parcel-land-source]")
+    if page.locator("[data-testid=parcel-layer-city]").count():
+        page.click("[data-testid=parcel-layer-city]")
+    items = _text(page, "[data-testid=parcel-layer-items]")
+    check("[P16] 빈 곳 클릭 → 정식 필지 카드: 토지 정보(출처 '브이월드 · 기준일')·층별 고시 펼치기(출처 줄)",
+          stc == "ok" and _text(page, "[data-testid=inspector-title]").endswith("역삼동 823") and "브이월드" in srcl
+          and "쪽" in items, f"{stc} '{srcl}' {items[:60]!r}")
+    tabs = page.eval_on_selector_all("[data-testid=inspector-tabs] [role=tab]", "es => es.map(e => e.textContent)")
+    check("[P16] 필지 보기 탭: 개요·근거", tabs == ["개요", "근거"], str(tabs))
+
+    # ---- 8. URL 공유: sel=project:1로 새로 열면 같은 내용
+    _open(page, with_q + "sel=project:1")
+    _inspector_ready(page)
+    check("[P16] URL sel=project:1로 새로 열기 → 같은 인스펙터",
+          _text(page, "[data-testid=inspector-title]") == "한양7차아파트 재건축"
+          and _text(page, "[data-testid=stepper-line]") == line, _text(page, "[data-testid=inspector-title]"))
+
+    # ---- 9. 상단 고시 칩 → 인스펙터, 사업 목록 상태 배지, 데이터 상태 라이선스
+    _open(page, home)
+    page.click("[data-testid=notice-chip] >> nth=0")
+    page.click("[data-testid=notice-open-inspector]")
+    ok_n = _wait_url(page, lambda u: (_q(page, "sel") or "").startswith("regulation:D"))
+    _inspector_ready(page)
+    check("[P16] 상단 고시 칩 → '인스펙터에서 보기' → 규제 보기",
+          ok_n and _text(page, "[data-testid=inspector-kind]") == "규제", f"sel={_q(page, 'sel')}")
+    page.click("[data-testid=left-tab-projects]")
+    page.wait_for_selector("[data-testid=project-card-2]")
+    b1 = page.locator("[data-testid=project-card-1] [data-testid=project-status-badge]").all_inner_texts()
+    b2 = page.locator("[data-testid=project-card-2] [data-testid=project-status-badge]").all_inner_texts()
+    check("[P16] 사업 목록 상태 배지: 한양7차 '공람 마감' / 대청마을 '공람 마감'·'승인 고시 미확인'",
+          b1 == ["공람 마감"] and b2 == ["공람 마감", "승인 고시 미확인"], f"{b1} {b2}")
+    page.click("[data-testid=left-tab-status]")
+    page.wait_for_selector("[data-testid=status-table]")
+    lic = [page.inner_text(f"[data-testid=status-row-{i}]") for i in ("ref-seoulplan", "ref-uije")]
+    check("[P16 0-3] 데이터 상태 탭: 서울플랜+·의제처리구역 모두 '공공누리 4유형'", all("4유형" in t for t in lic),
+          " | ".join(t.replace("\n", " ")[:60] for t in lic))
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
@@ -727,6 +981,7 @@ def main() -> int:
 
         p14_checks(page, url, check, a.shot)
         p15_checks(page, url, check, a.shot, tiles, a.built)
+        p16_checks(page, url, check, a.shot)
 
         if a.built:
             other = [e for e in console_errors if "api.vworld.kr" not in e and "Failed to load resource" not in e]

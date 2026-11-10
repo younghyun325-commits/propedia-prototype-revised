@@ -3,19 +3,7 @@ import type { MapProject } from '../api/map'
 import { UI } from '../copy/ui'
 import { selectProject } from '../state/actions'
 import { useMapStore } from '../state/useMapStore'
-
-function Stepper({ seq, total }: { seq: number; total: number }) {
-  return (
-    <div className="flex items-center gap-0.5" role="img" aria-label={UI.projects.stage(seq, total)}>
-      {Array.from({ length: total }, (_, i) => (
-        <span
-          key={i}
-          className={`h-1.5 flex-1 rounded-full ${i + 1 < seq ? 'bg-brand-indigo/45' : i + 1 === seq ? 'bg-brand-indigo' : 'bg-ink/12'}`}
-        />
-      ))}
-    </div>
-  )
-}
+import { MiniStepper } from '../ui/Stepper'
 
 export function ProjectsTab({ projects }: { projects: MapProject[] }) {
   const selected = useMapStore((s) => s.selected)
@@ -48,9 +36,17 @@ export function ProjectsTab({ projects }: { projects: MapProject[] }) {
               <div className="text-xs text-ink-muted">
                 {p.project_type_label} · {p.position_label}
               </div>
-              <Stepper seq={p.stage_seq} total={p.stage_total} />
+              <MiniStepper seq={p.stage_seq} total={p.stage_total} />
               <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                <span className="rounded-full bg-brand-indigo/10 px-2 py-0.5 text-ink">{p.status_badge}</span>
+                {p.status_badges.map((b) => (
+                  <span
+                    key={b}
+                    data-testid="project-status-badge"
+                    className={`rounded-full px-2 py-0.5 font-semibold ${b === UI.project.statusOpen ? 'bg-brand-blue/12 text-ink' : 'bg-layer-regulation/15 text-warn'}`}
+                  >
+                    {b}
+                  </span>
+                ))}
                 {p.deadline && (
                   <span className="text-ink-muted">
                     {UI.projects.deadline} {p.deadline.title} · <span className="tabular-nums">{p.deadline.d_day_label}</span>

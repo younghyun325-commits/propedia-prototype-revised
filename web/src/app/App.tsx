@@ -3,8 +3,6 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { UI } from '../copy/ui'
 import { LeftPanel } from '../panel/LeftPanel'
 import { useMapStore } from '../state/useMapStore'
-import { featureId, isParcelLookup } from '../state/url'
-import { ParcelLookupCard } from '../inspector/ParcelLookupCard'
 import { useUrlSync } from '../state/useUrlSync'
 import { GlassPanel } from '../ui/GlassPanel'
 import { LiquidGlassFilter } from '../ui/LiquidGlassFilter'
@@ -17,6 +15,9 @@ import type { Insets } from '../map/insets'
 const MapView = lazy(() => import('../map/MapView'))
 // 명령 팔레트는 Ctrl+K로 처음 열 때 불러온다
 const CommandPalette = lazy(() => import('../search/CommandPalette'))
+// 인스펙터·원문 모달은 따로 묶는다 (P16, 초기 JS 예산)
+const Inspector = lazy(() => import('../inspector/Inspector'))
+const EvidenceModal = lazy(() => import('../ui/EvidenceModal'))
 
 const GAP = 12 // 패널과 화면 가장자리 사이
 const TOP_H = 56
@@ -59,33 +60,22 @@ export default function App() {
       {/* 좌측 패널 320px (L) */}
       {s.leftOpen && <LeftPanel style={{ top: sideTop, bottom: sideBottom, left: GAP, width: LEFT_W }} />}
 
-      {/* 우측 인스펙터 400px (I). 내용은 P16 — 지금은 선택 상태와 빈 곳 클릭 필지 조회 카드(P15) */}
+      {/* 우측 인스펙터 400px (I, P16) */}
       {s.rightOpen && (
-        <GlassPanel
-          as="aside"
-          data-testid="right-panel"
-          aria-label={UI.inspector.title}
-          className="absolute overflow-y-auto p-4 text-sm"
-          style={{ top: sideTop, bottom: sideBottom, right: GAP, width: RIGHT_W }}
+        <Suspense
+          fallback={
+            <GlassPanel
+              as="aside"
+              data-testid="right-panel"
+              aria-label={UI.inspector.title}
+              aria-busy="true"
+              className="absolute"
+              style={{ top: sideTop, bottom: sideBottom, right: GAP, width: RIGHT_W }}
+            />
+          }
         >
-          <h2 className="font-semibold">{UI.inspector.title}</h2>
-          {s.parcel.status !== 'idle' && (!s.selected || isParcelLookup(s.selected)) ? (
-            <ParcelLookupCard lookup={s.parcel} />
-          ) : s.selected ? (
-            <div className="mt-2 space-y-1" data-testid="inspector-selected">
-              <p>
-                {UI.inspector.selected}: <code className="font-mono text-xs">{featureId(s.selected)}</code>
-              </p>
-              <p className="text-ink-muted">{UI.inspector.placeholder}</p>
-            </div>
-          ) : (
-            <>
-              <p className="mt-2 text-ink-muted">{UI.inspector.none}</p>
-              <p className="mt-1 text-xs text-ink-muted">{UI.parcel.clickHint}</p>
-            </>
-          )}
-          <p className="mt-2 text-xs text-ink-muted">{UI.inspector.hint}</p>
-        </GlassPanel>
+          <Inspector style={{ top: sideTop, bottom: sideBottom, right: GAP, width: RIGHT_W }} />
+        </Suspense>
       )}
 
       {/* 하단 타임라인 44px 접힘 / 200px 펼침 (T) */}
@@ -107,6 +97,12 @@ export default function App() {
           <span className="font-normal text-ink-muted">(P19) · T 키로 펼치기</span>
         </button>
       </GlassPanel>
+
+      {s.evidence && (
+        <Suspense fallback={null}>
+          <EvidenceModal />
+        </Suspense>
+      )}
 
       {s.paletteOpen && (
         <Suspense fallback={null}>

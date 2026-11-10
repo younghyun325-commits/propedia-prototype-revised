@@ -276,12 +276,12 @@ def test_wms_tile_rejects_and_failures():
 
 def test_api_wms_tile(client, monkeypatch):
     import api.index as api
-    assert client.get("/api/v1/map/wms/lt_c_uq111/14/13962/6352.png").status_code == 503      # PROPEDIA_LIVE=0
+    assert client.get("/api/v1/map/wms/lt_c_uq111/14/13974/6348.png").status_code == 503      # PROPEDIA_LIVE=0
 
     class FakeLive:
-        def wms_tile(self, layer, z, x, y):
-            return vworld.wms_tile(layer, z, x, y, fetch_bytes=FakeBytes(), key="k")
+        def wms_tile(self, layer, z, x, y, size=None):
+            return vworld.wms_tile(layer, z, x, y, size=size, fetch_bytes=FakeBytes(), key="k")
     monkeypatch.setattr(api.live_mod, "default", lambda: FakeLive())
-    r = client.get("/api/v1/map/wms/lt_c_uq111/14/13962/6352.png")
+    r = client.get("/api/v1/map/wms/lt_c_uq111/14/13974/6348.png")
     assert r.status_code == 200 and r.headers["content-type"] == "image/png" and "max-age" in r.headers["cache-control"]
     assert client.get("/api/v1/map/wms/evil/14/1/1.png").status_code == 400

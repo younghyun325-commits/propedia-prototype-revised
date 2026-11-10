@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from core.catalog import DOC_KIND_LABELS
-from core.db import meta
+from core.db import loads, meta, source
 from core import refzones
 from core.lookup import DISCLAIMER, load_items, lookup_pnu
 from core.progress import progress
@@ -229,6 +229,23 @@ def _bbox(geom: dict) -> list[float] | None:
     return [round(w, 6), round(s, 6), round(e, 6), round(n, 6)] if w <= e else None
 
 
+STATUS_OPEN = "공람 중"
+STATUS_CLOSED = "공람 마감"
+STATUS_NO_APPROVAL = "승인 고시 미확인"
+
+
+def project_status_badges(pr: dict) -> list[str]:
+    """사업 목록·인스펙터 상태 배지 (P16). progress() 값을 문구로 옮기기만 한다:
+    공람 기한 open → 공람 중, closed → 공람 마감 / 단계 메모(stage_note: 승인 고시 확인 문서 없음)가 있으면 승인 고시 미확인."""
+    out = []
+    dl = next((d for d in pr["deadlines"] if d["kind"] == "public_review"), None)
+    if dl:
+        out.append(STATUS_OPEN if dl["status"] == "open" else STATUS_CLOSED)
+    if pr["stage_note"] and "승인" in pr["stage_note"]:
+        out.append(STATUS_NO_APPROVAL)
+    return out
+
+
 def map_projects(con, today) -> dict:
     geoms = {f["properties"]["id"]: f for f in _features("propedia_projects")}
     out = []
@@ -253,6 +270,7 @@ def map_projects(con, today) -> dict:
         g = geoms.get(f"project:{p['id']}")
         gp = (g or {}).get("properties", {})
         status_badge = pr["sub_status"] or pr["current"]["title"]
+        status_badges = project_status_badges(pr)
         dl_part = None
         if deadline:
             dl_part = (f"{deadline['title']} 마감" if deadline["status"] == "closed"
@@ -263,7 +281,8 @@ def map_projects(con, today) -> dict:
             "short_name": short, "aliases": aliases, "project_type": pr["project_type"],
             "project_type_label": pr["project_type_label"], "position_label": pr["position_label"],
             "stage_seq": cur["seq"], "stage_total": len(stages), "stage_title": cur["title"],
-            "status_badge": status_badge, "stage_note": pr["stage_note"], "deadline": deadline,
+            "status_badge": status_badge, "status_badges": status_badges, "stage_note": pr["stage_note"],
+            "deadline": deadline,
             "representative_jibun": pr["location_text"], "representative_pnu": rep["pnu"] if rep else None,
             "bbox": _bbox(g["geometry"]) if g else None, "has_boundary": g is not None,
             "parcels": counts, "parcels_unverified": unverified,
@@ -272,6 +291,57 @@ def map_projects(con, today) -> dict:
             "progress_url": f"/api/v1/projects/{pr['project_id']}/progress",
         })
     return {"as_of": today.isoformat(), "projects": out}
+
+
+# ---- 참고 WMS 프록시 요청 검사 (P16 0단계) ----
+WMS_MARGIN_M = 2000                 # 강남구 경계 bbox + 2km 안의 타일만 받는다
+WMS_FORMAT = "image/png"
+WMS_OUTSIDE = "강남구 주변(경계 + 2km) 타일만 받습니다"
+WMS_BAD_FORMAT = "그림 형식은 image/png만 받습니다"
+_gangnam_bbox: list[float] | None = None
+
+
+def gangnam_bbox() -> list[float] | None:
+    """public/data/base/gangnam.geojson의 [서, 남, 동, 북] (처음 한 번 읽음)"""
+    global _gangnam_bbox
+    if _gangnam_bbox is None:
+        fc = _read_json(BASE_DIR / "gangnam.geojson") or {}
+        boxes = [b for b in (_bbox(f["geometry"]) for f in fc.get("features") or []) if b]
+        if boxes:
+            _gangnam_bbox = [min(b[0] for b in boxes), min(b[1] for b in boxes),
+                             max(b[2] for b in boxes), max(b[3] for b in boxes)]
+    return _gangnam_bbox
+
+
+def tile_lonlat_bbox(z: int, x: int, y: int) -> tuple[float, float, float, float]:
+    """XYZ 타일 → 경위도 (서, 남, 동, 북)"""
+    import math
+    n = 2 ** z
+
+    def lat(yy: int) -> float:
+        return math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * yy / n))))
+    return (x / n * 360 - 180, lat(y + 1), (x + 1) / n * 360 - 180, lat(y))
+
+
+def wms_request_error(layer: str, z: int, x: int, y: int, size: int | None = None,
+                      fmt: str | None = None) -> str | None:
+    """참고 WMS 프록시 요청 검사. 문제가 있으면 한국어 안내 (API 400), 없으면 None."""
+    import math
+    from core.live import vworld
+    bad = vworld.wms_check(layer, z, x, y, size)
+    if bad:
+        return bad
+    if fmt is not None and fmt != WMS_FORMAT:
+        return WMS_BAD_FORMAT
+    gb = gangnam_bbox()
+    if gb is None:
+        return WMS_OUTSIDE
+    dlat = WMS_MARGIN_M / 111_320
+    dlon = WMS_MARGIN_M / (111_320 * math.cos(math.radians((gb[1] + gb[3]) / 2)))
+    w, s, e, n = tile_lonlat_bbox(z, x, y)
+    if w < gb[0] - dlon or e > gb[2] + dlon or s < gb[1] - dlat or n > gb[3] + dlat:
+        return WMS_OUTSIDE
+    return None
 
 
 def key_status() -> dict:
@@ -310,7 +380,7 @@ def _assemble(con, parcel: dict, live, today, point: tuple | None) -> dict:
             "centroid": parcel.get("centroid"), "as_of": m.get("as_of"), "source": parcel.get("source"),
             "land": None, "land_use_documented": None, "building": None, "building_note": None, "layer_counts": None,
             "dong_projects": [], "included_projects": [], "nearby_projects": [], "nearby_note": None,
-            "ref_zones": [], "disclaimer": DISCLAIMER}
+            "ref_zones": [], "project_banner": [], "evidence": [], "disclaimer": DISCLAIMER}
     if parcel["status"] != "ok":
         return base
     r = lookup_pnu(con, parcel["pnu"], today=today, live=live, location=parcel.get("centroid"))
@@ -320,7 +390,10 @@ def _assemble(con, parcel: dict, live, today, point: tuple | None) -> dict:
     pc = L["parcel"]
     land = pc["land"] or {}
     n = r["normalized"]
-    lat, lon = point if point else ((parcel["centroid"] or {}).get("lat"), (parcel["centroid"] or {}).get("lon"))
+    banner, evidence = _parcel_banner_evidence(con, pc["included_projects"], L)
+    lat, lon = point if point else ((parcel.get("centroid") or {}).get("lat"), (parcel.get("centroid") or {}).get("lon"))
+    if lat is None or lon is None:        # 경계 없이 조립한 경우 (P16 대체 경로): 빌드 캐시의 필지 중심점
+        lat, lon = n.get("lat"), n.get("lon")
     return base | {
         "jibun_address": n["jibun_address"] or parcel.get("address"),
         "dong_name": n["dong_name"], "addr_id": n["addr_id"], "coord_source": n["coord_source"],
@@ -329,11 +402,38 @@ def _assemble(con, parcel: dict, live, today, point: tuple | None) -> dict:
         "building": pc["building"], "building_note": pc["building_note"],
         "layer_counts": {"city": len(L["city"]), "gu": len(L["gu"]["items"]), "dong": len(L["dong"]["items"]),
                          "parcel": len(pc["items"])},
+        "layer_items": {k: [_item_brief(it) for it in v] for k, v in
+                        (("city", L["city"]), ("gu", L["gu"]["items"]), ("dong", L["dong"]["items"]),
+                         ("parcel", pc["items"]))},
         "dong_projects": [{"project_id": p["project_id"], "name": p["name"]} for p in L["dong"]["projects"]],
         "included_projects": pc["included_projects"], "nearby_projects": pc["nearby_projects"],
         "nearby_note": pc["nearby_note"],
         "ref_zones": refzones.zones_at(lat, lon) if lat is not None and lon is not None else [],
+        "project_banner": banner, "evidence": evidence,
     }
+
+
+def _parcel_banner_evidence(con, included: list, L: dict) -> tuple[list, list]:
+    """필지 보기 맨 위 '사업 구역 필지' 줄 (P16)과 원문 모달용 근거 목록. lookup 결과에서 고르기만 한다."""
+    ev = _Evidence(_doc_meta(con))
+    aliases = {row["id"]: loads(row["aliases"], []) for row in con.execute("SELECT id, aliases FROM projects")}
+    banner = []
+    for p in included:
+        short = (aliases.get(p["project_id"]) or [p["name"]])[0]
+        banner.append({"project_id": p["project_id"], "short_name": short, "inclusion": p["inclusion"],
+                       "inclusion_label": p["inclusion_label"], "verified": p["inclusion"] == "included",
+                       "review_id": p["review_id"], "basis_label": p["basis_label"], "source": p["source"]})
+        ev.add(p["source"], None, f"사업 필지 · {p['basis_label']}")
+    for v in (L["city"], L["gu"]["items"], L["dong"]["items"], L["parcel"]["items"]):
+        for it in v:
+            ev.add(it["source"], it["evidence"], it["title"])
+    return banner, ev.items
+
+
+def _item_brief(it: dict) -> dict:
+    """필지 보기의 '걸린 고시' 펼치기용 (lookup 항목에서 고르기만 함)"""
+    return {k: it.get(k) for k in ("item_key", "title", "summary", "scope_label", "effective_label",
+                                   "effective_status_label", "evidence", "source")}
 
 
 def _offline(con) -> dict:
@@ -354,3 +454,261 @@ def parcel_by_pnu(con, pnu: str, live, today=None) -> dict:
         return _offline(con)
     parcel = live.parcel_by_pnu(pnu, allowed_bjd=_allowed_bjd(con))
     return _assemble(con, parcel, live, today, None)
+
+
+# ---- 인스펙터 (P16): GET /api/v1/map/feature/{kind}/{id} ----
+# 사업 = progress(), 규제 = load_items(), 필지 = parcel_by_pnu()/_assemble() 결과를 고르고 묶기만 한다.
+# 새로 계산하는 값은 '남은 단계 수 = 템플릿 단계 수 − 현재 단계 번호' 하나뿐이다.
+FEATURE_KINDS = {"project": "사업", "regulation": "규제", "parcel": "필지"}
+REGULATION_DOC_KINDS = ("designation", "restriction", "press")
+ROLE_LABELS = {"stage_basis": "단계 근거 문서", "related": "관련 문서"}
+BOUNDARY_LABEL = "구역 경계 (결정도와 연속지적도 대조, 사람 확인 전)"
+BOUNDARY_LABEL_OK = "구역 경계 (결정도와 연속지적도 대조)"
+PARCEL_BOUNDARY_NOTE = "필지 경계를 지금 불러오지 못해 미리 받아 둔 자료로 보여 줍니다"
+NOT_FOUND = {"project": "사업 {id}을(를) 찾을 수 없습니다", "regulation": "규제 고시 {id}을(를) 찾을 수 없습니다",
+             "parcel": "필지 {id}을(를) 찾을 수 없습니다 (PNU 19자리 또는 사업번호:PNU)"}
+
+
+class FeatureNotFound(Exception):
+    """없는 kind·id → API 404"""
+
+
+def _doc_meta(con) -> dict:
+    return {r["doc_id"]: r for r in con.execute(
+        "SELECT id, doc_id, title, short_title, gosi_no, issuer, published_at, doc_kind FROM documents")}
+
+
+class _Evidence:
+    """화면의 모든 출처 줄을 (문서, 쪽, 근거 문장) 기준으로 한 번씩 모은 목록 — 원문 모달의 이전/다음."""
+
+    def __init__(self, docs: dict):
+        self.docs, self.items, self.seen = docs, [], set()
+
+    def add(self, src: dict | None, evidence: str | None, label: str) -> None:
+        if not src:
+            return
+        k = (src["doc_id"], src.get("pdf_page"), evidence or "")
+        if k in self.seen:
+            return
+        self.seen.add(k)
+        d = self.docs.get(src["doc_id"])
+        page = src.get("pdf_page")
+        self.items.append({
+            "doc_id": src["doc_id"], "short_title": src["short_title"], "title": d["title"] if d else None,
+            "gosi_no": d["gosi_no"] if d else None, "published_at": src.get("published_at"),
+            "pdf_page": page, "page_label": src.get("page_label"), "evidence": evidence,
+            "page_image": src.get("page_image"), "label": label,
+            "docs_url": f"/docs.html?doc={src['doc_id']}" + (f"&page={page}" if page else ""),
+        })
+
+
+def _source_page(con, docs: dict, sp: str | None) -> dict | None:
+    """'D9 p12' → SOURCE (쪽 이미지 포함)"""
+    if not sp or " p" not in sp:
+        return None
+    doc, _, pg = sp.partition(" p")
+    d = docs.get(doc)
+    return source(con, d["id"], int(pg)) if d and pg.isdigit() else None
+
+
+def _date_desc(rows: list[dict]) -> list[dict]:
+    rows = sorted(rows, key=lambda r: r.get("label") or "")
+    return sorted(rows, key=lambda r: r.get("date") or "", reverse=True)
+
+
+def _boundary(con, docs: dict, geo: dict | None) -> dict | None:
+    if not geo:
+        return None
+    gp = geo["properties"]
+    label = BOUNDARY_LABEL_OK if gp.get("verified") else BOUNDARY_LABEL
+    return {"bbox": _bbox(geo["geometry"]), "verified": bool(gp.get("verified")), "label": label,
+            "area_m2_doc": gp.get("area_m2_doc"), "area_m2_geom": gp.get("area_m2_geom"),
+            "source": _source_page(con, docs, gp.get("source_page"))}
+
+
+def feature_project(con, pid: int, today) -> dict | None:
+    from core.lookup import parcel_projects
+    from core.progress import WHAT_HAPPENS_NOTE, template_status
+    pr = progress(con, pid, today=today)
+    if pr is None:
+        return None
+    docs = _doc_meta(con)
+    ev = _Evidence(docs)
+    card = next(p for p in map_projects(con, today)["projects"] if p["id"] == pid)
+    tpl = {t["sub_stage_code"]: t for t in con.execute(
+        "SELECT * FROM stage_templates WHERE project_type=?", (pr["project_type"],))}
+    stages = []
+    for s in pr["stages"]:
+        t = tpl[s["code"]]
+        stages.append(s | {"what_happens": t["what_happens"],
+                           "what_happens_note": None if t["what_happens"] else WHAT_HAPPENS_NOTE,
+                           "owner_actions": t["owner_actions"], "template_status": template_status(t)})
+    cur = next(s for s in stages if s["status"] == "current")
+
+    # 근거 (화면 순서)
+    sb = pr["stage_basis"]
+    ev.add(sb["source"], sb["evidence"], "현재 단계 근거")
+    for d in pr["deadlines"]:
+        ev.add(d["source"], None, d["title"])
+    for f in pr["facts"]:
+        ev.add(f["source"], f["evidence"], f["label"])
+    geo = next((f for f in _features("propedia_projects") if f["properties"]["id"] == f"project:{pid}"), None)
+    boundary = _boundary(con, docs, geo)
+    if boundary:
+        ev.add(boundary["source"], None, boundary["label"])
+
+    # 사업 필지: 필지마다 기존 parcel_projects()의 판정을 그대로
+    pgeo = {f["properties"]["pnu"]: f for f in _features("propedia_parcels")
+            if f["properties"].get("project_id") == pid}
+    parcels = []
+    for r in con.execute("SELECT pnu, verified FROM project_parcels WHERE project_id=? ORDER BY pnu", (pid,)):
+        norm = {"pnu": r["pnu"], "lat": None, "lon": None, "coord_source": None}
+        row = next((x for x in parcel_projects(con, norm, Overrides())[0] if x["project_id"] == pid), None)
+        if row is None:
+            continue
+        g = pgeo.get(r["pnu"])
+        parcels.append({"pnu": r["pnu"], "feature_id": f"parcel:{pid}:{r['pnu']}",
+                        "name": (g or {}).get("properties", {}).get("name") or r["pnu"],
+                        "inclusion": row["inclusion"], "inclusion_label": row["inclusion_label"],
+                        "basis": row["basis"], "basis_label": row["basis_label"], "verified": bool(r["verified"]),
+                        "review_id": row["review_id"], "source": row["source"],
+                        "bbox": _bbox(g["geometry"]) if g else None})
+        ev.add(row["source"], None, f"사업 필지 · {row['basis_label']}")
+    order = {"included": 0, "possible": 1, "likely": 2}
+    parcels.sort(key=lambda p: (order.get(p["inclusion"], 9), p["name"]))
+
+    # 이력: 단계 근거(고시) + 묶인 문서 + 관련 고시, 날짜 내림차순
+    hist = []
+    for h in con.execute("SELECT * FROM project_stage_history WHERE project_id=?", (pid,)):
+        t = tpl.get(h["sub_stage_code"])
+        hist.append({"date": h["entered_at"], "kind": "stage",
+                     "label": f"{t['title'] if t else h['sub_stage_code']} 단계 근거",
+                     "gosi_no": None, "evidence": h["evidence"], "source": source(con, h["source_doc_id"], h["pdf_page"])})
+    for d in pr["documents"]:
+        dm = docs.get(d["doc_id"])
+        hist.append({"date": d["published_at"], "kind": "document",
+                     "label": f"{d['short_title']} ({ROLE_LABELS.get(d['role'], d['role'])})",
+                     "gosi_no": dm["gosi_no"] if dm else None, "evidence": None,
+                     "source": source(con, dm["id"], None) if dm else None})
+    for r in pr["related_history"]:
+        hist.append({"date": r["date"], "kind": "related", "label": r["label"], "gosi_no": r["gosi_no"],
+                     "evidence": None, "source": r["source"]})
+    for h in hist:
+        ev.add(h["source"], h["evidence"], h["label"])
+
+    badges = [{"text": pr["project_type_label"], "tone": "brand"}]
+    badges += [{"text": b, "tone": "info" if b == STATUS_OPEN else "warn"} for b in card["status_badges"]]
+    return {
+        "kind": "project", "id": str(pid), "kind_label": FEATURE_KINDS["project"],
+        "title": card["short_name"], "subtitle": pr["name"], "badges": badges, "unverified": card["unverified"],
+        "as_of": today.isoformat(), "data_as_of": pr["as_of"], "bbox": card["bbox"],
+        "sections": {
+            "progress": pr | {"stages": stages},
+            "stepper": {"total": len(stages), "current_seq": cur["seq"], "remaining_stages": len(stages) - cur["seq"],
+                        "position_label": pr["position_label"],
+                        "next_title": pr["next"]["title"] if pr["next"] else None},
+            "status_badges": card["status_badges"],
+            "boundary": boundary, "parcels": parcels, "history": _date_desc(hist),
+        },
+        "evidence": ev.items, "disclaimer": DISCLAIMER,
+    }
+
+
+def feature_regulation(con, rid: str, today) -> dict | None:
+    docs = _doc_meta(con)
+    doc_id = rid.split("-")[0]
+    d = docs.get(doc_id)
+    if d is None or d["doc_kind"] not in REGULATION_DOC_KINDS:
+        return None
+    items = [it for it in load_items(con, Overrides(), today)
+             if it["source"] and it["source"]["doc_id"] == doc_id and (rid == doc_id or it["item_key"] == rid)]
+    items.sort(key=lambda it: (it["tier"] != "applies", it["item_key"]))
+    if not items:
+        return None
+    it = items[0]
+    ev = _Evidence(docs)
+    ev.add(it["source"], it["evidence"], "근거 문장")
+    for m in it["more_evidence"]:
+        ev.add(m["source"], m["evidence"], m["label"])
+    geo = next((f for f in _features("propedia_regulations") if f["properties"]["id"] == f"regulation:{doc_id}"), None)
+    boundary = _boundary(con, docs, geo)
+    boundary_note = None
+    if boundary:
+        ev.add(boundary["source"], None, boundary["label"])
+    elif it["scope_type"] == "BJD":
+        boundary_note = D5_NOTE if doc_id == "D5" else f"경계 확인 전, 법정동({it['scope_label']}) 단위로만 표시"
+    hist = [{"date": d["published_at"], "kind": "document", "label": f"{d['short_title']} 공고",
+             "gosi_no": d["gosi_no"], "evidence": None, "source": source(con, d["id"], None)}]
+    if it["effective_from"]:
+        hist.append({"date": it["effective_from"], "kind": "effective", "label": "효력 시작 (원문 기재)",
+                     "gosi_no": None, "evidence": it["evidence"], "source": it["source"]})
+    if it["effective_to"]:
+        hist.append({"date": it["effective_to"], "kind": "effective", "label": "효력 끝 (원문 기재)",
+                     "gosi_no": None, "evidence": it["evidence"], "source": it["source"]})
+    kind_label = DOC_KIND_LABELS.get(d["doc_kind"], d["doc_kind"])
+    badges = [{"text": kind_label, "tone": "brand"}]
+    if it["effective_status_label"]:
+        badges.append({"text": it["effective_status_label"],
+                       "tone": "info" if it["effective_status"] == "in_force" else "muted"})
+    return {
+        "kind": "regulation", "id": rid, "kind_label": FEATURE_KINDS["regulation"],
+        "title": d["short_title"], "subtitle": it["title"], "badges": badges,
+        "unverified": bool(boundary and not boundary["verified"]) or bool(boundary_note),
+        "as_of": today.isoformat(), "data_as_of": d["published_at"],
+        "bbox": boundary["bbox"] if boundary else None,
+        "sections": {
+            "regulation": {"doc_id": doc_id, "item_key": it["item_key"], "doc_kind": d["doc_kind"],
+                           "doc_kind_label": kind_label, "gosi_no": d["gosi_no"], "issuer": d["issuer"],
+                           "published_at": d["published_at"], "title": it["title"], "summary": it["summary"],
+                           "scope_label": it["scope_label"], "target_note": it["target_note"],
+                           "effective_from": it["effective_from"], "effective_to": it["effective_to"],
+                           "effective_label": it["effective_label"], "effective_status": it["effective_status"],
+                           "effective_status_label": it["effective_status_label"],
+                           "evidence": it["evidence"], "evidence_ok": it["evidence_ok"], "source": it["source"],
+                           "more_evidence": it["more_evidence"]},
+            "boundary": boundary, "boundary_note": boundary_note, "history": _date_desc(hist),
+        },
+        "evidence": ev.items, "disclaimer": DISCLAIMER,
+    }
+
+
+def feature_parcel(con, fid: str, live, today) -> dict | None:
+    pnu = fid.split(":")[-1]
+    if not (pnu.isdigit() and len(pnu) == 19):
+        return None
+    r = parcel_by_pnu(con, pnu, live, today) if live is not None else None
+    boundary_note = None
+    if r is None or r["status"] in ("unavailable", "timeout"):
+        # 실시간 필지 조회가 없거나 실패: 같은 조립을 경계 없이 (빌드 캐시 land_cache·DB만)
+        r = _assemble(con, {"status": "ok", "pnu": pnu, "address": None, "boundary": None, "centroid": None,
+                            "source": None}, None, today, None)
+        boundary_note = PARCEL_BOUNDARY_NOTE
+    if r["status"] in ("not_found", "outside"):
+        raise FeatureNotFound(r.get("message") or NOT_FOUND["parcel"].format(id=fid))
+    banner = r["project_banner"]
+    badges = [{"text": b["inclusion_label"], "tone": "brand" if b["verified"] else "warn"} for b in banner]
+    return {
+        "kind": "parcel", "id": fid, "kind_label": FEATURE_KINDS["parcel"],
+        "title": r.get("jibun_address") or pnu, "subtitle": pnu, "badges": badges,
+        "unverified": any(not b["verified"] for b in banner),
+        "as_of": today.isoformat(), "data_as_of": r.get("as_of"),
+        "bbox": _bbox(r["boundary"]) if r.get("boundary") else None,
+        "sections": {"parcel": r | {"boundary_note": boundary_note}, "project_banner": banner},
+        "evidence": r["evidence"], "disclaimer": DISCLAIMER,
+    }
+
+
+def map_feature(con, kind: str, fid: str, live=None, today=None) -> dict:
+    from core.timeutil import today_kst
+    today = today or today_kst()
+    if kind == "project":
+        out = feature_project(con, int(fid), today) if fid.isdigit() else None
+    elif kind == "regulation":
+        out = feature_regulation(con, fid, today)
+    elif kind == "parcel":
+        out = feature_parcel(con, fid, live, today)
+    else:
+        raise FeatureNotFound("인스펙터 대상 종류는 project·regulation·parcel만 있습니다")
+    if out is None:
+        raise FeatureNotFound(NOT_FOUND[kind].format(id=fid))
+    return out

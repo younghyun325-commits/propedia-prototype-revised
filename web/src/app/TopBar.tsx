@@ -11,7 +11,7 @@ import { Popover } from '../ui/Floating'
 
 const MAX_CHIPS = 3
 
-function NoticeBody({ n }: { n: Notice }) {
+function NoticeBody({ n, onOpen }: { n: Notice; onOpen: () => void }) {
   const src = n.source
   return (
     <div className="space-y-1" data-testid="notice-popover">
@@ -34,6 +34,14 @@ function NoticeBody({ n }: { n: Notice }) {
           </>
         )}
       </p>
+      <button
+        type="button"
+        data-testid="notice-open-inspector"
+        onClick={onOpen}
+        className="mt-1 rounded-lg bg-white/80 px-2 py-1 font-semibold text-brand-indigo hover:bg-white focus-visible:outline-2 focus-visible:outline-brand-indigo"
+      >
+        {UI.notices.openInspector}
+      </button>
     </div>
   )
 }
@@ -41,6 +49,11 @@ function NoticeBody({ n }: { n: Notice }) {
 function NoticeChips() {
   const { data } = useNotices()
   const [open, setOpen] = useState<{ key: string; el: HTMLElement } | null>(null)
+  const select = useMapStore((s) => s.select)
+  const openInspector = (n: Notice) => {
+    setOpen(null)
+    select({ kind: 'regulation', id: n.doc_id })
+  }
   const items = data?.items ?? []
   const shown = items.slice(0, MAX_CHIPS)
   const rest = items.slice(MAX_CHIPS)
@@ -75,10 +88,10 @@ function NoticeChips() {
         {open?.key === '+'
           ? rest.map((n) => (
               <div key={n.item_key} className="border-t border-ink/10 py-1 first:border-0">
-                <NoticeBody n={n} />
+                <NoticeBody n={n} onOpen={() => openInspector(n)} />
               </div>
             ))
-          : items.filter((n) => n.item_key === open?.key).map((n) => <NoticeBody key={n.item_key} n={n} />)}
+          : items.filter((n) => n.item_key === open?.key).map((n) => <NoticeBody key={n.item_key} n={n} onOpen={() => openInspector(n)} />)}
       </Popover>
     </div>
   )

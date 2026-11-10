@@ -32,7 +32,7 @@ export function useShellEffects(): void {
         s.setPaletteOpen(!s.paletteOpen)
         return
       }
-      if (s.paletteOpen) return // 팔레트가 열려 있으면 팔레트가 Esc를 처리한다
+      if (s.paletteOpen || s.evidence) return // 팔레트·원문 모달이 열려 있으면 그쪽이 키를 처리한다
       if (action === 'left') s.toggleLeft()
       else if (action === 'right') s.toggleRight()
       else if (action === 'timeline') s.toggleTimeline()

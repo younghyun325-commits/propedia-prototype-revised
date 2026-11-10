@@ -28,6 +28,7 @@ import {
 } from './reference'
 import { GlassPanel } from '../ui/GlassPanel'
 import { ATTRIBUTION, BASEMAPS, TILE_MAX_ZOOM, TILE_MIN_ZOOM, tileUrl } from './basemaps'
+import { Callout } from './Callout'
 import { bboxOf, labelPoint, outsideMask, padBounds, type Bounds } from './geo'
 import { MapControls } from './MapControls'
 import { estimateLabelWidth, placeLabels, REGULATION_LABEL_MIN_ZOOM, type Box, type Placement } from './labels'
@@ -147,9 +148,11 @@ function buildStyle(
     layers.push({ id: 'mask', type: 'fill', source: 'mask', paint: { 'fill-color': '#ffffff', 'fill-opacity': 0.55 } })
   }
   // 공식 참고 WMS (P15, API 프록시): 보이는 레이어가 있을 때만 MapLibre가 타일을 요청한다. 줌 조건은 소스·레이어 minzoom
+  // bounds = 강남구 경계 bbox: 서버 허용 범위(경계 + 2km, P16 0단계) 밖 타일을 아예 요청하지 않는다
+  const guBox = gu ? bboxOf(gu.features) : null
   for (const id of REF_WMS_IDS) {
     sources[id] = { type: 'raster', tiles: [wmsTileUrl(WMS[id].layer)], tileSize: 256, minzoom: WMS[id].minZoom,
-      maxzoom: 19 }
+      maxzoom: 19, ...(guBox ? { bounds: [guBox[0][0], guBox[0][1], guBox[1][0], guBox[1][1]] } : {}) }
   }
   layers.push(...withState(REF_WMS_IDS.map(refWmsLayer), snap))
   if (dongs) {
@@ -585,6 +588,8 @@ export default function MapView({ insets }: { insets: Insets }) {
         {areaLabels.map((l) => {
           const pl = placements[l.id]
           if (pl && !pl.visible) return null
+          // 선택한 사업·규제는 콜아웃(P16)이 같은 내용을 보여 주므로 라벨을 숨긴다
+          if (selected && featureId(selected) === l.id) return null
           return (
             <Marker key={l.id} longitude={l.at[0]} latitude={l.at[1]} anchor="center" offset={pl ? [pl.dx, pl.dy] : [0, 0]}>
               <span
@@ -629,6 +634,7 @@ export default function MapView({ insets }: { insets: Insets }) {
           </Marker>
         )}
       </Map>
+      <Callout getMap={getMap} loaded={loaded} insets={insets} />
 
       <MapControls insets={insets} hasKey={Boolean(KEY)} />
 

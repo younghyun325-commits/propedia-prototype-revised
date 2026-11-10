@@ -243,16 +243,36 @@ def wms_size(layer: str, z: int) -> int:
     return size
 
 
-def wms_tile(layer: str, z: int, x: int, y: int, *, fetch_bytes=None, key: str | None = None) -> dict:
+WMS_SIZES = (256, 512)
+WMS_BAD = "허용하지 않는 레이어·타일입니다"
+
+
+def wms_check(layer: str, z: int, x: int, y: int, size: int | None = None) -> str | None:
+    """레이어·줌·타일 번호·그림 크기 검사. 문제가 있으면 한국어 안내, 없으면 None (강남구 범위 검사는 core/map)."""
+    if layer not in WMS_LAYERS:
+        return "참고 WMS는 용도지역(lt_c_uq111)·지구단위계획구역(lt_c_upisuq161)·지적도(lp_pa_cbnd_bubun)만 받습니다"
+    if not (WMS_LAYERS[layer] <= z <= 19) or not (0 <= x < 2 ** z and 0 <= y < 2 ** z):
+        return f"이 레이어는 줌 {WMS_LAYERS[layer]}~19 타일만 받습니다"
+    if size is not None and size not in WMS_SIZES:
+        return "타일 크기는 256 또는 512만 받습니다"
+    limit = WMS_MAX_MPP.get(layer)
+    if limit and size is not None and (2 * _R3857 / (2 ** z)) / size > limit + 1e-6:
+        return "지적도는 줌 17 이상에 해당하는 해상도(0.6m/px 이하)만 받습니다"
+    return None
+
+
+def wms_tile(layer: str, z: int, x: int, y: int, *, size: int | None = None, fetch_bytes=None,
+             key: str | None = None) -> dict:
     """참고 WMS 타일 프록시 (브이월드 WMS는 CORS 헤더가 없어 브라우저가 직접 못 받는다). 저장하지 않는다.
-    반환 {status: ok|bad_request|unavailable|timeout, content, content_type, note}."""
-    if layer not in WMS_LAYERS or not (WMS_LAYERS[layer] <= z <= 19) or not (0 <= x < 2 ** z and 0 <= y < 2 ** z):
-        return {"status": "bad_request", "content": b"", "content_type": None, "note": "허용하지 않는 레이어·타일입니다"}
+    반환 {status: ok|bad_request|unavailable|timeout, content, content_type, note}. note에는 URL·키를 넣지 않는다."""
+    bad = wms_check(layer, z, x, y, size)
+    if bad:
+        return {"status": "bad_request", "content": b"", "content_type": None, "note": bad}
     key = key if key is not None else env_key(KEY_ENV)
     if not key:
         return {"status": "unavailable", "content": b"", "content_type": None, "note": PARCEL_NO_KEY_NOTE}
     fetch_bytes = fetch_bytes or get_bytes
-    size = wms_size(layer, z)
+    size = size or wms_size(layer, z)
     w, s, e, n = tile_bbox_3857(z, x, y)
     try:
         body, ctype = fetch_bytes(WMS_URL, {"SERVICE": "WMS", "REQUEST": "GetMap", "VERSION": "1.3.0", "LAYERS": layer,
@@ -262,8 +282,8 @@ def wms_tile(layer: str, z: int, x: int, y: int, *, fetch_bytes=None, key: str |
     except LiveError as err:
         timeout = "Timeout" in str(err)
         return {"status": "timeout" if timeout else "unavailable", "content": b"", "content_type": None,
-                "note": str(err)}
-    if not (ctype or "").startswith("image/"):
+                "note": "참고 WMS 응답 시간 초과" if timeout else "참고 WMS 응답 오류"}
+    if not (ctype or "").startswith("image/png"):
         return {"status": "unavailable", "content": b"", "content_type": None, "note": "응답이 그림이 아님"}
     return {"status": "ok", "content": body, "content_type": ctype.split(";")[0], "note": None}
 

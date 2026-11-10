@@ -62,6 +62,9 @@ export type MapProject = {
   stage_total: number
   stage_title: string
   status_badge: string
+  /** P16: 공람 중 / 공람 마감 / 승인 고시 미확인 (progress 값을 문구로) */
+  status_badges: string[]
+  stage_note: string | null
   deadline: { title: string; d_day_label: string; status: 'open' | 'closed'; due_on: string } | null
   representative_jibun: string | null
   representative_pnu: string | null

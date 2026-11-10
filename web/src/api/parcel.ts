@@ -17,7 +17,8 @@ export type RefZone = {
   badge: string
 }
 export type ParcelProject = { project_id: number; name: string; inclusion: string; inclusion_label: string;
-  distance_m?: number; message?: string }
+  distance_m?: number; message?: string; review_id?: number | null; basis_label?: string; distance_basis?: string;
+  stage?: { code: string; title: string | null; seq: number | null } }
 export type ParcelAt = {
   status: ParcelStatus
   message: string | null
@@ -36,8 +37,21 @@ export type ParcelAt = {
     official_price: { won_per_m2: number | null; year: number | null; announced_on: string | null } | null
     source: string | null
     note: string | null
+    fetched_at?: string | null
   } | null
-  building: { main_purpose?: string; bld_names?: string[] } | null
+  building: {
+    found?: boolean
+    main_purpose?: string | null
+    bld_names?: string[]
+    main_count?: number | null
+    structure?: string | null
+    use_apr_day?: string | null
+    max_grnd_flr?: number | null
+    total_hhld?: number | null
+    total_area?: number | null
+    source?: string | null
+    fetched_label?: string | null
+  } | null
   building_note: string | null
   layer_counts: { city: number; gu: number; dong: number; parcel: number } | null
   dong_projects: { project_id: number; name: string }[]
@@ -45,7 +59,40 @@ export type ParcelAt = {
   nearby_projects: ParcelProject[]
   nearby_note: string | null
   ref_zones: RefZone[]
+  /** P16: 이 필지가 사업 필지면 맨 위 한 줄 (포함 판정·검수 번호) */
+  project_banner: {
+    project_id: number
+    short_name: string
+    inclusion: string
+    inclusion_label: string
+    verified: boolean
+    review_id: number | null
+    basis_label: string
+    source: LayerItemSource | null
+  }[]
+  /** P16: 층별 항목 (펼치기) */
+  layer_items: Record<'city' | 'gu' | 'dong' | 'parcel', LayerItem[]> | null
+  /** P16: 원문 모달용 근거 목록 */
+  evidence: import('./feature').EvidenceItem[]
   disclaimer: string
+}
+export type LayerItemSource = {
+  doc_id: string
+  short_title: string
+  published_at: string | null
+  pdf_page: number | null
+  page_label: string | null
+  page_image: string | null
+}
+export type LayerItem = {
+  item_key: string
+  title: string
+  summary: string | null
+  scope_label: string | null
+  effective_label: string | null
+  effective_status_label: string | null
+  evidence: string | null
+  source: LayerItemSource | null
 }
 
 export const parcelAtUrl = (lat: number, lon: number) =>
