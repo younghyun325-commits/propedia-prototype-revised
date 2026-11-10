@@ -326,7 +326,7 @@ function InfraSelected({ kind, fid }: { kind: 'school' | 'station' | 'bus' | 'po
   )
 }
 
-export default function Inspector({ style }: { style: CSSProperties }) {
+export default function Inspector({ style, bare = false }: { style: CSSProperties; bare?: boolean }) {
   const selected = useMapStore((s) => s.selected)
   const parcelStatus = useMapStore((s) => s.parcel.status)
   // 빈 곳 클릭·URL 복원 필지(sel=parcel:{PNU})는 /map/parcel-at 결과(store.parcel)로 보여 준다
@@ -339,12 +339,13 @@ export default function Inspector({ style }: { style: CSSProperties }) {
   }, [key])
   return (
     <GlassPanel
-      as="aside"
+      as={bare ? 'div' : 'aside'}
       ref={ref}
       data-testid="right-panel"
       data-selected={selected ? featureId(selected) : ''}
       aria-label={UI.inspector.title}
-      className="absolute flex flex-col overflow-hidden text-sm"
+      // 하단 시트 안(bare)에서는 시트가 글래스이므로 글래스를 겹치지 않는다 (glass.css .glass-bare)
+      className={bare ? 'glass-bare flex h-full min-h-0 flex-col overflow-hidden text-sm' : 'absolute flex flex-col overflow-hidden text-sm'}
       style={style}
     >
       {clickMode ? (

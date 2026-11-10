@@ -294,7 +294,8 @@ def state_at(con, as_of) -> dict:
             "item_key": it["item_key"], "doc_id": doc, "feature_id": f"regulation:{doc}",
             "effective_from": it["effective_from"], "effective_to": it["effective_to"],
             "status": e["effective_status"], "status_label": EFFECTIVE_SHORT_LABELS.get(e["effective_status"]),
-            "effective_label": e["effective_label"], "published": published.get(doc, False)}
+            "effective_label": e["effective_label"], "published": published.get(doc, False),
+            "scope_type": it["scope_type"], "scope_ref": list(it["scope_ref"] or [])}
     return {"as_of": as_of.isoformat(), "documents": documents, "projects": projects, "regulations": regulations,
             "notices": _notices(con, items, kinds, published, as_of), "items": items}
 
@@ -305,9 +306,12 @@ def map_notices(con, today) -> dict:
     regs = {}
     for r in st["regulations"].values():          # 문서 하나에 항목이 여럿이면 첫 항목(item_key 순)
         regs.setdefault(r["feature_id"], r)
+    # P20: 지도 도형이 없는 규제(D5 법정동 단위, D6~D8 서울 전역)는 화면이 범위(scope)로 법정동·구 경계를 강조한다
+    geoms = {f["properties"]["id"] for f in _features("propedia_regulations")}
     return {"as_of": st["as_of"], "items": st["notices"],
-            "regulations": [{k: r[k] for k in ("feature_id", "doc_id", "item_key", "status", "status_label",
-                                                "effective_from", "effective_to")}
+            "regulations": [{**{k: r[k] for k in ("feature_id", "doc_id", "item_key", "status", "status_label",
+                                                  "effective_from", "effective_to", "scope_type", "scope_ref")},
+                             "has_geometry": r["feature_id"] in geoms}
                             for r in sorted(regs.values(), key=lambda r: r["item_key"])]}
 
 

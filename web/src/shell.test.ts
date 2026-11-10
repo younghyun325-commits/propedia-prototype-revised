@@ -31,6 +31,10 @@ describe('keyAction', () => {
     expect(keyAction({ key: 't' })).toBe('timeline')
     expect(keyAction({ key: 'Escape' })).toBe('clear')
   })
+  it('? 단축키 도움말 (P20), 입력 중에는 무시', () => {
+    expect(keyAction({ key: '?', shiftKey: true })).toBe('help')
+    expect(keyAction({ key: '?', shiftKey: true, target: { tagName: 'INPUT' } })).toBeNull()
+  })
   it('Ctrl+K·Cmd+K는 입력 중에도 검색 열기', () => {
     expect(keyAction({ key: 'k', ctrlKey: true })).toBe('palette')
     expect(keyAction({ key: 'K', metaKey: true, target: { tagName: 'INPUT' } })).toBe('palette')

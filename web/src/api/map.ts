@@ -133,6 +133,10 @@ export type RegulationState = {
   status_label: string | null
   effective_from: string | null
   effective_to: string | null
+  /** P20: 적용 범위 (SIDO·SGG·BJD·PARCEL)와 지도 도형 유무 — 도형이 없으면 법정동·구 경계로 대신 강조 */
+  scope_type: 'SIDO' | 'SGG' | 'SAENGHWAL' | 'BJD' | 'PARCEL'
+  scope_ref: string[]
+  has_geometry: boolean
 }
 export type Notices = { as_of: string; items: Notice[]; regulations: RegulationState[] }
 /** 숨긴 사업 (그날 첫 근거 문서가 아직 없음) */

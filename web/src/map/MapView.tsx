@@ -35,6 +35,8 @@ import { ATTRIBUTION, BASEMAPS, TILE_MAX_ZOOM, TILE_MIN_ZOOM, tileUrl } from './
 import { Callout } from './Callout'
 import { bboxOf, initialFitTarget, labelPoint, outsideMask, padBounds, type Bounds } from './geo'
 import { MapControls } from './MapControls'
+import { scopeArea, type ScopeArea } from './scope'
+import { motionMs } from '../ui/motion'
 import { estimateLabelWidth, placeLabels, REGULATION_LABEL_MIN_ZOOM, type Box, type Placement } from './labels'
 import {
   APARTMENT_LABEL_MIN_ZOOM, APARTMENT_SOURCE, apartmentLayers,
@@ -86,6 +88,8 @@ const SELECTED_LAYERS: Record<string, string> = {
   ...INFRA_SELECTED,
 }
 const CLICK_SOURCE = 'click-parcel'
+/** P20: 지도 도형이 없는 규제를 고를 때 법정동·구 경계 점선 강조 (map/scope.ts) */
+const SCOPE_SOURCE = 'scope-highlight'
 const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] }
 
 type RefData = Partial<Record<RefGeoId, FeatureCollection<Polygon | MultiPolygon, Record<string, unknown>>>>
@@ -177,6 +181,7 @@ function buildStyle(
   apartments: ApartmentFC | null = null,
   infra: InfraData = { schools: null, stations: null, bus: null, pois: {} },
   radiusData: FeatureCollection = EMPTY_FC,
+  scopeData: FeatureCollection = EMPTY_FC,
 ): StyleSpecification {
   const sources: StyleSpecification['sources'] = {}
   const layers: StyleSpecification['layers'] = [{ id: 'bg', type: 'background', paint: { 'background-color': BG } }]
@@ -240,6 +245,10 @@ function buildStyle(
   if (gu) {
     layers.push({ id: 'gu-line', type: 'line', source: 'gu', paint: { 'line-color': INK, 'line-width': 1.5 } })
   }
+  // 도형 없는 규제의 적용 범위 (P20): 선택 강조 색 점선
+  sources[SCOPE_SOURCE] = { type: 'geojson', data: scopeData }
+  layers.push({ id: 'scope-highlight-line', type: 'line', source: SCOPE_SOURCE,
+    paint: { 'line-color': hl.selected, 'line-width': 3, 'line-dasharray': [2, 1.5] } })
   // 반경 보기 원 (P18) + 생활 인프라 칩 (불러온 것만): 면·선 위
   sources[RADIUS_SOURCE] = { type: 'geojson', data: radiusData }
   layers.push(...radiusLayers())
@@ -391,6 +400,14 @@ export default function MapView({ insets }: { insets: Insets }) {
       })),
     [dongs],
   )
+  // 도형 없는 규제 (P20): 적용 범위로 법정동·구 경계를 대신 강조한다
+  const regFeatureIds = useMemo(() => new Set((propedia.regulation?.features ?? []).map((f) => f.properties.id)), [propedia])
+  const scope: ScopeArea | null = useMemo(
+    () => (propediaDone ? scopeArea(selected, regulations, regFeatureIds, dongs, gu) : null),
+    [propediaDone, selected, regulations, regFeatureIds, dongs, gu],
+  )
+  const scopeRef = useRef<FeatureCollection>(EMPTY_FC)
+  scopeRef.current = scope?.fc ?? EMPTY_FC
   // 스타일은 배경·데이터가 바뀔 때만 새로 만든다. 패널 상태는 만들 때의 값을 넣고, 이후 변경은 아래 effect가 지도에 바로 건다
   const style = useMemo(() => {
     const s = useMapStore.getState()
@@ -398,7 +415,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       layers: s.layers, overlap: s.overlap, selected: s.selected, searchPnu: s.searchHit?.pnu ?? null, routeArs: routeArsRef.current,
       poi: s.poi, ...dateRef.current,
     }, refData, clickParcelData(s.parcel, s.selected), apartments,
-    { schools: infra.schools, stations: infra.stations, bus: infra.bus, pois: infra.poiByCat }, radiusRef.current)
+    { schools: infra.schools, stations: infra.stations, bus: infra.bus, pois: infra.poiByCat }, radiusRef.current, scopeRef.current)
   }, [basemap, gu, dongs, propedia, colors, hl, refData, apartments, infra.schools, infra.stations, infra.bus, infra.poiByCat])
 
   // 사업·규제 구역 라벨 (사람 확인 전이면 '확인 전')
@@ -503,6 +520,8 @@ export default function MapView({ insets }: { insets: Insets }) {
       map.setPaintProperty('bus-icon', 'icon-opacity', Math.round((s.layers.bus_stops.opacity / 100) * ROUTE_DIM * 1000) / 1000)
     const rs = map.getSource(RADIUS_SOURCE) as maplibregl.GeoJSONSource | undefined
     rs?.setData(radiusRef.current as never)
+    const sc = map.getSource(SCOPE_SOURCE) as maplibregl.GeoJSONSource | undefined
+    sc?.setData(scopeRef.current as never)
     // 편의시설 (P19-1): 분류는 visibility, 하위 분류는 setFilter·setPaintProperty만 (소스·레이어를 다시 만들지 않음)
     for (const k of POI_KEYS) {
       if (!map.getLayer(poiIconLayer(k))) continue
@@ -517,7 +536,7 @@ export default function MapView({ insets }: { insets: Insets }) {
   }, [])
   useEffect(() => {
     if (loaded) applyState()
-  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState, route, routeArs, radiusFC, poiSel, hidden, regDim])
+  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState, route, routeArs, radiusFC, poiSel, hidden, regDim, scope])
 
   // 새로고침: URL sel=parcel:{pnu}면 같은 필지를 다시 조회해 강조한다 (한 번)
   const restored = useRef(false)
@@ -572,19 +591,48 @@ export default function MapView({ insets }: { insets: Insets }) {
   }, [loaded, guBounds, insets, propedia, propediaDone, padding, apartments, aptQ.isFetched, infra.schools, infra.stations,
     infra.bus, infra.poiFeatures, infra.error])
 
+  // 도형 없는 규제 (P20): 고르면 그 범위(법정동 또는 강남구 전체)로 한 번 이동. URL에 카메라가 있으면 첫 복원은 그대로 둔다
+  const fitScope = useCallback(
+    (sc: ScopeArea) => {
+      const map = mapRef.current
+      if (!map) return
+      if (sc.level === 'city' && guBounds)
+        map.fitBounds(guBounds, { padding: { ...insets, top: insets.top + 24, bottom: insets.bottom + 24 }, duration: motionMs(600) })
+      else map.fitBounds(sc.bounds, { padding: padding(60), maxZoom: 16, duration: motionMs(600) })
+    },
+    [guBounds, insets, padding],
+  )
+  const scopeFitted = useRef<string | null>(null)
+  const skipScopeFit = useRef(initialCamera.current !== null && useMapStore.getState().selected?.kind === 'regulation')
+  useEffect(() => {
+    if (!loaded || !scope) {
+      if (!scope) scopeFitted.current = null
+      return
+    }
+    if (scopeFitted.current === scope.key) return
+    scopeFitted.current = scope.key
+    if (skipScopeFit.current) {
+      skipScopeFit.current = false
+      return
+    }
+    fitScope(scope)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, scope?.key])
+
   // 이동 요청 (작업 탭·사업 카드·검색)
   useEffect(() => {
     const map = mapRef.current
     if (!loaded || !map || !viewRequest) return
     if (viewRequest.type === 'home') {
-      if (guBounds) map.fitBounds(guBounds, { padding: { ...insets, top: insets.top + 24, bottom: insets.bottom + 24 }, duration: 600 })
+      if (guBounds) map.fitBounds(guBounds, { padding: { ...insets, top: insets.top + 24, bottom: insets.bottom + 24 }, duration: motionMs(600) })
     } else if (viewRequest.type === 'feature') {
       const kind = viewRequest.id.split(':')[0] as 'project' | 'regulation'
       const f = propedia[kind]?.features.find((x) => x.properties.id === viewRequest.id)
-      if (f) map.fitBounds(bboxOf([f as Feature<Polygon | MultiPolygon>]), { padding: padding(60), maxZoom: 17, duration: 600 })
+      if (f) map.fitBounds(bboxOf([f as Feature<Polygon | MultiPolygon>]), { padding: padding(60), maxZoom: 17, duration: motionMs(600) })
+      else if (scope && scope.key.startsWith(viewRequest.id + ':')) fitScope(scope)
     } else {
       const [w, s, e, n] = viewRequest.bbox
-      map.fitBounds([[w, s], [e, n]], { padding: padding(60), maxZoom: 17, duration: 600 })
+      map.fitBounds([[w, s], [e, n]], { padding: padding(60), maxZoom: 17, duration: motionMs(600) })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, viewRequest?.nonce])
@@ -596,9 +644,10 @@ export default function MapView({ insets }: { insets: Insets }) {
     const f = searchHit.pnu ? propedia.parcel?.features.find((x) => x.properties.pnu === searchHit.pnu) : undefined
     if (f) {
       const b = bboxOf([f as Feature<Polygon | MultiPolygon>])
-      map.fitBounds(b, { padding: padding(80), maxZoom: 18, duration: 600 })
+      map.fitBounds(b, { padding: padding(80), maxZoom: 18, duration: motionMs(600) })
     } else if (searchHit.point) {
-      map.flyTo({ center: searchHit.point, zoom: 17, duration: 600 })
+      if (motionMs(600) === 0) map.jumpTo({ center: searchHit.point, zoom: 17 })
+      else map.flyTo({ center: searchHit.point, zoom: 17, duration: 600 })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, searchHit?.nonce])
@@ -617,7 +666,7 @@ export default function MapView({ insets }: { insets: Insets }) {
 
   // 3D 기울기
   useEffect(() => {
-    mapRef.current?.easeTo({ pitch: tilt3d ? TILT : 0, duration: 600 })
+    mapRef.current?.easeTo({ pitch: tilt3d ? TILT : 0, duration: motionMs(600) })
   }, [tilt3d])
 
   // 클러스터 개수 (HTML 마커): 그려진 클러스터 원만
@@ -799,7 +848,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       if (c) {
         const src = map.getSource(c.source) as maplibregl.GeoJSONSource
         void src.getClusterExpansionZoom(Number(c.properties.cluster_id)).then((z) =>
-          map.easeTo({ center: (c.geometry as Point).coordinates as [number, number], zoom: Math.min(z + 0.2, MAX_ZOOM) }),
+          map.easeTo({ center: (c.geometry as Point).coordinates as [number, number], zoom: Math.min(z + 0.2, MAX_ZOOM), duration: motionMs(500) }),
         )
         return
       }
@@ -851,6 +900,7 @@ export default function MapView({ insets }: { insets: Insets }) {
     <div
       className="absolute inset-0"
       data-testid="map"
+      role="region"
       aria-label="지도"
       data-basemap={basemap}
       data-layers={style.layers.map((l) => l.id).join(',')}
@@ -1001,6 +1051,19 @@ export default function MapView({ insets }: { insets: Insets }) {
       <RouteChip insets={insets} routes={infra.routes} />
       <RadiusPanel insets={insets} infra={infra} apartments={apartments} projects={propedia.project ?? null} />
 
+      {/* 도형 없는 규제의 적용 범위 표시 (P20) */}
+      {scope && (
+        <GlassPanel
+          role="status"
+          data-testid="scope-label"
+          data-level={scope.level}
+          className="pointer-events-none absolute -translate-x-1/2 px-3 py-1.5 text-xs font-semibold"
+          style={{ top: insets.top + 8, left: `calc(${insets.left}px + (100% - ${insets.left + insets.right}px) / 2)`, borderRadius: 999 }}
+        >
+          {scope.label}
+        </GlassPanel>
+      )}
+
       {/* 호버 툴팁 (이동 중 숨김) */}
       {hover && !mapMoving && (
         <GlassPanel
@@ -1058,7 +1121,9 @@ export default function MapView({ insets }: { insets: Insets }) {
         data-testid="attribution"
         className="glass pointer-events-none absolute px-3 py-1 text-right text-xs"
         // 참고 레이어 출처가 붙으면 길어진다: 왼쪽 커서 표시줄(약 280px)과 패널을 피해 줄을 바꾼다
-        style={{ right: insets.right, bottom: insets.bottom, borderRadius: 12, maxWidth: `calc(100% - ${insets.left + insets.right + 280}px)` }}
+        // 1024px 미만(P20)은 커서 표시줄이 없으므로 화면 폭 안에서만 줄을 바꾼다
+        style={{ right: insets.right, bottom: insets.bottom, borderRadius: 12,
+          maxWidth: `calc(100% - ${insets.left + insets.right + (window.innerWidth < 1024 ? 0 : 280)}px)` }}
       >
         {[ATTRIBUTION, ...refAttributions((id) => layerStates[id].visible)].join(' · ')}
       </div>

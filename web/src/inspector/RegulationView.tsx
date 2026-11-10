@@ -4,6 +4,7 @@
  */
 import { MapPin } from 'lucide-react'
 import type { RegulationFeature } from '../api/feature'
+import { useNotices } from '../api/map'
 import { UI } from '../copy/ui'
 import { useMapStore } from '../state/useMapStore'
 import { EvidenceLine } from '../ui/EvidenceLine'
@@ -48,6 +49,12 @@ function PeriodBar({ from, to, today, status, statusLabel }: {
 function Overview({ f }: { f: RegulationFeature }) {
   const { regulation: r, boundary, boundary_note } = f.sections
   const requestView = useMapStore((s) => s.requestView)
+  // P20: 지도 도형이 없는 규제는 적용 범위(법정동·서울 전역)로 지도에서 대신 강조한다 (map/scope.ts와 같은 문구)
+  const reg = useNotices().data?.regulations.find((x) => x.feature_id === `regulation:${f.id}`)
+  const scopeText = reg && !reg.has_geometry
+    ? reg.scope_type === 'BJD' || reg.scope_type === 'PARCEL' ? UI.regulation.scopeBjd
+      : reg.scope_type === 'SIDO' ? UI.regulation.scopeCity : UI.regulation.scopeGu
+    : null
   const ev = f.evidence
   return (
     <div className="space-y-4">
@@ -95,8 +102,24 @@ function Overview({ f }: { f: RegulationFeature }) {
             )}
           </div>
         </Section>
-      ) : boundary_note ? (
-        <p className="text-xs text-warn" data-testid="regulation-boundary-note">{boundary_note}</p>
+      ) : boundary_note || scopeText ? (
+        <div className="space-y-1">
+          {boundary_note && <p className="text-xs text-warn" data-testid="regulation-boundary-note">{boundary_note}</p>}
+          {scopeText && (
+            <div className="flex items-center gap-2">
+              <p className="text-xs" data-testid="regulation-scope-note">{scopeText}</p>
+              <button
+                type="button"
+                data-testid="regulation-show-on-map"
+                onClick={() => requestView({ type: 'feature', id: `regulation:${f.id}` })}
+                className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white/70 px-2 py-1 text-xs hover:bg-white focus-visible:outline-2 focus-visible:outline-brand-indigo"
+              >
+                <MapPin size={13} aria-hidden="true" />
+                {UI.regulation.showOnMap}
+              </button>
+            </div>
+          )}
+        </div>
       ) : null}
     </div>
   )

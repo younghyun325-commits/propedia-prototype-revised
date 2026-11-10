@@ -103,6 +103,16 @@ def test_notices_as_of(client):
     assert client.get("/api/v1/map/notices", params={"as_of": "2026-13-01"}).status_code == 400
 
 
+def test_notices_regulation_scope(client):
+    """P20: 규제마다 적용 범위와 지도 도형 유무 — 도형이 없으면 화면이 법정동·구 경계로 대신 강조한다"""
+    regs = {r["doc_id"]: r for r in client.get("/api/v1/map/notices", params={"as_of": "2026-11-10"}).json()["regulations"]}
+    assert regs["D10"]["has_geometry"] is True and regs["D10"]["scope_type"] == "BJD"
+    assert regs["D5"]["has_geometry"] is False
+    assert regs["D5"]["scope_type"] == "BJD" and regs["D5"]["scope_ref"] == ["1168011000"]
+    for d in ("D6", "D7", "D8"):
+        assert regs[d]["has_geometry"] is False and regs[d]["scope_type"] == "SIDO" and regs[d]["scope_ref"] == ["11"]
+
+
 def test_notices_default_today(client):
     assert client.get("/api/v1/map/notices").status_code == 200
 

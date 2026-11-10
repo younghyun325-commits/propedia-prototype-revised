@@ -9,6 +9,11 @@ export const UI = {
     search: '주소·지번·사업명 검색',
     searchKey: 'Ctrl K',
     reduceTransparency: '투명도 줄이기',
+    settings: '설정',
+    shortcuts: '단축키 보기',
+    legacyLookup: '주소로 조회(기존 화면)',
+    legacyDocs: '문서 DB',
+    otherScreens: '다른 화면',
     noticesLabel: '서울 전역·강남구 단위 고시',
     moreNotices: (n: number) => `+${n}`,
     today: '오늘',
@@ -19,8 +24,49 @@ export const UI = {
     evidence: '근거',
     openPage: '원문 쪽 보기',
   },
+  // 단축키 도움말 (P20, ? 키)
+  shortcuts: {
+    title: '단축키',
+    close: '닫기',
+    groups: [
+      {
+        title: '화면',
+        rows: [
+          [['Ctrl K'], '검색 (주소·지번·사업명)'],
+          [['L'], '좌측 패널 열기·닫기'],
+          [['I'], '우측 인스펙터 열기·닫기'],
+          [['T'], '하단 타임라인 열기·닫기'],
+          [['Esc'], '선택 해제 · 열린 창 닫기'],
+          [['?'], '이 도움말'],
+        ],
+      },
+      {
+        title: '타임라인 (막대에 포커스가 있을 때)',
+        rows: [
+          [['←', '→'], '기준일 하루 앞·뒤'],
+          [['Shift ←', 'Shift →'], '기준일 한 달 앞·뒤'],
+          [['Home'], '오늘로'],
+        ],
+      },
+    ] as { title: string; rows: [string[], string][] }[],
+  },
+  // 반응형 (P20)
+  shell: {
+    narrowNotice: '큰 화면에서 모든 기능을 쓸 수 있습니다',
+    noticeLabel: '화면 폭 안내',
+  },
+  sheet: {
+    label: '정보 시트',
+    snapGroup: '시트 높이',
+    info: '정보',
+    timeline: '타임라인',
+    snaps: { collapsed: '접힘', half: '절반', full: '전체' } as Record<'collapsed' | 'half' | 'full', string>,
+    handle: (now: string, next: string) => `시트 높이 ${now} — 누르면 ${next}`,
+  },
   left: {
     panelLabel: '좌측 패널',
+    openPanel: '패널 열기',
+    closePanel: '좌측 패널 접기',
     tabs: { layers: '레이어', projects: '사업 목록', feed: '고시 피드', status: '데이터 상태' },
     loading: '불러오는 중',
     loadError: '목록을 불러오지 못했습니다',
@@ -243,6 +289,10 @@ export const UI = {
     showOnMap: '지도에서 보기',
     gosiNo: '고시번호',
     issuer: '발행',
+    // P20: 지도 도형이 없는 규제를 고를 때 지도 위 표시
+    scopeBjd: '법정동 단위 표시 · 경계 확인 전',
+    scopeCity: '서울 전역 적용 · 지도 경계 없음',
+    scopeGu: '강남구 전체 적용 · 지도 경계 없음',
   },
   parcelView: {
     banner: (name: string, label: string, unchecked: boolean, review: number | null) =>

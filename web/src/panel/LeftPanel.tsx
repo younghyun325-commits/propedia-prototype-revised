@@ -1,5 +1,6 @@
 /** 좌측 패널 320px (P14): 레이어 · 사업 목록 · 고시 피드 · 데이터 상태. 스크롤은 패널 안에서만. */
 import type { CSSProperties } from 'react'
+import { PanelLeftClose } from 'lucide-react'
 import { useHealth, useManifest, useMapProjects } from '../api/map'
 import { UI } from '../copy/ui'
 import { useMapStore } from '../state/useMapStore'
@@ -18,20 +19,22 @@ function Pending({ error }: { error?: unknown }) {
   )
 }
 
-export function LeftPanel({ style }: { style: CSSProperties }) {
-  const tab = useMapStore((s) => s.leftTab)
-  const setTab = useMapStore((s) => s.setLeftTab)
+/** 탭 본문 (P20: 하단 시트에서도 쓴다) */
+export function LeftPanelBody({ tab: t }: { tab: LeftTab }) {
   const manifest = useManifest()
   const projects = useMapProjects()
   const health = useHealth()
+  if (t === 'feed') return <FeedTab />
+  if (t === 'projects')
+    return projects.data ? <ProjectsTab projects={projects.data.projects} /> : <Pending error={projects.error} />
+  if (!manifest.data) return <Pending error={manifest.error} />
+  return t === 'layers' ? <LayersTab manifest={manifest.data} /> : <StatusTab manifest={manifest.data} health={health.data} />
+}
 
-  const body = (t: LeftTab) => {
-    if (t === 'feed') return <FeedTab />
-    if (t === 'projects')
-      return projects.data ? <ProjectsTab projects={projects.data.projects} /> : <Pending error={projects.error} />
-    if (!manifest.data) return <Pending error={manifest.error} />
-    return t === 'layers' ? <LayersTab manifest={manifest.data} /> : <StatusTab manifest={manifest.data} health={health.data} />
-  }
+/** collapsible (P20, 1024~1279px): 탭 줄 끝에 접기 버튼 — 접으면 아이콘 줄(IconRail)로 */
+export function LeftPanel({ style, collapsible = false }: { style: CSSProperties; collapsible?: boolean }) {
+  const tab = useMapStore((s) => s.leftTab)
+  const setTab = useMapStore((s) => s.setLeftTab)
 
   return (
     <GlassPanel
@@ -56,6 +59,18 @@ export function LeftPanel({ style }: { style: CSSProperties }) {
             {UI.left.tabs[t]}
           </button>
         ))}
+        {collapsible && (
+          <button
+            type="button"
+            data-testid="left-collapse"
+            onClick={() => useMapStore.getState().toggleLeft()}
+            aria-label={UI.left.closePanel}
+            title={UI.left.closePanel}
+            className="ml-auto mb-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted hover:bg-white/80 focus-visible:outline-2 focus-visible:outline-brand-indigo"
+          >
+            <PanelLeftClose size={16} aria-hidden="true" />
+          </button>
+        )}
       </div>
       <div
         id="left-tabpanel"
@@ -63,7 +78,7 @@ export function LeftPanel({ style }: { style: CSSProperties }) {
         aria-labelledby={`left-tab-${tab}`}
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4"
       >
-        {body(tab)}
+        <LeftPanelBody tab={tab} />
       </div>
     </GlassPanel>
   )

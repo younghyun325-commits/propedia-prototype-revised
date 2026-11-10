@@ -53,3 +53,28 @@ html.reduce-transparency.liquid-glass .glass-liquid {
   position: relative;
   z-index: 50;
 }
+
+/* 7. 반응형 (P20, ui/useViewport.ts가 html[data-viewport]를 적는다) */
+html .glass.glass-bare,
+html.reduce-transparency .glass.glass-bare {
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  border: 0;
+  border-radius: 0;
+}
+/* 1024~1279px: 인스펙터가 지도 위에 겹치므로 닫기 버튼을 또렷하게 */
+html[data-viewport='mid'] [data-testid='right-panel'] [data-testid='inspector-close'] {
+  background: rgb(255 255 255);
+  color: var(--color-ink);
+  box-shadow: 0 0 0 1.5px var(--color-brand-indigo);
+}
+/* 1024px 미만은 보기 전용: 반경 보기·스크러버 끌기·커서 위치 표시줄을 숨긴다 */
+html[data-viewport='narrow'] [data-testid='radius-tool'],
+html[data-viewport='narrow'] [data-testid='radius-help'],
+html[data-viewport='narrow'] [data-testid='radius-panel'],
+html[data-viewport='narrow'] [data-testid='tl-scrubber'],
+html[data-viewport='narrow'] [data-testid='cursor-bar'] {
+  display: none !important;
+}

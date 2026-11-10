@@ -4,6 +4,7 @@ import type { ParcelAt } from '../api/parcel'
 import type { BasemapId } from '../map/basemaps'
 import type { Radius } from '../infra/radius'
 import { todayIso } from './dates'
+import { readBool, REDUCE_TRANSPARENCY_KEY, writeBool } from './prefs'
 import { parseIsoDate } from './url'
 import { poiAll, poiAny, poiNone, type PoiSel } from '../infra/poiSelect'
 import {
@@ -58,6 +59,8 @@ export type MapState = {
   radiusTool: boolean
   hovered: string | null
   paletteOpen: boolean
+  /** P20: 단축키 도움말 모달 (? 키·설정 메뉴) */
+  shortcutsOpen: boolean
   viewRequest: ViewRequest | null
   searchHit: SearchHit
   /** 현재 줌 (이동이 끝날 때) — 줌 조건이 있는 레이어 안내용 */
@@ -84,6 +87,7 @@ export type MapState = {
   setCamera: (c: Camera) => void
   setHovered: (id: string | null) => void
   setPaletteOpen: (v: boolean) => void
+  setShortcutsOpen: (v: boolean) => void
   requestView: (r: ViewTarget) => void
   setSearchHit: (h: Omit<NonNullable<SearchHit>, 'nonce'> | null) => void
   setZoom: (z: number) => void
@@ -121,12 +125,14 @@ export const useMapStore = create<MapState>()((set) => {
     rightOpen: true,
     timelineOpen: false,
     workspace: u.selected?.kind === 'project' ? 'project' : 'gangnam',
-    reduceTransparency: false,
+    // P20: 설정 메뉴에서 고른 값은 이 브라우저에 남긴다 (state/prefs.ts)
+    reduceTransparency: readBool(REDUCE_TRANSPARENCY_KEY),
     mapMoving: false,
     tilt3d: false,
     ...u,
     hovered: null,
     paletteOpen: false,
+    shortcutsOpen: false,
     viewRequest: null,
     searchHit: null,
     zoom: u.camera?.zoom ?? null,
@@ -146,7 +152,11 @@ export const useMapStore = create<MapState>()((set) => {
       })),
     clearSelection: () => set((s) => ({ selected: null, parcel: { status: 'idle', reqId: s.parcel.reqId + 1 } })),
     setWorkspace: (workspace) => set({ workspace }),
-    toggleReduceTransparency: () => set((s) => ({ reduceTransparency: !s.reduceTransparency })),
+    toggleReduceTransparency: () =>
+      set((s) => {
+        writeBool(REDUCE_TRANSPARENCY_KEY, !s.reduceTransparency)
+        return { reduceTransparency: !s.reduceTransparency }
+      }),
     setMapMoving: (mapMoving) => set(mapMoving ? { mapMoving, hovered: null } : { mapMoving }),
     setBasemap: (basemap) => set({ basemap }),
     toggleTilt3d: () => set((s) => ({ tilt3d: !s.tilt3d })),
@@ -172,6 +182,7 @@ export const useMapStore = create<MapState>()((set) => {
     setCamera: (camera) => set({ camera }),
     setHovered: (hovered) => set({ hovered }),
     setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
+    setShortcutsOpen: (shortcutsOpen) => set({ shortcutsOpen }),
     requestView: (r) => set({ viewRequest: { ...r, nonce: ++nonce } }),
     setSearchHit: (h) => set({ searchHit: h ? { ...h, nonce: ++nonce } : null }),
     setZoom: (zoom) => set({ zoom }),
