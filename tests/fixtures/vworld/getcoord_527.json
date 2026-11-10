@@ -4,34 +4,35 @@
    "name": "address",
    "version": "2.0",
    "operation": "getcoord",
-   "time": "14(ms)"
+   "time": "0(ms)"
   },
   "status": "OK",
   "input": {
    "type": "parcel",
-   "address": "서울특별시 강남구 압구정동 527"
+   "address": "서울특별시 강남구 견본로 1"
   },
   "refined": {
-   "text": "서울특별시 강남구 압구정동 527",
+   "text": "서울특별시 강남구 견본로 1",
    "structure": {
     "level0": "대한민국",
     "level1": "서울특별시",
     "level2": "강남구",
     "level3": "",
-    "level4L": "압구정동",
+    "level4L": "견본동",
     "level4LC": "1168011000105270000",
     "level4A": "",
     "level4AC": "",
-    "level5": "527",
+    "level5": "1",
     "detail": ""
    }
   },
   "result": {
    "crs": "EPSG:4326",
    "point": {
-    "x": "127.04331416864878",
-    "y": "37.52910580241611"
+    "x": "127.000000",
+    "y": "37.500000"
    }
   }
- }
+ },
+ "_sample_note": "형식 견본: 좌표·주소는 가짜 값 (지오코더·검색 결과 저장 금지, P15 0단계). 파싱 형식만 검사한다"
 }

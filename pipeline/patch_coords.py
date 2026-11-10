@@ -19,7 +19,7 @@ import shutil
 import sqlite3
 
 from core.lookup import lookup
-from pipeline.common import BUILD, DB_PATH, SEED, log, setup_stdout, sha256
+from pipeline.common import BUILD, DB_PATH, SEED, log, setup_stdout, sha256, vacuum_db
 
 BAK = BUILD / "propedia.db.bak"
 
@@ -97,6 +97,7 @@ def main() -> int:
         shutil.copy2(BAK, DB_PATH)
         log(f"판정이 바뀐 주소 {changed} → db/propedia.db를 백업으로 되돌렸습니다")
         return 1
+    vacuum_db()          # 덮어쓴 옛 행 바이트를 남기지 않는다 (P15 0단계)
     log(f"판정 15건 모두 같음 · db/propedia.db sha256 {sha256(DB_PATH)[:16]}")
     return 0
 

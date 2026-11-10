@@ -20,6 +20,14 @@ export type ManifestLayer = {
   badge?: string
   count_by_judgment?: { included: number; possible: number; likely: number }
   unverified_count?: number
+  // P15 공식 참고
+  lazy?: boolean
+  min_zoom?: number
+  wms_layer?: string
+  file?: string | null
+  size_bytes?: number | null
+  disclaimer?: string | null
+  ref?: boolean
 }
 export type Manifest = {
   generated_as_of: string | null

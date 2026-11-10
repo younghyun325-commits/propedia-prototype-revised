@@ -6,7 +6,7 @@ init_db → load_seed → load_extractions → build_projects → events → rev
 from datetime import datetime
 
 from pipeline import build_projects, events, init_db, load_extractions, load_seed, review_queue
-from pipeline.common import connect_rw, log, setup_stdout
+from pipeline.common import connect_rw, log, setup_stdout, vacuum_db
 
 COVERAGE_NOTE = ("프리토타입: 강남구. 고시·계획 문서 10종(D1 한양7차 재건축 정비계획(안) 공람, D2 2030 생활권계획 일부, "
                  "D3 2030 정비기본계획 재건축 부문 일부, D4 2040 서울도시기본계획 일부, D5~D7 토지거래허가구역·"
@@ -61,6 +61,7 @@ def main() -> None:
     for sql, expect in P3_SQL:
         log(f"{sql}\n   → {sql_rows(con, sql)}   (기대: {expect})")
     con.close()
+    vacuum_db()          # 지운·덮어쓴 행의 옛 바이트를 남기지 않는다 (P15 0단계)
 
 
 if __name__ == "__main__":

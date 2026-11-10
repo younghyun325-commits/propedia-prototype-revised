@@ -53,6 +53,40 @@
    "source": "고시 도면 × 브이월드 연속지적도(LP_PA_CBND_BUBUN) 대조 — Propedia 판독, 사람 확인 전",
    "title": "규제 구역 (고시 도면 정합)",
    "verified": "사람 확인 전 (verified=0)"
+  },
+  "ref_seoulplan": {
+   "as_of": "2026-01-31",
+   "badge": "참고·비상업",
+   "count": 109,
+   "disclaimer": "본 자료는 법적 효력이 없으며 참고자료로만 활용 가능합니다 (데이터셋 페이지 안내)",
+   "file": "ref_seoulplan.geojson",
+   "group": "공식 참고",
+   "kind_field": "SCLAS_CL",
+   "lazy": true,
+   "license": "공공누리 4유형(출처표시·상업적 이용금지·변경금지)",
+   "note": "표시용 좌표 변환(EPSG:5174 → EPSG:4326)·소수 6자리 반올림만, 도형 가공 없음 (자르기·단순화·병합 안 함)",
+   "ref": true,
+   "size_bytes": 160100,
+   "source": "서울 열린데이터광장 OA-22712 서울시 도시계획사업 현황",
+   "status": "ready",
+   "title": "서울시 도시계획사업 현황 (서울플랜+)"
+  },
+  "ref_uije": {
+   "as_of": "2026-08-26",
+   "badge": "참고·비상업",
+   "count": 75,
+   "disclaimer": null,
+   "file": "ref_uije.geojson",
+   "group": "공식 참고",
+   "kind_field": "ATRB_SE",
+   "lazy": true,
+   "license": "공공누리 4유형(출처표시·상업적 이용금지·변경금지)",
+   "note": "표시용 좌표 변환(EPSG:5174 → EPSG:4326)·소수 6자리 반올림만, 도형 가공 없음 (자르기·단순화·병합 안 함)",
+   "ref": true,
+   "size_bytes": 308402,
+   "source": "서울특별시 의제처리구역 위치정보(공공데이터포털)",
+   "status": "ready",
+   "title": "의제처리구역"
   }
  },
  "notes": [

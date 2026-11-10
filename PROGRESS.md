@@ -1,6 +1,74 @@
 # 진행 기록
-현재 단계: P14 좌측 레이어 패널·상단 바 완료 (2026-11-10, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P15 공식 참고 레이어·필지 클릭 조회
+현재 단계: P15 공식 참고 레이어·필지 클릭 조회 완료 (2026-11-10, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P16 우측 인스펙터
 
+
+## P15 공식 참고 레이어·필지 클릭 조회 — 완료 (2026-11-10)
+서울시 공식 공간정보 2종과 브이월드 WMS 3종을 '참고' 레이어로 올리고, 지도 빈 곳을 누르면 그 필지의 토지 정보·걸린 고시·주변 사업·참고 구역이 나오게 했다. 카드 디자인 완성은 P16.
+
+### 0. 지오코더 응답 저장 정리
+- 찾은 곳: `tests/fixtures/vworld/getcoord_527.json`·`getcoord_1168011400106190000.json`·`getcoord_notfound.json`(커밋됨), `search_road_teheran_427.json`(브이월드 주소 검색, point 좌표, 커밋됨), `build/check_keys/vworld/getcoord_*` 3개·`search_road_teheran_427.json`, `build/p13/land_cache_before.json`(지오코더 좌표 28건)·`project_coords_before.csv`·`propedia_before.db`, `build/propedia.db.bak`, `build/propedia_before_p135.db`, 그리고 **커밋된 `db/propedia.db` 페이지 빈 공간에 옛 지오코더 좌표 바이트 3곳**(행 데이터에는 없음, P13 patch_coords가 VACUUM 없이 덮어씀). `build/vworld_raw/`에는 없음
+- 처리
+  - `pipeline/check_keys.py`: getcoord 3건·주소 검색 1건은 HTTP 상태·`response.status`·응답 필드 이름(키 경로)만 출력, 본문은 어디에도 저장하지 않음(`--update-fixtures`도). 이미지 API 중심은 지오코더 대신 `seed/land_cache.json`의 필지 경계 중심점. 새 옵션 `--parcel-at`(2D 데이터 필지 점 조회 저장 응답만)
+  - fixtures 견본: `point` → x=127.000000·y=37.500000, 주소 문자열 → '서울특별시 강남구 견본로 1'(검색 응답은 좌표만, 결정대로), `_sample_note` 추가. PNU는 파싱 테스트 식별자라 유지. 실제 좌표에 기대던 테스트는 `tests/test_live_vworld.py:28` 하나(범위 검사) → 형식 검사(`{lat: 37.5, lon: 127.0, source}`)로 바꿈
+  - `db/propedia.db`: `pipeline/vacuum_db.py`(새, 할 일 없으면 건드리지 않음) → 'vworld-geocoder' 바이트 3 → 0건, 시연 15건 lookup 응답 전후 같음. `run_all`·`patch_coords`·`patch_parcels` 끝에 `common.vacuum_db()`
+  - build/ 10개 삭제(승인 받음). `build/p13/fetch_land.log`는 좌표 없이 출처 이름·이동 거리만이라 남김
+- git 이력(수정·force-push 안 함): getcoord 저장 응답은 d57a54b(P10)부터 HEAD까지 커밋돼 있었음. `seed/land_cache.json`·`seed/project_coords.csv`의 지오코더 좌표는 d57a54b~e176aa3(P13에서 중심점으로 바꿈) 사이. `db/propedia.db` 바이트: d57a54b 20곳, e176aa3·723cd23·6f2e51d 2곳(빈 공간). P9 이전 커밋에는 없음
+- P14 '남은 것'의 check_keys 항목 닫음
+
+### 1. 참고 레이어 빌드 (`pipeline/import_reference.py`, 멱등)
+- pyshp(CP949) → EPSG:5174 → 4326(always_xy). 좌표계 검증(반올림 전 변환값, P13과 같은 계산): **D9 '일원동 대청마을 북측구역' IoU 0.9615 (P13 0.961), D10 '대치선경' 0.9750 (P13 0.975)** — 소수 6자리 좌표로는 0.9616·0.9750
+- 고르기: 강남구 경계와 겹친 면적 > 0(선만 닿는 이웃 구 도형 제외), 자르지 않음. 완전 중복 8건(의제처리구역: 압구정아파트지구·청담현대1차 소규모재건축 등) → `build/reference_dupes.csv`
+- 라이선스 확인: 서울플랜+ OA-22712 '공공누리 4유형 : 출처표시+상업적 이용금지+변경금지', **의제처리구역 data.go.kr 15082965도 '공공저작물 : 출처표시, 상업적 이용금지, 변경금지 (제 4유형)'** (PLAN의 '출처표시'는 틀림 → 둘 다 '참고·비상업', PLAN 192·193·229행 고침, HUMAN_TODO 42)
+- 결과 (속성은 원본 필드 이름·값 그대로 + `_source`·`_license`·`_as_of`·`_ref`·`_layer`·`_row`, 좌표만 소수 6자리)
+
+  | 레이어 | 원본 | 강남구 | 경계 밖 걸침 | 기준일(CREATE_DAT 최대) | 크기 | sha256 |
+  |---|---|---|---|---|---|---|
+  | `ref_seoulplan.geojson` | 2,585행 | 109건 | 0 | 2026-01-31 | 160,100 B (0.15 MB) | `00561cbf…` |
+  | `ref_uije.geojson` | 3,329행 | 75건 | 4 | 2026-08-26 | 308,402 B (0.29 MB) | `fbf99da4…` |
+
+  둘 다 1.5MB 미만이지만 지연 로딩(켤 때 처음 한 번) 적용. `manifest.json`의 `ref_*` 항목(원천·기준일·건수·라이선스·group·badge·lazy·note '표시용 좌표 변환·반올림만, 도형 가공 없음')은 import_reference 소유, `build_map_layers`는 `propedia_*`만 바꾸도록 고침 → 두 스크립트 모두 2회 실행 sha256 같음(manifest `12fd727a…`)
+- 종류별 건수 (SHP·메타데이터·데이터셋 페이지에 코드 이름표가 없음 → 코드와 대표 구역명, HUMAN_TODO 40)
+
+  | 서울플랜+ SCLAS_CL | 건수 | 예 | | 의제처리구역 ATRB_SE | 건수 | 예 |
+  |---|---|---|---|---|---|---|
+  | BZ105 | 24 | 은마아파트 | | UQ1240 | 27 | 개포현대2차아파트 재건축정비사업 |
+  | BZ202 | 19 | 논현세광연립 가로주택정비사업 | | UQ1206 | 9 | 개포우성4차아파트 재건축사업 |
+  | BZ101 | 15 | 개포 경남·우성3·현대1 | | UQ5600 | 8 | 취락구조개선(방죽1마을) |
+  | BZ302 | 10 | 강남구청역A | | UQ1812 | 5 | 역삼목화연립 가로주택정비사업 |
+  | BZ602 | 10 | 서광아파트 | | UQ1700 | 4 | 청담.도곡아파트지구(삼성주구) |
+  | BZ204 | 9 | 개포현대4차아파트 | | UQ1813 | 4 | 청담현대1차아파트 소규모재건축사업 |
+  | BZ303 | 7 | 논현동 202-7 | | UQ1900 | 4 | 개포토지구획정리사업 |
+  | BZ306 | 5 | 테헤란 아이파크 | | UQ5500 | 3 | 수서역세권 공공주택지구 |
+  | BZ501 | 3 | 세곡2 | | UQ6300 | 3 | 양재동 1-26 일원 역세권 청년주택 공급촉진지 |
+  | BZ603 | 3 | 논현종합시장 | | UQ6500 | 3 | 택지개발지구 |
+  | BZ201·BZ203·BZ301·BZ601 | 각 1 | 대청마을 북측구역·개포동 1165-4·일원동 743·구룡마을 | | UQ1100·UQ1221·UQ1232·UQ1811·UQ6400 | 각 1 | 개포(구룡마을)도시개발구역 등 |
+- 지도 모양: 회색 점선 외곽선 + 면 8%(새 토큰 `--color-layer-ref` = ink-muted 값), 종류별 색 없음, 줌 15 이상 라벨 'DGM_NM · 참고'(Propedia 라벨 다음 순위로 겹침 피하기)
+
+### 2. 브이월드 WMS 참고 레이어
+- `pipeline/check_wms.py`(새): GetCapabilities 레이어 211개. 지원 요청 GetCapabilities·GetMap·GetFeatureInfo — **LegendURL·GetLegendGraphic 없음 → 범례 생략**. 고른 이름(영현): 용도지역 `lt_c_uq111` '도시지역'(강남구 전체가 도시지역), 지구단위계획구역 `lt_c_upisuq161` '지구단위계획', 지적도 `lp_pa_cbnd_bubun` '연속지적도'. 다른 후보: uq112 관리지역·uq113 농림지역·uq114 자연환경보전지역, uq121~130 용도지구 8종, `lp_pa_cbnd_bonbun`
+- **브이월드 WMS는 CORS 헤더가 없음** `[확인]`(WMTS는 `Access-Control-Allow-Origin: *`) → 브라우저 직접 요청은 콘솔 CORS 오류·타일 0장. 결정(영현): `GET /api/v1/map/wms/{layer}/{z}/{x}/{y}.png` 서버 프록시(`core/live/vworld.wms_tile`, 서버 키·`VWORLD_DOMAIN`, 4초·재시도 1회, 허용 레이어 3개만, 저장 없음·`Cache-Control: max-age=86400`). 브라우저에 키가 나가지 않음
+- **연속지적도 WMS는 0.6m/px보다 거친 요청에 빈 그림(1,784B)** `[확인]`: z16 256px(2.39m/px)·512px(1.19) 빈 그림, z17 512px(0.6) 그림, z16 1024px는 525KB. 그래서 지적도는 **줌 17부터**(프록시가 z17은 512px로 받음), 행 안내 '줌 17 이상에서 표시'. 지시(16)와 다름 → HUMAN_TODO 43. 용도지역·지구단위계획은 줌 14부터
+- 레이어 패널 '공식 참고' 5행(참고 배지·건수·투명도), 줌 조건 안내, 우하단 출처에 켜진 참고 레이어 출처를 이어 붙임(길면 줄 바꿈)
+
+### 3. 필지 클릭 조회
+- `core/live/vworld.parcel_at(lat, lon)`·`parcel_by_pnu(pnu)`: 2D 데이터 `LP_PA_CBND_BUBUN` 점 필터·PNU 필터 → pnu·지번·주소·경계·중심점. 상태 ok / outside(강남구 법정동 14개 밖) / not_found / unavailable / timeout. 캐시·저장 없음. `get_land(location=)`: 위치를 주면 지오코더를 부르지 않음
+- `core/lookup.py` 리팩터링: `lookup()` = 정규화 + `fill_layers()`, 새 `lookup_pnu()`(+ `core/address.normalize_pnu`). 리팩터링 전에 만든 `tests/fixtures/lookup_snapshot/*.json` 15건과 **바이트 단위로 같음**
+- `core/geo.py`·`core/refzones.py`(표준 라이브러리): bbox 선필터 + 짝홀 규칙(구멍·MultiPolygon). 184개 도형에서 점 판정 0.1~0.3ms
+- `GET /api/v1/map/parcel-at?lat=&lon=`(강남구 주변 밖 400)·`GET /api/v1/map/parcel?pnu=`(URL 복원용): pnu·지번 주소·경계·토지 정보(지목·면적·용도지역·지역지구·공시지가)·건축물·층별 고시 수·주변 500m 사업·참고 구역(이름·종류 코드·출처·라이선스·배지). 좌표는 필지 경계 중심점(`vworld-2d:LP_PA_CBND_BUBUN centroid`)
+- 화면: `map/pick.ts` 우선순위(사업 → 규제 → 사업 필지 → P17·P18 자리 → 빈 곳 = 필지 조회, 겹치면 P14 목록 유지 — 영현 결정), `api/parcel.ts` `LatestRequest`(AbortController, 이전 요청 취소), `state/parcelLookup.ts`, 브랜드 색 외곽선 강조(`click-parcel-line`), `inspector/ParcelLookupCard.tsx`, `sel=parcel:{19자리}` 복원(사업 필지 `parcel:{사업}:{pnu}`와 형식으로 구분). 상태 문구는 `web/src/copy/ui.ts`
+
+### 완료 확인 (2026-11-10)
+- `pytest -q` **156 passed** (전 132 → `tests/test_parcel_at.py` 23: 파싱·강남구 밖·필지 없음·시간 초과·오류·키 없음, 조립(지오코더·주소 검색 호출 없음), API 형식, lookup 15건 바이트 동일, `lookup_pnu` = `lookup` 층, 참고 구역 안/밖·속도, import_reference 멱등(임시 폴더 2회 + 커밋 결과와 같음), 원본 필드 유지, 지오코더 견본, check_keys 본문 저장 없음, parcel_at 저장 응답에 키·도메인 없음, WMS 프록시 3 / `test_map.py` 참고 레이어 1)
+- `npm --prefix web run test` **59 passed** (전 48 → `p15.test.ts` 11: 클릭 우선순위, 요청 취소, `sel=parcel` 복원, 참고 레이어 모양·WMS 줌·출처)
+- `npm --prefix web run build`: 초기 JS `index` **94.66 KB gzip**(전 92.22, ≤ 400KB), `MapView` 312.15 KB lazy
+- `python -m pipeline.import_reference` 2회 sha256 같음, `python -m pipeline.build_map_layers` 뒤에도 같음
+- `python -m evals.run_eval`: M1~M20 직전과 같음 (M10만 6 → 7ms)
+- `python -m evals.run_eval --live`: M18 **100% (20/20) · p95 300ms**, 새 지표 **M21 필지 클릭 조회 100% (5/5) · p95 307ms** (세곡동 279 307ms·역삼동 823 159·논현동 100 203·삼성동 159 43·개포동 12 174, 토지 정보 모두 ok). 대표 좌표는 `pipeline/live_parcel_points.py`가 연속지적도 경계 중심점으로 만든 `evals/goldset/live_parcels.yaml`(2회 같음). 커밋한 `evals/report.md`는 오프라인 실행본
+- `tests/ui_check_map.py --shot`(3000) **69/69**, `--built`(8000) **69/69**, 콘솔 오류 0 (P15 13항목: 참고 2종 켤 때 한 번만 요청·그려짐·점선·면 8%·출처, 참고 라벨, 줌 17 미만 안내·타일 요청 없음, 17 이상 WMS 타일 200(8000에서도 200×24), 역삼동 823 클릭 → 강조·카드·URL, 새로고침 복원, 빠른 두 번 클릭 → 마지막 것만, 대청마을 구역 안 → 사업 선택, 은마아파트 구역 안 → 참고 구역 이름)
+- 스크린샷: `docs/screens/map_03a_reference.png`, `map_03b_wms_cadastral.png`(줌 17.2), `map_03c_parcel_click.png`
+
+### 남은 것
+- 인스펙터 카드 디자인(P16), 코드 이름표(HUMAN_TODO 40), 서울플랜+ 새 판(41), Preview에서 WMS 프록시 확인(43)
 
 ## P14 좌측 레이어 패널·상단 바 — 완료 (2026-11-10)
 사용자가 레이어를 켜고 끄고, 겹쳐 보고, 사업을 찾아 고를 수 있게 했다. 인스펙터는 '선택 상태'까지만 만들었다 (내용은 P16).
@@ -45,8 +113,8 @@
 - 스크린샷: `docs/screens/map_02_layers.png`, `map_02d_overlap.png`, `map_02e_search.png`, `map_02f_status.png`, `map_02g_labels_before.png`, `map_02g_labels_after.png`
 
 ### 남은 것
-- 오른쪽 인스펙터 내용(P16), 고시 피드(P19), 빈 곳 클릭 필지 조회(P15)
-- `check_keys`는 기본 출력 위치(`build/check_keys/`)에도 지오코더 응답(getcoord)을 저장한다. build/는 커밋하지 않는 로컬 캐시지만 '지오코더 결과 저장 금지'와 맞춰 볼지 사람 확인 필요
+- 오른쪽 인스펙터 내용(P16), 고시 피드(P19), ~~빈 곳 클릭 필지 조회(P15)~~ → P15 완료
+- ~~`check_keys`는 기본 출력 위치(`build/check_keys/`)에도 지오코더 응답(getcoord)을 저장한다~~ → P15 0단계에서 닫음 (본문 저장 안 함)
 
 ## P13.5 528번지 likely 반영, 키 확인 — 완료 (2026-11-10)
 ### A. 브이월드 키

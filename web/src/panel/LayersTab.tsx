@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, Info, SlidersHorizontal } from 'lucide-react
 import type { Manifest, ManifestLayer } from '../api/map'
 import { UI } from '../copy/ui'
 import { BASEMAP_ORDER, BASEMAPS } from '../map/basemaps'
+import { zoomBlocked } from '../map/reference'
 import { useMapStore } from '../state/useMapStore'
 import { PANEL_LAYER_IDS, type PanelLayerId } from '../state/url'
 import { Tooltip } from '../ui/Floating'
@@ -20,6 +21,7 @@ function swatchOf(l: ManifestLayer): SwatchKind {
   if (l.id.startsWith('impact')) return 'impact'
   if (l.id === 'parcels') return 'parcel'
   if (l.id.startsWith('regulation')) return 'regulation'
+  if (l.ref) return l.kind === 'raster' ? 'raster' : 'reference'
   if (l.status !== 'ready') return l.kind === 'symbol' ? 'symbol' : l.kind === 'raster' ? 'raster' : 'pending'
   return 'pending'
 }
@@ -77,8 +79,10 @@ function LayerRow({ l }: { l: ManifestLayer }) {
   const state = useMapStore((s) => (panelId ? s.layers[panelId] : null))
   const setVisible = useMapStore((s) => s.setLayerVisible)
   const setOpacity = useMapStore((s) => s.setLayerOpacity)
+  const zoom = useMapStore((s) => s.zoom)
   const [open, setOpen] = useState(false)
   const enabled = l.status === 'ready' && panelId !== null
+  const blockedAt = zoomBlocked(l.id, zoom)
   const inputId = `layer-${l.id}`
   return (
     <li
@@ -101,7 +105,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
           className="h-4 w-4 shrink-0 accent-brand-indigo"
         />
         <label htmlFor={inputId} className="flex min-w-0 flex-1 items-center gap-2">
-          <LayerSwatch kind={swatchOf(l)} opacity={state ? state.opacity / 100 : 1} />
+          <span className="flex shrink-0"><LayerSwatch kind={swatchOf(l)} opacity={state ? state.opacity / 100 : 1} /></span>
           <span className="leading-tight break-keep">{l.name}</span>
         </label>
         {l.status === 'ready' && l.count !== null && (
@@ -110,6 +114,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
           </span>
         )}
         {l.status === 'ready' && l.unverified && <Badge tone="warn">{UI.layers.unverified}</Badge>}
+        {l.status === 'ready' && l.badge && <Badge>{l.badge}</Badge>}
         {l.status === 'not_adopted' && <Badge tone="warn">{UI.layers.notAdopted}</Badge>}
         {l.status === 'pending' && (
           <span className="flex flex-col items-end gap-0.5">
@@ -148,6 +153,11 @@ function LayerRow({ l }: { l: ManifestLayer }) {
         </label>
       )}
       {l.id === 'impact500' && <p className="mt-1 ml-6 text-xs text-ink-muted">{UI.layers.impactNote}</p>}
+      {enabled && blockedAt !== null && (
+        <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid={`layer-zoomhint-${l.id}`}>
+          {UI.reference.zoomHint(blockedAt)}
+        </p>
+      )}
       {l.id === 'parcels' && l.count_by_judgment && (
         <ul className="mt-1 ml-6 space-y-0.5 text-xs text-ink-muted" data-testid="parcel-legend">
           <li className="flex items-center gap-1.5">

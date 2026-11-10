@@ -90,6 +90,22 @@ def _demo_by_pnu(con, pnu: str):
     return con.execute("SELECT * FROM demo_addresses WHERE pnu=? AND in_scope=1 ORDER BY addr_id", (pnu,)).fetchone()
 
 
+def normalize_pnu(con, pnu: str, via: str = "map-click") -> dict:
+    """PNU(지도 클릭 등으로 이미 정해진 필지) → 정규화 결과. 시연 주소와 같은 필지면 그 행을 쓴다 (P15)."""
+    if not (isinstance(pnu, str) and len(pnu) == 19 and pnu.isdigit()):
+        return _result("not_found", "PNU는 숫자 19자리입니다", match_via=via)
+    if pnu[:5] != SCOPE_SGG:
+        return _result("out_of_scope", MSG_OUT, match_via=via)
+    info = _dong_info(con, pnu[:10])
+    if not info:
+        return _result("out_of_scope", MSG_OUT, match_via=via)
+    same = _demo_by_pnu(con, pnu)
+    if same:
+        return _from_demo(con, same, via)
+    return _result("ok", None, jibun_address=jibun_text(con, pnu), pnu=pnu, bjd_code=pnu[:10], sgg_code=pnu[:5],
+                   match_via=via, **info)
+
+
 def _from_search_row(con, r: dict, via: str) -> dict:
     """도로명 검색 결과 1건 → 정규화 결과. 같은 PNU의 시연 주소가 있으면 그 행(캐시·좌표)을 쓴다."""
     pnu = r["pnu"]

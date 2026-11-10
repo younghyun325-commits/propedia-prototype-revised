@@ -6,7 +6,7 @@ reference_rank가 있는 배경 항목은 '참고(reference)' 섹션으로 보�
 import math
 
 from core import review as review_mod
-from core.address import jibun_text, normalize
+from core.address import jibun_text, normalize, normalize_pnu
 from core.db import loads, meta, source
 from core.timeutil import d_day, dot, effective, parse_date, today_kst
 
@@ -268,13 +268,15 @@ def land_use_documented(con, included: list) -> dict | None:
     return None
 
 
-def land_for(con, norm: dict, live) -> dict:
-    """토지 정보: ① 빌드 캐시(seed/land_cache.json) ② 실시간(메모리 캐시 1시간 포함) ③ 없음 안내."""
+def land_for(con, norm: dict, live, location: dict | None = None) -> dict:
+    """토지 정보: ① 빌드 캐시(seed/land_cache.json) ② 실시간(메모리 캐시 1시간 포함) ③ 없음 안내.
+    location(필지 경계 중심점)을 주면 실시간 조회에서 지오코더를 부르지 않는다 (P15 지도 클릭)."""
     r = con.execute("SELECT payload FROM land_cache WHERE pnu=?", (norm["pnu"],)).fetchone()
     if r:
         return dict(loads(r["payload"], {}) or {}, from_cache=True, cache="build")
     if live is not None:
-        land = live.get_land(norm["pnu"], norm["jibun_address"] or jibun_text(con, norm["pnu"]))
+        jibun = norm["jibun_address"] or jibun_text(con, norm["pnu"])
+        land = live.get_land(norm["pnu"], jibun, location=location) if location else live.get_land(norm["pnu"], jibun)
         return dict(land, cache="memory" if land.get("from_cache") else None)
     return {"status": "unavailable", "pnu": norm["pnu"], "zones": [], "missing": [], "location": None,
             "official_price": None, "from_cache": False, "cache": None, "found": None, "source": None,
@@ -315,21 +317,44 @@ NORM_KEYS = ("addr_id", "road_address", "jibun_address", "pnu", "bjd_code", "sgg
              "lat", "lon", "coord_source", "match_via")
 
 
+def _response(query: str, norm: dict, m: dict, ov) -> tuple[dict, dict]:
+    normalized = {k: norm[k] for k in NORM_KEYS}
+    resp = {"query": query, "status": norm["status"], "message": norm["message"], "normalized": normalized,
+            "candidates": norm.get("candidates"),
+            "as_of": m.get("as_of"), "layers": None, "reference": None, "review_applied": ov.review_applied,
+            "events": ov.events, "coverage_note": m.get("coverage_note"), "disclaimer": DISCLAIMER}
+    return resp, normalized
+
+
 def lookup(con, text: str, decisions=None, today=None, live=None) -> dict:
     """live: 실시간 조회 객체(core.live.Live). None이면 네트워크 없이 시연 주소·지번·빌드 캐시만 쓴다."""
     today = today or today_kst()
     m = meta(con)
     ov = review_mod.apply(con, decisions)
     norm = normalize(con, text, search=live.search if live is not None else None)
-    normalized = {k: norm[k] for k in NORM_KEYS}
-    resp = {"query": text, "status": norm["status"], "message": norm["message"], "normalized": normalized,
-            "candidates": norm.get("candidates"),
-            "as_of": m.get("as_of"), "layers": None, "reference": None, "review_applied": ov.review_applied,
-            "events": ov.events, "coverage_note": m.get("coverage_note"), "disclaimer": DISCLAIMER}
+    resp, normalized = _response(text, norm, m, ov)
     if norm["status"] != "ok":
         return resp
+    return fill_layers(con, resp, norm, normalized, ov, today, live, m)
 
-    land = land_for(con, norm, live)
+
+def lookup_pnu(con, pnu: str, decisions=None, today=None, live=None, location: dict | None = None) -> dict:
+    """필지가 이미 정해진 경우 (지도 클릭, P15): 주소 검색을 거치지 않고 PNU로 바로 4개 층을 조립한다.
+    location = 필지 경계 중심점 {lat, lon, source} (지오코더 대신)."""
+    today = today or today_kst()
+    m = meta(con)
+    ov = review_mod.apply(con, decisions)
+    norm = normalize_pnu(con, pnu)
+    resp, normalized = _response(pnu, norm, m, ov)
+    if norm["status"] != "ok":
+        return resp
+    return fill_layers(con, resp, norm, normalized, ov, today, live, m, location=location)
+
+
+def fill_layers(con, resp: dict, norm: dict, normalized: dict, ov, today, live, m: dict,
+                location: dict | None = None) -> dict:
+    """'필지가 정해진 뒤' 부분: 토지 정보·4개 층·사업·참고 섹션을 resp에 채운다."""
+    land = land_for(con, norm, live, location)
     loc = land.get("location")
     if loc:                               # 좌표는 토지 정보(지오코더)를 쓰고, 주변 500m 판정을 모든 주소에 적용
         norm.update(lat=loc["lat"], lon=loc["lon"], coord_source=loc["source"])

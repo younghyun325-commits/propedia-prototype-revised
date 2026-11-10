@@ -18,8 +18,14 @@ import type { Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson'
 import { MapPin } from 'lucide-react'
 import { useMapProjects } from '../api/map'
 import { UI } from '../copy/ui'
-import { useMapStore } from '../state/useMapStore'
-import { featureId, parseSelected, PANEL_LAYER_IDS, type LayerStates, type Selected } from '../state/url'
+import { useMapStore, type ParcelLookup } from '../state/useMapStore'
+import { featureId, isParcelLookup, parseSelected, PANEL_LAYER_IDS, type LayerStates, type Selected } from '../state/url'
+import { lookupParcelAt, lookupParcelByPnu } from '../state/parcelLookup'
+import { decideClick } from './pick'
+import {
+  REF_GEO_IDS, REF_GEOJSON, REF_LABEL_MIN_ZOOM, REF_WMS_IDS, WMS, refAttributions, refGeoLayers, refWmsLayer,
+  wmsTileUrl, type RefGeoId,
+} from './reference'
 import { GlassPanel } from '../ui/GlassPanel'
 import { ATTRIBUTION, BASEMAPS, TILE_MAX_ZOOM, TILE_MIN_ZOOM, tileUrl } from './basemaps'
 import { bboxOf, labelPoint, outsideMask, padBounds, type Bounds } from './geo'
@@ -48,12 +54,23 @@ const LABEL_LIFT = 14 // .map-area-label translateY(-14px)
 
 type Propedia = Partial<Record<LayerKind, PropediaFC>>
 const KINDS = Object.keys(LAYER_FILES) as LayerKind[]
+// 클릭 대상은 Propedia 도형만 (참고 레이어는 클릭 대상 아님). 우선순위는 map/pick.ts
 const HIT_LAYERS = ['propedia-project-fill', 'propedia-regulation-fill', 'propedia-parcel-hit'] as const
-const PICK_ORDER: Record<string, number> = { project: 0, regulation: 1, parcel: 2 } // 클릭 우선순위
 const HOVER_ORDER: Record<string, number> = { parcel: 0, regulation: 1, project: 2 } // 호버: 가장 작은 도형
+const CLICK_SOURCE = 'click-parcel'
+const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] }
+
+type RefData = Partial<Record<RefGeoId, FeatureCollection<Polygon | MultiPolygon, Record<string, unknown>>>>
 
 /** 스타일에 넣을 때와 지도에 바로 걸 때 같은 값을 쓰는 상태 묶음 */
 type Snapshot = { layers: LayerStates; overlap: boolean; selected: Selected; searchPnu: string | null }
+
+/** 클릭 필지 강조 도형: 결과가 있고 지금 선택이 그 필지일 때만 */
+function clickParcelData(parcel: ParcelLookup, selected: Selected): FeatureCollection {
+  if (parcel.status !== 'done' || parcel.data.status !== 'ok' || !parcel.data.boundary) return EMPTY_FC
+  if (!isParcelLookup(selected) || selected.id !== parcel.data.pnu) return EMPTY_FC
+  return { type: 'FeatureCollection', features: [{ type: 'Feature', properties: { pnu: parcel.data.pnu }, geometry: parcel.data.boundary }] }
+}
 
 /** 점검 스크립트용 지도 객체 노출: 개발 서버 또는 ?debug=1일 때만 */
 function exposeMap(): boolean {
@@ -105,6 +122,8 @@ function buildStyle(
   colors: LayerColors,
   hl: HighlightColors,
   snap: Snapshot,
+  ref: RefData = {},
+  clickData: FeatureCollection = EMPTY_FC,
 ): StyleSpecification {
   const sources: StyleSpecification['sources'] = {}
   const layers: StyleSpecification['layers'] = [{ id: 'bg', type: 'background', paint: { 'background-color': BG } }]
@@ -127,6 +146,12 @@ function buildStyle(
     sources.gu = { type: 'geojson', data: gu }
     layers.push({ id: 'mask', type: 'fill', source: 'mask', paint: { 'fill-color': '#ffffff', 'fill-opacity': 0.55 } })
   }
+  // 공식 참고 WMS (P15, API 프록시): 보이는 레이어가 있을 때만 MapLibre가 타일을 요청한다. 줌 조건은 소스·레이어 minzoom
+  for (const id of REF_WMS_IDS) {
+    sources[id] = { type: 'raster', tiles: [wmsTileUrl(WMS[id].layer)], tileSize: 256, minzoom: WMS[id].minZoom,
+      maxzoom: 19 }
+  }
+  layers.push(...withState(REF_WMS_IDS.map(refWmsLayer), snap))
   if (dongs) {
     sources.bjd = { type: 'geojson', data: dongs }
     // 커서 위치의 법정동을 찾기 위한 투명 면
@@ -137,6 +162,12 @@ function buildStyle(
       source: 'bjd',
       paint: { 'line-color': INK, 'line-width': 0.75, 'line-opacity': 0.45 },
     })
+  }
+  // 공식 참고 GeoJSON (P15, 처음 켤 때 불러온 것만): Propedia 레이어 아래
+  for (const id of REF_GEO_IDS) {
+    if (!ref[id]) continue
+    sources[id] = { type: 'geojson', data: ref[id]! }
+    layers.push(...withState(refGeoLayers(id, colors.ref), snap))
   }
   // Propedia 검증 레이어 (스포트라이트 마스크·법정동 경계 위, 구 경계선 아래). 라벨은 HTML 마커
   const loadedKinds = KINDS.filter((k) => propedia[k])
@@ -149,6 +180,10 @@ function buildStyle(
   if (gu) {
     layers.push({ id: 'gu-line', type: 'line', source: 'gu', paint: { 'line-color': INK, 'line-width': 1.5 } })
   }
+  // 빈 곳 클릭으로 조회한 필지 강조 (브랜드 색 외곽선, P15)
+  sources[CLICK_SOURCE] = { type: 'geojson', data: clickData }
+  layers.push({ id: 'click-parcel-line', type: 'line', source: CLICK_SOURCE,
+    paint: { 'line-color': hl.selected, 'line-width': 3.5, 'line-blur': 0.5 } })
   return { version: 8, sources, layers }
 }
 
@@ -182,6 +217,23 @@ export default function MapView({ insets }: { insets: Insets }) {
   const [pick, setPick] = useState<Pick | null>(null)
   const [placements, setPlacements] = useState<Record<string, Placement>>({})
   const initialCamera = useRef(useMapStore.getState().camera)
+  const parcel = useMapStore((s) => s.parcel)
+  const [refData, setRefData] = useState<RefData>({})
+  const refLoading = useRef(new Set<RefGeoId>())
+
+  // 공식 참고 GeoJSON: 행을 처음 켤 때만 불러온다 (켤 때 불러오기). 한 번 받은 것은 다시 받지 않는다
+  useEffect(() => {
+    for (const id of REF_GEO_IDS) {
+      if (!layerStates[id].visible || refData[id] || refLoading.current.has(id)) continue
+      refLoading.current.add(id)
+      loadJson<NonNullable<RefData[RefGeoId]>>(REF_GEOJSON[id].file)
+        .then((fc) => setRefData((d) => ({ ...d, [id]: fc })))
+        .catch((e: Error) => {
+          refLoading.current.delete(id)
+          setLoadError(`${UI.reference.loadError} (${e.message})`)
+        })
+    }
+  }, [layerStates, refData])
 
   useEffect(() => {
     Promise.all([loadJson('/data/base/gangnam.geojson'), loadJson('/data/base/bjd.geojson')])
@@ -216,8 +268,8 @@ export default function MapView({ insets }: { insets: Insets }) {
     const s = useMapStore.getState()
     return buildStyle(basemap, gu, dongs, propedia, colors, hl, {
       layers: s.layers, overlap: s.overlap, selected: s.selected, searchPnu: s.searchHit?.pnu ?? null,
-    })
-  }, [basemap, gu, dongs, propedia, colors, hl])
+    }, refData, clickParcelData(s.parcel, s.selected))
+  }, [basemap, gu, dongs, propedia, colors, hl, refData])
 
   // 사업·규제 구역 라벨 (사람 확인 전이면 '확인 전')
   const areaLabels = useMemo(
@@ -231,6 +283,21 @@ export default function MapView({ insets }: { insets: Insets }) {
         })),
       ),
     [propedia],
+  )
+
+  // 공식 참고 라벨: 줌 15 이상, DGM_NM + '참고' (Propedia 라벨 다음 순위로 겹침 피하기)
+  const refVisible = REF_GEO_IDS.map((id) => (layerStates[id].visible ? '1' : '0')).join('')
+  const refLabels = useMemo(
+    () =>
+      REF_GEO_IDS.filter((_, i) => refVisible[i] === '1').flatMap((id) =>
+        (refData[id]?.features ?? []).map((f, i) => ({
+          id: `ref:${id}:${i}`,
+          layer: id,
+          text: `${String(f.properties.DGM_NM ?? '')} · ${UI.reference.labelSuffix}`,
+          at: labelPoint(f.geometry),
+        })),
+      ),
+    [refData, refVisible],
   )
 
   const [loaded, setLoaded] = useState(false)
@@ -253,10 +320,21 @@ export default function MapView({ insets }: { insets: Insets }) {
     }
     if (map.getLayer('propedia-parcel-search'))
       map.setFilter('propedia-parcel-search', idFilter('pnu', s.searchHit?.pnu ?? null) as never)
+    const click = map.getSource(CLICK_SOURCE) as maplibregl.GeoJSONSource | undefined
+    click?.setData(clickParcelData(s.parcel, s.selected) as never)
   }, [])
   useEffect(() => {
     if (loaded) applyState()
-  }, [loaded, layerStates, overlap, selected, searchHit, applyState])
+  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState])
+
+  // 새로고침: URL sel=parcel:{pnu}면 같은 필지를 다시 조회해 강조한다 (한 번)
+  const restored = useRef(false)
+  useEffect(() => {
+    if (!loaded || restored.current) return
+    restored.current = true
+    const s = useMapStore.getState()
+    if (isParcelLookup(s.selected) && s.parcel.status === 'idle') void lookupParcelByPnu(s.selected.id)
+  }, [loaded])
 
   // 이동 범위: 지도 중심을 강남구 경계 + 약 2km 안으로 묶는다.
   // MapLibre maxBounds는 화면 전체(패널 밑 포함)를 그 안에 넣으려고 줌을 키워 버려서(1440px 화면에서 줌 ~13.5)
@@ -317,6 +395,17 @@ export default function MapView({ insets }: { insets: Insets }) {
   }, [loaded, searchHit?.nonce])
   const searchHasParcel = !!(searchHit?.pnu && propedia.parcel?.features.some((x) => x.properties.pnu === searchHit.pnu))
 
+  // URL로 복원한 필지 조회 결과: 그 경계로 이동 (클릭 조회는 이동하지 않음)
+  const fittedReq = useRef<number | null>(null)
+  useEffect(() => {
+    const map = mapRef.current
+    if (!loaded || !map || parcel.status !== 'done' || !parcel.fit || fittedReq.current === parcel.reqId) return
+    const g = parcel.data.boundary
+    if (parcel.data.status !== 'ok' || !g || (g.type !== 'Polygon' && g.type !== 'MultiPolygon')) return
+    fittedReq.current = parcel.reqId
+    map.fitBounds(bboxOf([{ type: 'Feature', properties: {}, geometry: g }]), { padding: padding(80), maxZoom: 18, duration: 0 })
+  }, [loaded, parcel, padding])
+
   // 3D 기울기
   useEffect(() => {
     mapRef.current?.easeTo({ pitch: tilt3d ? TILT : 0, duration: 600 })
@@ -343,8 +432,12 @@ export default function MapView({ insets }: { insets: Insets }) {
         minZoom: l.kind === 'regulation' ? REGULATION_LABEL_MIN_ZOOM : undefined,
       }
     })
-    setPlacements(placeLabels(inputs, zoom, obstacles))
-  }, [labels, areaLabels])
+    const refInputs = refLabels.map((l) => {
+      const p = map.project(l.at as [number, number])
+      return { id: l.id, x: p.x, y: p.y - LABEL_LIFT, w: estimateLabelWidth(l.text), h: LABEL_H, minZoom: REF_LABEL_MIN_ZOOM }
+    })
+    setPlacements(placeLabels([...inputs, ...refInputs], zoom, obstacles))
+  }, [labels, areaLabels, refLabels])
   useEffect(() => {
     if (loaded) relayout()
   }, [loaded, relayout])
@@ -394,21 +487,28 @@ export default function MapView({ insets }: { insets: Insets }) {
   }
 
   const onClick = (e: MapLayerMouseEvent) => {
-    const ts = targetsAt(e).sort((a, b) => PICK_ORDER[propsOf(a).kind] - PICK_ORDER[propsOf(b).kind])
-    if (ts.length === 0) {
-      setPick(null)
+    const feats = targetsAt(e)
+    const d = decideClick(feats.map((f) => ({ id: propsOf(f).id, kind: propsOf(f).kind })))
+    if (pick) {
+      setPick(null) // 열린 선택 목록은 바깥을 누르면 닫기만 한다
+      if (d.type === 'parcel-lookup') return
+    }
+    if (d.type === 'parcel-lookup') {
+      // 빈 곳 = 필지 조회 (P15). 이전 요청은 취소된다
+      void lookupParcelAt(e.lngLat.lat, e.lngLat.lng)
       return
     }
-    if (ts.length === 1) {
+    if (d.type === 'select') {
       setPick(null)
-      useMapStore.getState().select(parseSelected(propsOf(ts[0]).id))
+      useMapStore.getState().select(parseSelected(d.id))
       return
     }
+    const byId = new globalThis.Map(feats.map((f) => [propsOf(f).id, propsOf(f)]))
     setPick({
       x: e.point.x,
       y: e.point.y,
-      items: ts.map((f) => {
-        const p = propsOf(f)
+      items: d.items.map((it) => {
+        const p = byId.get(it.id)!
         return { id: p.id, kind: p.kind, name: p.kind === 'project' ? (p.short_name ?? p.name) : p.name }
       }),
     })
@@ -464,6 +564,7 @@ export default function MapView({ insets }: { insets: Insets }) {
           setMapMoving(false)
           const c = e.target.getCenter()
           useMapStore.getState().setCamera({ lon: c.lng, lat: c.lat, zoom: e.target.getZoom() })
+          useMapStore.getState().setZoom(e.target.getZoom())
           relayout()
         }}
         onLoad={() => {
@@ -476,6 +577,7 @@ export default function MapView({ insets }: { insets: Insets }) {
           map?.on('styleimagemissing', (e: { id: string }) => e.id === HATCH_ID && addHatch())
           // 점검 스크립트(tests/ui_check_map.py)가 페인트·렌더된 도형을 확인할 수 있게: 개발 서버 또는 ?debug=1일 때만
           if (exposeMap()) (window as unknown as { __propediaMap?: unknown }).__propediaMap = map
+          if (map) useMapStore.getState().setZoom(map.getZoom())
           setLoaded(true)
         }}
         style={{ position: 'absolute', inset: 0 }}
@@ -496,6 +598,22 @@ export default function MapView({ insets }: { insets: Insets }) {
             </Marker>
           )
         })}
+        {refLabels.map((l) => {
+          const pl = placements[l.id]
+          if (!pl || !pl.visible) return null
+          return (
+            <Marker key={l.id} longitude={l.at[0]} latitude={l.at[1]} anchor="center" offset={[pl.dx, pl.dy]}>
+              <span className="map-area-label map-area-label--reference" data-testid="ref-label" data-layer={l.layer}>
+                {l.text}
+              </span>
+            </Marker>
+          )
+        })}
+        {parcel.status === 'loading' && parcel.point && (
+          <Marker longitude={parcel.point[0]} latitude={parcel.point[1]} anchor="bottom">
+            <span className="map-area-label" role="status" data-testid="parcel-loading-marker">{UI.parcel.loading}</span>
+          </Marker>
+        )}
         {labels.map((l) => (
           <Marker key={l.id} longitude={l.at[0]} latitude={l.at[1]} anchor="center">
             <span className="map-dong-label" data-testid="dong-label">
@@ -569,10 +687,11 @@ export default function MapView({ insets }: { insets: Insets }) {
       {/* 출처 (우하단) */}
       <div
         data-testid="attribution"
-        className="glass pointer-events-none absolute px-3 py-1 text-xs"
-        style={{ right: insets.right, bottom: insets.bottom, borderRadius: 999 }}
+        className="glass pointer-events-none absolute px-3 py-1 text-right text-xs"
+        // 참고 레이어 출처가 붙으면 길어진다: 왼쪽 커서 표시줄(약 280px)과 패널을 피해 줄을 바꾼다
+        style={{ right: insets.right, bottom: insets.bottom, borderRadius: 12, maxWidth: `calc(100% - ${insets.left + insets.right + 280}px)` }}
       >
-        {ATTRIBUTION}
+        {[ATTRIBUTION, ...refAttributions((id) => layerStates[id].visible)].join(' · ')}
       </div>
 
       {loadError && (

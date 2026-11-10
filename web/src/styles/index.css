@@ -73,6 +73,12 @@ body {
 .map-area-label--regulation {
   border-left: 3px solid var(--color-layer-regulation-line);
 }
+/* 공식 참고 라벨 (P15): 회색 점선 띠, 글자도 흐리게 */
+.map-area-label--reference {
+  border-left: 3px dashed var(--color-layer-ref);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+}
 
 /* 배경지도·3D 칩에서 켜진 것 */
 .map-chip-on {

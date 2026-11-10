@@ -1,7 +1,8 @@
 import { create } from 'zustand'
+import type { ParcelAt } from '../api/parcel'
 import type { BasemapId } from '../map/basemaps'
 import {
-  defaultUrlState, parseUrl, type Camera, type LayerStates, type LeftTab, type PanelLayerId, type Selected,
+  defaultUrlState, isParcelLookup, parseUrl, type Camera, type LayerStates, type LeftTab, type PanelLayerId, type Selected,
 } from './url'
 
 export type Workspace = 'gangnam' | 'project'
@@ -12,6 +13,13 @@ export type ViewRequest = ViewTarget & { nonce: number }
 
 /** 검색으로 찾은 곳: 필지 경계가 있으면 pnu로 강조, 없으면 임시 핀 (좌표는 화면 메모리에만, 저장하지 않음) */
 export type SearchHit = { label: string; pnu: string | null; point: [number, number] | null; nonce: number } | null
+
+/** 지도 클릭 필지 조회 (P15). 화면 메모리에만 (저장하지 않음). reqId가 다른 (이전) 응답은 버린다 */
+export type ParcelLookup =
+  | { status: 'idle'; reqId: number }
+  | { status: 'loading'; reqId: number; point: [number, number] | null; pnu: string | null }
+  | { status: 'done'; reqId: number; data: ParcelAt; fit: boolean }
+  | { status: 'error'; reqId: number; message: string }
 
 export type MapState = {
   leftOpen: boolean
@@ -36,6 +44,9 @@ export type MapState = {
   paletteOpen: boolean
   viewRequest: ViewRequest | null
   searchHit: SearchHit
+  /** 현재 줌 (이동이 끝날 때) — 줌 조건이 있는 레이어 안내용 */
+  zoom: number | null
+  parcel: ParcelLookup
 
   toggleLeft: () => void
   toggleRight: () => void
@@ -57,6 +68,8 @@ export type MapState = {
   setPaletteOpen: (v: boolean) => void
   requestView: (r: ViewTarget) => void
   setSearchHit: (h: Omit<NonNullable<SearchHit>, 'nonce'> | null) => void
+  setZoom: (z: number) => void
+  setParcel: (p: ParcelLookup) => void
 }
 
 function initialUrlState() {
@@ -84,13 +97,20 @@ export const useMapStore = create<MapState>()((set) => {
     paletteOpen: false,
     viewRequest: null,
     searchHit: null,
+    zoom: u.camera?.zoom ?? null,
+    parcel: { status: 'idle', reqId: 0 },
 
     toggleLeft: () => set((s) => ({ leftOpen: !s.leftOpen })),
     toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
     toggleTimeline: () => set((s) => ({ timelineOpen: !s.timelineOpen })),
     // 고르면 인스펙터를 연다 (내용은 P16)
-    select: (selected) => set(selected ? { selected, rightOpen: true } : { selected: null }),
-    clearSelection: () => set({ selected: null }),
+    // 필지 조회가 아닌 대상을 고르면 필지 조회 결과를 내린다
+    select: (selected) =>
+      set((s) => ({
+        ...(selected ? { selected, rightOpen: true } : { selected: null }),
+        ...(isParcelLookup(selected) ? {} : { parcel: { status: 'idle' as const, reqId: s.parcel.reqId + 1 } }),
+      })),
+    clearSelection: () => set((s) => ({ selected: null, parcel: { status: 'idle', reqId: s.parcel.reqId + 1 } })),
     setWorkspace: (workspace) => set({ workspace }),
     toggleReduceTransparency: () => set((s) => ({ reduceTransparency: !s.reduceTransparency })),
     setMapMoving: (mapMoving) => set(mapMoving ? { mapMoving, hovered: null } : { mapMoving }),
@@ -114,5 +134,7 @@ export const useMapStore = create<MapState>()((set) => {
     setPaletteOpen: (paletteOpen) => set({ paletteOpen }),
     requestView: (r) => set({ viewRequest: { ...r, nonce: ++nonce } }),
     setSearchHit: (h) => set({ searchHit: h ? { ...h, nonce: ++nonce } : null }),
+    setZoom: (zoom) => set({ zoom }),
+    setParcel: (parcel) => set({ parcel }),
   }
 })

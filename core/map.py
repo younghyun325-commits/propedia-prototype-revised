@@ -4,6 +4,8 @@
 - map_notices: 지도에 영역이 없는 서울 전역·강남구 단위 고시 (상단 바 칩). 효력 판정은 lookup.load_items 그대로
 - map_projects: 사업 목록. 단계·기한은 progress() 결과를 그대로 쓰고 새로 계산하지 않는다
 - key_status: 실시간 조회 키가 있는지 '있음/없음'만 (값은 절대 내보내지 않음)
+- parcel_at / parcel_by_pnu: 지도 클릭 필지 조회 (P15). 필지 찾기는 core/live(브이월드 2D 데이터), 나머지는
+  lookup_pnu(기존 4개 층 조립)·refzones(공식 참고 구역 점 판정)를 그대로 쓴다. 결과는 저장하지 않는다.
 건수는 여기·화면·테스트 어디에도 숫자로 적지 않고 manifest·GeoJSON·DB에서 읽는다.
 """
 import json
@@ -11,7 +13,8 @@ from pathlib import Path
 
 from core.catalog import DOC_KIND_LABELS
 from core.db import meta
-from core.lookup import load_items
+from core import refzones
+from core.lookup import DISCLAIMER, load_items, lookup_pnu
 from core.progress import progress
 from core.review import Overrides
 
@@ -42,17 +45,22 @@ GROUPS = [
     {"id": "base", "name": "기본 경계"},
 ]
 
-# 아직 데이터가 없는 레이어 (P15·P17·P18에서 채움)
+# 공식 참고 레이어 (P15). 빌드 GeoJSON 2종은 manifest.json의 ref_* 항목(pipeline/import_reference.py),
+# WMS 3종은 브이월드 GetCapabilities로 확인한 이름 (pipeline/check_wms.py, 2026-11-10: GetLegendGraphic 없음 → 범례 없음).
+# 브이월드 WMS는 CORS 헤더가 없어 화면은 /api/v1/map/wms/{layer}/{z}/{x}/{y}.png(서버 키 프록시)로 받는다
+REF_GEOJSON = [("ref-seoulplan", "ref_seoulplan", "서울시 도시계획사업 현황"), ("ref-uije", "ref_uije", "의제처리구역")]
+REF_WMS = [
+    {"id": "ref-zoning", "name": "용도지역 (WMS)", "wms_layer": "lt_c_uq111", "wms_title": "도시지역", "min_zoom": 14},
+    {"id": "ref-district", "name": "지구단위계획구역 (WMS)", "wms_layer": "lt_c_upisuq161", "wms_title": "지구단위계획",
+     "min_zoom": 14},
+    # 연속지적도 WMS는 0.6m/px보다 거친 요청에 빈 그림을 준다 → 줌 17부터 (core/live/vworld.WMS_MAX_MPP)
+    {"id": "ref-cadastral", "name": "지적도 (WMS)", "wms_layer": "lp_pa_cbnd_bubun", "wms_title": "연속지적도",
+     "min_zoom": 17},
+]
+WMS_BADGE = "참고"
+
+# 아직 데이터가 없는 레이어 (P17·P18에서 채움)
 PENDING = [
-    {"id": "ref-seoulplan", "group": "reference", "name": "서울시 도시계획사업 현황 (서울플랜+)", "kind": "fill",
-     "source": "서울 열린데이터광장 OA-22712", "license": "공공누리 4유형 (출처표시·비상업·변경금지)",
-     "available_from": "P15", "badge": "참고·비상업"},
-    {"id": "ref-uije", "group": "reference", "name": "의제처리구역", "kind": "fill",
-     "source": "서울특별시 의제처리구역 위치정보", "license": "출처표시", "available_from": "P15", "badge": "참고"},
-    {"id": "ref-zoning", "group": "reference", "name": "용도지역·지구단위계획 (WMS)", "kind": "raster",
-     "source": "브이월드 WMS", "license": VWORLD_LICENSE, "available_from": "P15", "badge": "참고"},
-    {"id": "ref-cadastral", "group": "reference", "name": "지적도 (WMS)", "kind": "raster",
-     "source": "브이월드 WMS lp_pa_cbnd_bubun", "license": VWORLD_LICENSE, "available_from": "P15", "badge": "참고"},
     {"id": "apartments", "group": "market", "name": "아파트 단지", "kind": "fill",
      "source": "국토교통부 공동주택 단지 목록·기본 정보", "license": "이용허락범위 제한 없음", "available_from": "P17"},
     {"id": "schools", "group": "infra", "name": "학교", "kind": "symbol",
@@ -154,6 +162,19 @@ def map_manifest(con) -> dict:
         entry("regulation-d5", "propedia", "압구정 아파트지구 토지거래허가구역 (D5)", "fill",
               {"source": "서울특별시 공고 제2026-1141호 지형도면", "doc_ids": ["D5"]}, count=0,
               status="not_adopted", note=d5.split(":", 1)[1].strip() if ":" in d5 else D5_NOTE)
+
+    for id_, key, name in REF_GEOJSON:
+        rf = L.get(key)
+        entry(id_, "reference", name, "fill", rf, status="ready" if rf else "pending",
+              note=(rf or {}).get("note") or "pipeline.import_reference 실행 전", badge=(rf or {}).get("badge"),
+              lazy=True, file=(rf or {}).get("file"), size_bytes=(rf or {}).get("size_bytes"),
+              disclaimer=(rf or {}).get("disclaimer"), ref=True)
+    for w in REF_WMS:
+        entry(w["id"], "reference", w["name"], "raster",
+              {"source": f"브이월드 WMS {w['wms_layer']} ({w['wms_title']})", "license": VWORLD_LICENSE},
+              status="ready", note=None, badge=WMS_BADGE, wms_layer=w["wms_layer"], min_zoom=w["min_zoom"],
+              tile_url=f"/api/v1/map/wms/{w['wms_layer']}/{{z}}/{{x}}/{{y}}.png",
+              legend_url=None, ref=True)
 
     for p in PENDING:
         layers.append({"id": p["id"], "group": p["group"], "name": p["name"], "kind": p["kind"], "source": p["source"],
@@ -264,3 +285,72 @@ def key_status() -> dict:
     if not has["vworld"]:
         notes.append("브이월드 키 없음: 토지 정보는 미리 받아 둔 시연 주소만 보여 줍니다")
     return {"keys": {k: "있음" if v else "없음" for k, v in has.items()}, "key_notes": notes}
+
+
+# ---- 지도 클릭 필지 조회 (P15) ----
+LIVE_OFF_NOTE = "실시간 조회를 쓰지 않는 설정이라 필지를 조회하지 못했습니다"
+CLICK_LAT = (37.40, 37.60)          # 강남구 주변 (화면 URL 범위와 같음). 밖이면 API 400
+CLICK_LON = (126.90, 127.25)
+LAND_KEYS = ("status", "jimok", "area_m2", "land_use_zone", "land_use_zone2", "zones", "official_price",
+             "use_situation", "missing", "source", "fetched_at", "from_cache", "cache", "found", "note")
+
+
+def in_click_range(lat: float, lon: float) -> bool:
+    return CLICK_LAT[0] <= lat <= CLICK_LAT[1] and CLICK_LON[0] <= lon <= CLICK_LON[1]
+
+
+def _allowed_bjd(con) -> set:
+    return {r["bjd_code"] for r in con.execute("SELECT bjd_code FROM bjd_codes")}
+
+
+def _assemble(con, parcel: dict, live, today, point: tuple | None) -> dict:
+    m = meta(con)
+    base = {"status": parcel["status"], "message": parcel.get("note"), "pnu": parcel.get("pnu"),
+            "jibun_address": parcel.get("address"), "boundary": parcel.get("boundary"),
+            "centroid": parcel.get("centroid"), "as_of": m.get("as_of"), "source": parcel.get("source"),
+            "land": None, "land_use_documented": None, "building": None, "building_note": None, "layer_counts": None,
+            "dong_projects": [], "included_projects": [], "nearby_projects": [], "nearby_note": None,
+            "ref_zones": [], "disclaimer": DISCLAIMER}
+    if parcel["status"] != "ok":
+        return base
+    r = lookup_pnu(con, parcel["pnu"], today=today, live=live, location=parcel.get("centroid"))
+    if r["status"] != "ok":
+        return base | {"status": "outside" if r["status"] == "out_of_scope" else r["status"], "message": r["message"]}
+    L = r["layers"]
+    pc = L["parcel"]
+    land = pc["land"] or {}
+    n = r["normalized"]
+    lat, lon = point if point else ((parcel["centroid"] or {}).get("lat"), (parcel["centroid"] or {}).get("lon"))
+    return base | {
+        "jibun_address": n["jibun_address"] or parcel.get("address"),
+        "dong_name": n["dong_name"], "addr_id": n["addr_id"], "coord_source": n["coord_source"],
+        "land": {k: land.get(k) for k in LAND_KEYS},
+        "land_use_documented": pc["land_use_documented"],
+        "building": pc["building"], "building_note": pc["building_note"],
+        "layer_counts": {"city": len(L["city"]), "gu": len(L["gu"]["items"]), "dong": len(L["dong"]["items"]),
+                         "parcel": len(pc["items"])},
+        "dong_projects": [{"project_id": p["project_id"], "name": p["name"]} for p in L["dong"]["projects"]],
+        "included_projects": pc["included_projects"], "nearby_projects": pc["nearby_projects"],
+        "nearby_note": pc["nearby_note"],
+        "ref_zones": refzones.zones_at(lat, lon) if lat is not None and lon is not None else [],
+    }
+
+
+def _offline(con) -> dict:
+    return _assemble(con, {"status": "unavailable", "note": LIVE_OFF_NOTE}, None, None, None)
+
+
+def parcel_at(con, lat: float, lon: float, live, today=None) -> dict:
+    """GET /api/v1/map/parcel-at: 누른 점 → 필지 → 기존 조회. 주소 검색(도로명주소·브이월드 검색)은 거치지 않는다."""
+    if live is None:
+        return _offline(con)
+    parcel = live.parcel_at(lat, lon, allowed_bjd=_allowed_bjd(con))
+    return _assemble(con, parcel, live, today, (lat, lon))
+
+
+def parcel_by_pnu(con, pnu: str, live, today=None) -> dict:
+    """GET /api/v1/map/parcel?pnu= : URL sel=parcel:{pnu} 복원용 (같은 조립)."""
+    if live is None:
+        return _offline(con)
+    parcel = live.parcel_by_pnu(pnu, allowed_bjd=_allowed_bjd(con))
+    return _assemble(con, parcel, live, today, None)

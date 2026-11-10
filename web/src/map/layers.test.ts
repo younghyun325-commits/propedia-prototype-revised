@@ -9,6 +9,7 @@ import {
   labelText, likelyFilter, opacityExpr, paintPlan, propediaLayers, readLayerColors,
   type PropediaFC,
 } from './layers'
+import { REF_GEO_IDS, REF_WMS_IDS, refGeoLayers, refWmsLayer } from './reference'
 
 describe('Propedia 레이어 모양 (PLAN.md 지도 레이어 모양)', () => {
   const layers = propediaLayers(DEFAULT_COLORS)
@@ -120,7 +121,11 @@ describe('P14 겹침 보기·점선·강조 식', () => {
     expect(idFilter('pnu', null)[2]).not.toBe('')
   })
   it('패널 레이어마다 지도 레이어가 스타일에 있음', () => {
-    const ids = new Set(propediaLayers(DEFAULT_COLORS).map((l) => l.id))
+    const ids = new Set([
+      ...propediaLayers(DEFAULT_COLORS),
+      ...REF_GEO_IDS.flatMap((id) => refGeoLayers(id, DEFAULT_COLORS.ref)),
+      ...REF_WMS_IDS.map(refWmsLayer),
+    ].map((l) => l.id))
     for (const p of Object.values(PANEL_LAYERS)) for (const l of p.layers) expect(ids.has(l)).toBe(true)
   })
 })

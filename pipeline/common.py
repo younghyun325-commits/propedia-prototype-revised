@@ -54,6 +54,16 @@ def sha256(path: Path) -> str:
     return h.hexdigest()
 
 
+def vacuum_db(path: Path | None = None) -> None:
+    """DB 파일을 다시 써서 지운·덮어쓴 행의 옛 바이트를 없앤다 (P15 0단계: 예전 지오코더 좌표가 페이지 빈 공간에 남았음).
+    행 내용은 바뀌지 않는다."""
+    con = sqlite3.connect(str(path or DB_PATH))
+    try:
+        con.execute("VACUUM")
+    finally:
+        con.close()
+
+
 def connect_rw() -> sqlite3.Connection:
     con = sqlite3.connect(str(DB_PATH))
     con.row_factory = sqlite3.Row

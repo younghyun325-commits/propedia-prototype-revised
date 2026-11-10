@@ -11,6 +11,7 @@
 import type { FeatureCollection, Geometry } from 'geojson'
 import type { LayerSpecification } from 'maplibre-gl'
 import type { PanelLayerId } from '../state/url'
+import { REF_OPACITY } from './reference'
 
 export type LayerKind = 'project' | 'impact' | 'parcel' | 'regulation'
 export type PropediaProps = {
@@ -37,10 +38,10 @@ export const LAYER_FILES: Record<LayerKind, string> = {
   regulation: '/data/layers/propedia_regulations.geojson',
 }
 
-export type LayerColors = { project: string; regulation: string; regulationLine: string }
+export type LayerColors = { project: string; regulation: string; regulationLine: string; ref: string }
 
 /** tokens.css 값과 같게 둔 기본값 (CSS 변수를 못 읽을 때) */
-export const DEFAULT_COLORS: LayerColors = { project: '#5d34a9', regulation: '#eda100', regulationLine: '#b07a00' }
+export const DEFAULT_COLORS: LayerColors = { project: '#5d34a9', regulation: '#eda100', regulationLine: '#b07a00', ref: '#5b6270' }
 
 export const OPACITY = { projectFill: 0.32, impactFill: 0.08 } as const
 export const WIDTH = { project: 2, impact: 1.5, regulation: 2, parcel: 1.25 } as const
@@ -60,6 +61,7 @@ export function readLayerColors(root?: CssReader): LayerColors {
     project: get('--color-layer-project', DEFAULT_COLORS.project),
     regulation: get('--color-layer-regulation', DEFAULT_COLORS.regulation),
     regulationLine: get('--color-layer-regulation-line', DEFAULT_COLORS.regulationLine),
+    ref: get('--color-layer-ref', DEFAULT_COLORS.ref),
   }
 }
 
@@ -176,7 +178,7 @@ export const PROPEDIA_SOURCES: Record<LayerKind, string> = {
 }
 
 /** 좌측 패널 레이어 id → 지도 레이어와 투명도 페인트 (기준 값) */
-type PaintSlot = { layer: string; prop: 'fill-opacity' | 'line-opacity'; base: number }
+type PaintSlot = { layer: string; prop: 'fill-opacity' | 'line-opacity' | 'raster-opacity'; base: number }
 export const PANEL_LAYERS: Record<PanelLayerId, { layers: string[]; paint: PaintSlot[] }> = {
   projects: {
     layers: ['propedia-project-fill', 'propedia-project-line', 'propedia-project-selected'],
@@ -213,6 +215,22 @@ export const PANEL_LAYERS: Record<PanelLayerId, { layers: string[]; paint: Paint
       { layer: 'propedia-regulation-line', prop: 'line-opacity', base: 1 },
     ],
   },
+  // P15 공식 참고 (map/reference.ts의 스타일과 같은 기준 값)
+  'ref-seoulplan': refGeoPanel('ref-seoulplan'),
+  'ref-uije': refGeoPanel('ref-uije'),
+  'ref-zoning': refWmsPanel('ref-zoning'),
+  'ref-district': refWmsPanel('ref-district'),
+  'ref-cadastral': refWmsPanel('ref-cadastral'),
+}
+
+function refGeoPanel(id: 'ref-seoulplan' | 'ref-uije'): { layers: string[]; paint: PaintSlot[] } {
+  return { layers: [`${id}-fill`, `${id}-line`], paint: [
+    { layer: `${id}-fill`, prop: 'fill-opacity', base: REF_OPACITY.fill },
+    { layer: `${id}-line`, prop: 'line-opacity', base: REF_OPACITY.line },
+  ] }
+}
+function refWmsPanel(id: 'ref-zoning' | 'ref-district' | 'ref-cadastral'): { layers: string[]; paint: PaintSlot[] } {
+  return { layers: [`${id}-raster`], paint: [{ layer: `${id}-raster`, prop: 'raster-opacity', base: REF_OPACITY.raster }] }
 }
 
 /**

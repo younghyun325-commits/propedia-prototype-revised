@@ -1,0 +1,29 @@
+draft: true
+author: claude-code (초안)
+note: '필지 클릭 조회(parcel-at) 측정: 지번 5건의 연속지적도 경계 중심점. 지오코더 좌표 아님. docs/map/PLAN.md P15 완료 확인 지번.'
+parcels:
+- label: 강남구 세곡동 279
+  pnu: '1168011100102790000'
+  lat: 37.465147
+  lon: 127.101192
+  basis: vworld-2d:LP_PA_CBND_BUBUN centroid
+- label: 강남구 역삼동 823
+  pnu: '1168010100108230000'
+  lat: 37.498701
+  lon: 127.031577
+  basis: vworld-2d:LP_PA_CBND_BUBUN centroid
+- label: 강남구 논현동 100
+  pnu: '1168010800101000000'
+  lat: 37.520414
+  lon: 127.037854
+  basis: vworld-2d:LP_PA_CBND_BUBUN centroid
+- label: 강남구 삼성동 159
+  pnu: '1168010500101590000'
+  lat: 37.512521
+  lon: 127.058819
+  basis: vworld-2d:LP_PA_CBND_BUBUN centroid
+- label: 강남구 개포동 12
+  pnu: '1168010300100120000'
+  lat: 37.494185
+  lon: 127.075215
+  basis: vworld-2d:LP_PA_CBND_BUBUN centroid

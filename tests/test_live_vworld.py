@@ -25,7 +25,8 @@ def test_land_ok_from_saved_responses():
     assert land["status"] == "ok" and land["missing"] == [] and land["found"] is True
     assert (land["jimok"], land["area_m2"], land["land_use_zone"]) == ("대", 377.1, "제2종일반주거지역")
     assert land["official_price"] == {"won_per_m2": 11080000, "year": 2026, "announced_on": "2026-04-30"}
-    assert land["location"]["source"] == "vworld-geocoder:parcel" and 37.4 < land["location"]["lat"] < 37.6
+    # 지오코더 저장 응답은 형식 견본(가짜 좌표 127.0, 37.5)이다 — 파싱 형식만 본다 (P15 0단계)
+    assert land["location"] == {"lat": 37.5, "lon": 127.0, "source": "vworld-geocoder:parcel"}
     assert land["terrain"] == "평지 · 정방형" and land["road_side"] == "광대소각" and land["use_situation"] == "상업용"
     names = [(z["name"], z["relation"]) for z in land["zones"]]
     assert ("도로", "접함") in names and len(names) == len(set(names))      # 같은 지역지구는 한 번만

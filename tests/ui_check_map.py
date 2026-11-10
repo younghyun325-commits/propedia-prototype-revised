@@ -7,6 +7,8 @@
 - P13: Propedia 레이어 4종이 스타일에 있고 그려지는지, '확인 전' 라벨, 스크린샷 3장(--shot).
 - P14: 레이어 끄기·URL·새로고침 복원, 투명도, 겹침 보기, 명령 팔레트(Ctrl+K), 필지 강조·툴팁, 사업 목록, 고시 칩·기준일,
   호버 툴팁·겹친 지점 선택 목록, 라벨 충돌, 키보드, 스크린샷 5장(--shot). 건수는 /api/v1/map/manifest에서 읽는다.
+- P15: 공식 참고 레이어(지연 로딩·출처·WMS 줌 조건·타일 200), 빈 곳 클릭 필지 조회(강조·카드·URL 복원),
+  클릭 우선순위(사업 구역 먼저), 참고 구역 이름, 스크린샷 3장(--shot). 클릭 지점은 GeoJSON에서 계산한다(shapely).
 
 사용: python tests/ui_check_map.py [--built] [--shot]
 """
@@ -42,11 +44,12 @@ FIT_JS = """async (key) => { const m = window.__propediaMap;
   await new Promise(r => m.once('idle', r));
   return m.getZoom() }""" % PADDING
 KEY_RE = re.compile(r"(/req/wmts/1\.0\.0/)[^/]+/")
+WMS_KEY_RE = re.compile(r"(KEY=)[^&]+", re.I)
 WORKER_RE = re.compile(r"worker", re.I)
 
 
 def mask(url: str) -> str:
-    return KEY_RE.sub(r"\1***/", url)
+    return WMS_KEY_RE.sub(r"\1***", KEY_RE.sub(r"\1***/", url))
 
 
 SHOT_LAYERS = SCREENS / "map_02_layers.png"
@@ -152,9 +155,9 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     check("[P14] D5 행: 비활성 + '경계 확인 전'",
           page.locator("[data-testid=layer-toggle-regulation-d5]").is_disabled()
           and "경계 확인 전" in page.inner_text("[data-testid=layer-row-regulation-d5]"))
-    pend = [i for i in ("ref-seoulplan", "apartments", "schools")
+    pend = [i for i in ("apartments", "schools", "subway")
             if page.locator(f"[data-testid=layer-toggle-{i}]").is_disabled()]
-    check("[P14] 준비 중 레이어(P15·P17·P18) 비활성", len(pend) == 3, str(pend))
+    check("[P14] 준비 중 레이어(P17·P18) 비활성", len(pend) == 3, str(pend))
     page.hover("[data-testid=layer-row-projects] button[aria-label$='레이어 정보']")
     page.wait_for_timeout(200)
     tip = _text(page, "[data-testid=layer-info-projects]")
@@ -347,7 +350,7 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
           for r in ("projects", "regulation-d5", "ref-seoulplan", "apartments")}
     keys = _text(page, "[data-testid=status-keys]")
     check("[P14] 데이터 상태: ready·not_adopted·pending, 키는 있음/없음만",
-          st == {"projects": "ready", "regulation-d5": "not_adopted", "ref-seoulplan": "pending", "apartments": "pending"}
+          st == {"projects": "ready", "regulation-d5": "not_adopted", "ref-seoulplan": "ready", "apartments": "pending"}
           and re.fullmatch(r"실시간 조회 키: 브이월드 (있음|없음) · 도로명주소 (있음|없음)", keys) is not None, f"{st} {keys}")
     if shot:
         page.screenshot(path=str(SHOT_STATUS))
@@ -370,6 +373,177 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     page.keyboard.press("Escape")
     check("[P14] 키보드 L·T, 입력창 안에서는 단축키 꺼짐", gone and tl == "true" and still
           and page.locator("[data-testid=palette]").count() == 0)
+
+
+SHOT_REF = SCREENS / "map_03a_reference.png"
+SHOT_WMS = SCREENS / "map_03b_wms_cadastral.png"
+SHOT_CLICK = SCREENS / "map_03c_parcel_click.png"
+JS_PT = """([lon, lat]) => { const m = window.__propediaMap; const p = m.project([lon, lat]);
+  const r = m.getCanvas().getBoundingClientRect(); return [p.x + r.left, p.y + r.top] }"""
+JS_JUMP = "([lon, lat, z]) => window.__propediaMap.jumpTo({center: [lon, lat], zoom: z})"
+
+
+def _click_points() -> dict:
+    """클릭 지점 (빌드 GeoJSON·live_parcels.yaml에서 계산, 지오코더 아님)."""
+    import json as _json
+
+    import yaml
+    from shapely.geometry import shape
+    from shapely.ops import unary_union
+    lay = ROOT / "public" / "data" / "layers"
+
+    def fc(n):
+        return _json.loads((lay / f"{n}.geojson").read_text(encoding="utf-8"))["features"]
+    parcels = unary_union([shape(f["geometry"]) for f in fc("propedia_parcels")])
+    others = unary_union([shape(f["geometry"]) for f in fc("propedia_projects") + fc("propedia_regulations")])
+    proj2 = next(shape(f["geometry"]) for f in fc("propedia_projects") if f["properties"]["id"] == "project:2")
+    in_proj = proj2.difference(parcels.buffer(0.00005)).representative_point()
+    eunma = next(shape(f["geometry"]) for f in fc("ref_seoulplan") if f["properties"]["DGM_NM"] == "은마아파트")
+    in_ref = eunma.difference(others.union(parcels).buffer(0.00005)).representative_point()
+    lp = yaml.safe_load((ROOT / "evals" / "goldset" / "live_parcels.yaml").read_text(encoding="utf-8"))["parcels"]
+    by = {x["label"]: x for x in lp}
+    yeok, nonh = by["강남구 역삼동 823"], by["강남구 논현동 100"]
+    return {"project2": (in_proj.x, in_proj.y), "eunma": (in_ref.x, in_ref.y),
+            "yeoksam": (yeok["lon"], yeok["lat"], yeok["pnu"]), "nonhyeon": (nonh["lon"], nonh["lat"], nonh["pnu"])}
+
+
+def _wait_card(page, timeout=12000) -> str | None:
+    try:
+        page.wait_for_function("""() => { const c = document.querySelector('[data-testid=parcel-card]');
+          return c && c.dataset.status !== 'loading' }""", timeout=timeout)
+    except Exception:
+        return None
+    return page.get_attribute("[data-testid=parcel-card]", "data-status")
+
+
+def p15_checks(page, url: str, check, shot: bool, tiles: dict, built: bool) -> None:
+    pts = _click_points()
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    reqs: list[str] = []
+    page.on("request", lambda r: reqs.append(r.url.rsplit("/", 1)[-1]) if "/data/layers/ref_" in r.url else None)
+
+    # ---- 1. 참고 레이어 2종: 처음 켤 때만 불러옴, 지도에 그려짐, 출처 표시
+    _open(page, home)
+    attr0 = page.inner_text("[data-testid=attribution]")
+    n0 = len(reqs)
+    rows = {i: page.inner_text(f"[data-testid=layer-row-{i}]") for i in ("ref-seoulplan", "ref-uije")}
+    check("[P15] 참고 행: 켜기 가능 + '참고·비상업' 배지, 켜기 전 요청 0",
+          all("참고·비상업" in t for t in rows.values()) and n0 == 0
+          and not page.locator("[data-testid=layer-toggle-ref-seoulplan]").is_disabled(),
+          f"{ {k: v.replace(chr(10), ' ') for k, v in rows.items()} } 요청 {n0}")
+    page.evaluate(JS_JUMP, [127.062, 37.497, 14.6])
+    for lid in ("ref-seoulplan", "ref-uije"):
+        page.click(f"[data-testid=layer-toggle-{lid}]")
+        page.wait_for_function(f"() => !!window.__propediaMap.getLayer('{lid}-fill')", timeout=8000)
+        page.evaluate(JS_IDLE)
+    drawn = {lid: page.evaluate(JS_RENDERED, [f"{lid}-fill", f"{lid}-line"]) for lid in ("ref-seoulplan", "ref-uije")}
+    for lid in ("ref-seoulplan", "ref-uije"):          # 끄고 다시 켜도 다시 받지 않음
+        page.click(f"[data-testid=layer-toggle-{lid}]")
+        page.click(f"[data-testid=layer-toggle-{lid}]")
+    page.evaluate(JS_IDLE)
+    got = sorted(reqs)
+    check("[P15] 참고 2종: 처음 켤 때만 한 번씩 불러옴, 지도에 그려짐",
+          got == ["ref_seoulplan.geojson", "ref_uije.geojson"] and all(v > 0 for v in drawn.values()), f"{got} {drawn}")
+    dash = page.evaluate(JS_PAINT, ["ref-seoulplan-line", "line-dasharray"])
+    fop = page.evaluate(JS_PAINT, ["ref-seoulplan-fill", "fill-opacity"])
+    check("[P15] 참고 모양: 회색 점선 + 면 8%", bool(dash) and fop == 0.08, f"{dash} {fop}")
+    attr1 = page.inner_text("[data-testid=attribution]")
+    check("[P15] 출처 표시: 켜진 참고 레이어 출처를 이어 붙임",
+          "도시계획사업 현황" not in attr0 and "도시계획사업 현황" in attr1 and "의제처리구역" in attr1, attr1)
+    page.evaluate(JS_JUMP, [127.0625, 37.4985, 15.6])
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(500)
+    rl = page.eval_on_selector_all("[data-testid=ref-label]", "es => es.map(e => e.textContent)")
+    check("[P15] 줌 15 이상 참고 라벨: DGM_NM + '참고'", bool(rl) and all(t.endswith("· 참고") for t in rl), str(rl[:4]))
+    if shot:
+        page.screenshot(path=str(SHOT_REF))
+
+    # ---- 2. WMS 지적도 (API 프록시): 줌 17 미만 안내, 17 이상 타일 200 (연속지적도 WMS는 0.6m/px보다 거칠면 빈 그림)
+    _open(page, home)
+    page.click("[data-testid=layer-toggle-ref-cadastral]")
+    page.evaluate(JS_IDLE)
+    hint = _text(page, "[data-testid=layer-zoomhint-ref-cadastral]")
+    before = len(tiles.get("wms:lp_pa_cbnd_bubun", []))
+    check("[P15] 줌 17 미만: 지적도 행에 '줌 17 이상에서 표시', 타일 요청 없음",
+          hint == "줌 17 이상에서 표시" and before == 0, f"'{hint}' 타일 {before}")
+    yl, ya, ypnu = pts["yeoksam"]
+    page.evaluate(JS_JUMP, [yl, ya, 17.2])
+    page.evaluate(JS_IDLE)
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(600)
+    st = tiles.get("wms:lp_pa_cbnd_bubun", [])
+    gone = page.locator("[data-testid=layer-zoomhint-ref-cadastral]").count() == 0
+    if built:
+        check("[P15] 줌 17 이상: 안내 사라짐 (빌드본은 타일 결과 기록만)", gone,
+              f"200×{st.count(200)} 기타 {sorted(set(st) - {200})}")
+    else:
+        check("[P15] 줌 17 이상: 안내 사라짐, 지적도 WMS 타일 200 (API 프록시)", gone and st.count(200) > 0
+              and all(x == 200 for x in st),
+              f"200×{st.count(200)} 기타 {[x for x in st if x != 200][:5]}")
+    if shot:
+        page.screenshot(path=str(SHOT_WMS))
+
+    # ---- 3. 빈 곳 클릭 → 필지 강조 + 인스펙터 카드 (역삼동 823 경계 중심점)
+    _open(page, home)
+    page.evaluate(JS_JUMP, [yl, ya, 17])
+    page.evaluate(JS_IDLE)
+    page.mouse.click(*page.evaluate(JS_PT, [yl, ya]))
+    status = _wait_card(page)
+    page.evaluate(JS_IDLE)
+    pnu = _text(page, "[data-testid=parcel-pnu]")
+    land = _text(page, "[data-testid=parcel-land]")
+    hl = page.evaluate(JS_RENDERED, ["click-parcel-line"])
+    ok_url = _wait_url(page, lambda u: _q(page, "sel") == f"parcel:{ypnu}")
+    check("[P15] 빈 곳 클릭(역삼동 823) → 필지 강조 + 카드(PNU·토지 정보) + sel=parcel:{pnu}",
+          status == "ok" and pnu == ypnu and "지목" in land and "개별공시지가" in land and hl > 0 and ok_url,
+          f"{status} {pnu} 강조 {hl} sel={_q(page, 'sel')}")
+    card = _text(page, "[data-testid=parcel-card]")
+    counts = _text(page, "[data-testid=parcel-counts]")
+    check("[P15] 카드: 층별 고시 수·주변 500m·참고 구역 섹션",
+          "서울 전역" in counts and "필지" in counts and "주변 500m 사업" in card and "이 지점의 참고 구역" in card,
+          counts.replace("\n", " "))
+    if shot:
+        page.screenshot(path=str(SHOT_CLICK))
+    page.reload()
+    _ready(page)
+    st2 = _wait_card(page)
+    page.evaluate(JS_IDLE)
+    check("[P15] 새로고침 → 같은 필지 다시 조회·강조",
+          st2 == "ok" and _text(page, "[data-testid=parcel-pnu]") == ypnu
+          and page.evaluate(JS_RENDERED, ["click-parcel-line"]) > 0, f"{st2}")
+
+    # 빠르게 두 번 → 마지막 것만 (이전 요청 취소)
+    nl, na, npnu = pts["nonhyeon"]
+    page.evaluate(JS_JUMP, [(yl + nl) / 2, (ya + na) / 2, 14.2])
+    page.evaluate(JS_IDLE)
+    page.mouse.click(*page.evaluate(JS_PT, [yl, ya]))
+    page.mouse.click(*page.evaluate(JS_PT, [nl, na]))
+    _wait_card(page)
+    page.wait_for_timeout(1500)
+    check("[P15] 빠르게 두 번 누르면 마지막 필지만 (이전 요청 취소)",
+          _text(page, "[data-testid=parcel-pnu]") == npnu and _q(page, "sel") == f"parcel:{npnu}",
+          f"{_text(page, '[data-testid=parcel-pnu]')} sel={_q(page, 'sel')}")
+
+    # ---- 4. 우선순위: 대청마을 구역 안(사업 필지 아님) → 사업 구역 선택
+    _open(page, home)
+    plon, plat = pts["project2"]
+    page.evaluate(JS_JUMP, [plon, plat, 16])
+    page.evaluate(JS_IDLE)
+    page.mouse.click(*page.evaluate(JS_PT, [plon, plat]))
+    ok = _wait_url(page, lambda u: _q(page, "sel") == "project:2")
+    check("[P15] 대청마을 구역 안 클릭 → 사업 구역 선택 (필지 조회 아님)",
+          ok and page.locator("[data-testid=parcel-card]").count() == 0, f"sel={_q(page, 'sel')}")
+
+    # ---- 5. 서울플랜+ 구역(은마아파트) 안 일반 필지 → 필지 조회 + 참고 구역 이름
+    page.keyboard.press("Escape")
+    elon, elat = pts["eunma"]
+    page.evaluate(JS_JUMP, [elon, elat, 16.5])
+    page.evaluate(JS_IDLE)
+    page.mouse.click(*page.evaluate(JS_PT, [elon, elat]))
+    st3 = _wait_card(page)
+    zones = page.eval_on_selector_all("[data-testid=parcel-ref-zone]", "es => es.map(e => e.textContent)")
+    check("[P15] 서울플랜+ 구역 안 필지 → 필지 조회 + '이 지점의 참고 구역'에 이름(참고 배지·출처)",
+          st3 == "ok" and any("은마아파트" in z and "참고" in z and "공공누리" in z for z in zones), f"{st3} {zones[:3]}")
 
 
 def main() -> int:
@@ -399,6 +573,10 @@ def main() -> int:
                 layer = r.url.split("/req/wmts/1.0.0/")[1].split("/")[1]
                 ok = r.status == 200 and (r.headers.get("content-type") or "").startswith("image")
                 tiles.setdefault(layer, []).append(200 if ok else r.status)
+            elif "/api/v1/map/wms/" in r.url:          # P15 참고 WMS (API 프록시)
+                m = re.search(r"/api/v1/map/wms/([^/]+)/", r.url)
+                ok = r.status == 200 and (r.headers.get("content-type") or "").startswith("image")
+                tiles.setdefault("wms:" + (m.group(1) if m else "?"), []).append(200 if ok else r.status)
 
         page.on("response", on_resp)
         aborted: list[str] = []
@@ -510,7 +688,7 @@ def main() -> int:
 
         # 회색 배경: white 레이어에 raster-saturation -1 (P13). 다른 배경에는 걸지 않는다.
         sat_js = ("() => { const m = window.__propediaMap; if (!m) return null;"
-                  " return m.getStyle().layers.filter(l => l.type === 'raster')"
+                  " return m.getStyle().layers.filter(l => l.type === 'raster' && l.id.startsWith('basemap-'))"
                   ".map(l => [l.id, m.getPaintProperty(l.id, 'raster-saturation') ?? null]) }")
         sat = page.evaluate(sat_js)
         check("회색 배경 raster-saturation = -1", bool(sat) and all(v == -1 for _, v in sat), str(sat))
@@ -548,6 +726,7 @@ def main() -> int:
                 page.screenshot(path=str(shot))
 
         p14_checks(page, url, check, a.shot)
+        p15_checks(page, url, check, a.shot, tiles, a.built)
 
         if a.built:
             other = [e for e in console_errors if "api.vworld.kr" not in e and "Failed to load resource" not in e]

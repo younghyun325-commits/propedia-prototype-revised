@@ -145,6 +145,11 @@ def main() -> None:
             "verified": "사람 확인 전 (verified=0)"}
         log(f"public/data/layers/{path.name}: {len(feats)}건 {n:,} B sha256 {sha256(path)[:16]}")
     mp = OUT / "manifest.json"
+    try:          # 다른 스크립트가 쓴 항목(ref_*: pipeline/import_reference.py)은 그대로 둔다
+        old = json.loads(mp.read_text(encoding="utf-8")).get("layers") or {}
+    except (OSError, ValueError):
+        old = {}
+    manifest["layers"].update({k: v for k, v in old.items() if not k.startswith("propedia_")})
     mp.write_text(json.dumps(manifest, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     log(f"manifest.json sha256 {sha256(mp)[:16]} · 메모 {notes}")
     log(f"레이어 합계 {total:,} B ({total / 1024 / 1024:.2f} MB, 목표 2MB 이하)")

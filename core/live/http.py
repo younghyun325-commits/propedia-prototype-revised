@@ -65,6 +65,21 @@ def get_json(url: str, params: dict, timeout: float = TIMEOUT, retries: int = RE
     raise LiveError(last)
 
 
+def get_bytes(url: str, params: dict, timeout: float = TIMEOUT, retries: int = RETRIES) -> tuple[bytes, str]:
+    """GET → (본문, Content-Type). 지도 타일 프록시용 (P15). 실패하면 LiveError(오류 종류만)."""
+    full = f"{url}?{urllib.parse.urlencode(params)}"
+    last = "unknown"
+    for _ in range(retries + 1):
+        try:
+            with urllib.request.urlopen(full, timeout=timeout) as r:
+                return r.read(), r.headers.get("Content-Type") or ""
+        except urllib.error.HTTPError as e:
+            last = f"HTTP {e.code}"
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            last = type(e).__name__
+    raise LiveError(last)
+
+
 def now_kst() -> datetime:
     return datetime.now(KST)
 

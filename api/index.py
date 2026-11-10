@@ -12,7 +12,7 @@ sys.path.insert(0, str(ROOT))
 from datetime import date  # noqa: E402
 
 from fastapi import Body, FastAPI, HTTPException  # noqa: E402
-from fastapi.responses import RedirectResponse  # noqa: E402
+from fastapi.responses import RedirectResponse, Response  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from core import catalog  # noqa: E402
@@ -78,6 +78,43 @@ def map_projects(as_of: str | None = None):
     con = _con()
     try:
         return map_mod.map_projects(con, day)
+    finally:
+        con.close()
+
+
+@app.get("/api/v1/map/parcel-at")
+def map_parcel_at(lat: float, lon: float):
+    if not map_mod.in_click_range(lat, lon):
+        raise HTTPException(status_code=400, detail="강남구 주변 좌표(위도 37.40~37.60, 경도 126.90~127.25)만 조회합니다")
+    con = _con()
+    try:
+        return map_mod.parcel_at(con, lat, lon, live_mod.default())
+    finally:
+        con.close()
+
+
+@app.get("/api/v1/map/wms/{layer}/{z}/{x}/{y}.png")
+def map_wms_tile(layer: str, z: int, x: int, y: int):
+    """공식 참고 WMS 타일 (P15). 브이월드 WMS는 CORS 헤더가 없어 서버 키로 받아 그대로 돌려준다. 저장하지 않는다."""
+    live = live_mod.default()
+    if live is None:
+        raise HTTPException(status_code=503, detail="실시간 조회를 쓰지 않는 설정입니다")
+    r = live.wms_tile(layer, z, x, y)
+    if r["status"] == "bad_request":
+        raise HTTPException(status_code=400, detail=r["note"])
+    if r["status"] != "ok":
+        raise HTTPException(status_code=504 if r["status"] == "timeout" else 502, detail="참고 WMS 타일을 받지 못했습니다")
+    return Response(content=r["content"], media_type=r["content_type"],
+                    headers={"Cache-Control": "public, max-age=86400"})
+
+
+@app.get("/api/v1/map/parcel")
+def map_parcel(pnu: str):
+    if not (pnu.isdigit() and len(pnu) == 19):
+        raise HTTPException(status_code=400, detail="PNU는 숫자 19자리입니다")
+    con = _con()
+    try:
+        return map_mod.parcel_by_pnu(con, pnu, live_mod.default())
     finally:
         con.close()
 

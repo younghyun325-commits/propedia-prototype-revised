@@ -20,7 +20,7 @@ import sys
 
 from pipeline.build_projects import (MAP_READING_CSV, MAP_READING_PROJECT, EXTRA_MAP_CSV, extra_group_reviews,
                                      extra_parcel_values, read_csv)
-from pipeline.common import BUILD, DB_PATH, log, setup_stdout, sha256
+from pipeline.common import BUILD, DB_PATH, log, setup_stdout, sha256, vacuum_db
 from pipeline.patch_coords import judgments
 
 BAK = BUILD / "propedia.db.bak"
@@ -127,6 +127,7 @@ def main() -> int:
         log(f"seed와 상관없는 주소의 판정이 바뀜 {bad} → build/propedia.db.bak으로 되돌림")
         return 1
     log(f"project_parcels 추가 {n['insert']} · 수정 {n['update']} · 삭제 {n['delete']} / 검수 행 변경 {n['review']}")
+    vacuum_db()          # 덮어쓴 옛 행 바이트를 남기지 않는다 (P15 0단계)
     log(f"db/propedia.db sha256 {sha256(DB_PATH)[:16]}")
     return 0
 

@@ -6,7 +6,11 @@
  */
 import { BASEMAP_ORDER, DEFAULT_BASEMAP, type BasemapId } from '../map/basemaps'
 
-export const PANEL_LAYER_IDS = ['projects', 'impact250', 'impact500', 'parcels', 'regulations'] as const
+export const PANEL_LAYER_IDS = [
+  'projects', 'impact250', 'impact500', 'parcels', 'regulations',
+  // P15 공식 참고 (기본 꺼짐): 빌드 GeoJSON 2종 + 브이월드 WMS 3종
+  'ref-seoulplan', 'ref-uije', 'ref-zoning', 'ref-district', 'ref-cadastral',
+] as const
 export type PanelLayerId = (typeof PANEL_LAYER_IDS)[number]
 export const DEFAULT_VISIBLE: PanelLayerId[] = ['projects', 'impact250', 'impact500', 'parcels']
 
@@ -44,6 +48,11 @@ export function defaultLayers(): LayerStates {
 
 export function defaultUrlState(): UrlState {
   return { layers: defaultLayers(), basemap: DEFAULT_BASEMAP, overlap: false, selected: null, leftTab: 'layers', camera: null }
+}
+
+/** sel=parcel:{19자리 PNU} = 지도 클릭 필지 조회 (P15). parcel:{사업}:{PNU}는 Propedia 사업 필지 */
+export function isParcelLookup(s: Selected): s is { kind: 'parcel'; id: string } {
+  return !!s && s.kind === 'parcel' && /^\d{19}$/.test(s.id)
 }
 
 export function featureId(s: NonNullable<Selected>): string {

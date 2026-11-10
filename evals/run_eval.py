@@ -2,7 +2,7 @@
 meta.eval_report 에 저장한다.
 
 사용: python -m evals.run_eval          # 네트워크 없이 M1~M17, M19·M20
-      python -m evals.run_eval --live   # M18(실시간 조회 성공률·p95)을 더 잰다 (외부 서비스 상태에 좌우됨)
+      python -m evals.run_eval --live   # M18(실시간 조회 성공률·p95)·M21(필지 클릭 조회)을 더 잰다 (외부 서비스 상태에 좌우됨)
 - 층별 기대 항목(M6·M7)은 core/lookup.py 를 쓰지 않고 정답셋(addresses.yaml + scope_labels.yaml)으로 따로 배치해 만든다.
   P9부터 기대 집합 = tier 'applies' + 효력 중 + 층별 5개 상한 적용 후 (정렬: tier_class → rank → 문서 날짜 최신).
 - 목표 미달이 있어도 종료 코드 0, 스크립트 오류는 1.
@@ -464,7 +464,7 @@ def evaluate(live: bool = False) -> dict:
                        "note": f"시연 주소 {len(demo_inputs)}건 × {TIMING_ROUNDS}회 = {len(times)}회 (로컬 TestClient)"})
 
     # M18 실시간 조회 (--live): 시연 목록 밖 강남구 도로명주소 → 도로명 검색·토지 정보 실시간
-    live_rows = []
+    live_rows, parcel_rows = [], []
     if live:
         from core import live as live_mod
         g_live = load_yaml("live_addresses.yaml")
@@ -494,6 +494,33 @@ def evaluate(live: bool = False) -> dict:
                         "pass": n > 0 and ok_n / n >= 0.9 and lp95 is not None and lp95 <= 3000,
                         "note": "실시간 항목은 실행 시점의 외부 서비스(도로명주소·브이월드) 상태에 좌우됨"})
 
+        # M21 필지 클릭 조회 (--live, P15): 지번 5건의 필지 경계 중심점 → /map/parcel-at과 같은 조립 → PNU 일치, p95
+        from core import map as map_mod
+        g_parcels = load_yaml("live_parcels.yaml")
+        con = connect_ro()
+        ct, c_ok = [], 0
+        for x in g_parcels.get("parcels", []):
+            t0 = time.perf_counter()
+            r = map_mod.parcel_at(con, x["lat"], x["lon"], live_mod.Live())
+            ms = (time.perf_counter() - t0) * 1000
+            ct.append(ms)
+            good = r["status"] == "ok" and r["pnu"] == x["pnu"]
+            c_ok += good
+            parcel_rows.append({"label": x["label"], "pnu": x["pnu"], "got": r["pnu"], "status": r["status"],
+                                "land": (r["land"] or {}).get("status"), "ms": round(ms)})
+            if not good:
+                errors.append({"type": "other", "detail": f"필지 클릭 {x['label']}: {r['status']} {r['pnu']} "
+                                                          f"{r.get('message') or ''}"})
+        con.close()
+        ct.sort()
+        cp95 = ct[max(0, math.ceil(len(ct) * 0.95) - 1)] if ct else None
+        n = len(ct)
+        metrics.append({"id": "M21", "name": "필지 클릭 조회", "value": pct(c_ok, n),
+                        "display": f"{disp(c_ok, n)} · p95 {cp95:.0f}ms" if cp95 is not None else "—",
+                        "target": "PNU 100%, p95 ≤ 2000ms",
+                        "pass": n > 0 and c_ok == n and cp95 is not None and cp95 <= 2000,
+                        "note": "지번 5건의 연속지적도 경계 중심점(evals/goldset/live_parcels.yaml)에서 실시간 조회"})
+
     # M19·M20 지도 경계·레이어 (docs/map/PLAN.md P13)
     g_bnd = load_yaml("boundaries.yaml")
     metrics += map_metrics(g_bnd, errors)
@@ -506,10 +533,12 @@ def evaluate(live: bool = False) -> dict:
                     "files": {"extraction": sha8(GOLD / "extraction.yaml"), "addresses": sha8(GOLD / "addresses.yaml"),
                               "scope_labels": sha8(GOLD / "scope_labels.yaml"), "land": sha8(GOLD / "land.yaml"),
                               "live_addresses": sha8(GOLD / "live_addresses.yaml"),
-                              "boundaries": sha8(GOLD / "boundaries.yaml")}},
+                              "boundaries": sha8(GOLD / "boundaries.yaml"),
+                              "live_parcels": sha8(GOLD / "live_parcels.yaml")}},
         "live": live,
         "live_rows": live_rows,
-        "metrics": metrics,
+        "parcel_rows": parcel_rows,
+        "metrics": sorted(metrics, key=lambda x: int(x["id"][1:])),
         "layers": layer_rows,
         "addresses": addr_rows,
         "excluded_addresses": g_addr.get("excluded", []),
@@ -612,6 +641,11 @@ def write_report_md(rep: dict) -> None:
         o2 = lambda v: "—" if v is None else ("일치" if v else "다름")  # noqa: E731
         for x in rep.get("live_rows", []):
             lines.append(f"| {x['input']} | {x['status']} | {x['land'] or '—'} | {o2(x['pnu_ok'])} | {x['via'] or '—'} | {x['ms']} |")
+        if rep.get("parcel_rows"):
+            lines += ["", "## 필지 클릭 조회 (M21)", "", "| 지번 | PNU 정답 | 응답 PNU | 상태 | 토지 정보 | 응답(ms) |",
+                      "|---|---|---|---|---|---|"]
+            for x in rep["parcel_rows"]:
+                lines.append(f"| {x['label']} | `{x['pnu']}` | `{x['got']}` | {x['status']} | {x['land'] or '—'} | {x['ms']} |")
     else:
         lines += ["", "실시간 조회(M18)는 `python -m evals.run_eval --live`로 잽니다 (이번 실행에는 없음)."]
     lines += ["", "## 오류 목록", ""]
@@ -638,7 +672,7 @@ def main() -> int:
     except Exception:
         pass
     ap = argparse.ArgumentParser()
-    ap.add_argument("--live", action="store_true", help="M18 실시간 조회까지 잰다 (네트워크 사용)")
+    ap.add_argument("--live", action="store_true", help="M18 실시간 조회·M21 필지 클릭 조회까지 잰다 (네트워크 사용)")
     args = ap.parse_args()
     if not args.live:
         os.environ["PROPEDIA_LIVE"] = "0"     # 네트워크 없이 (feedback2.md §8-2)

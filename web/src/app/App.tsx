@@ -3,7 +3,8 @@ import { ChevronDown, ChevronUp } from 'lucide-react'
 import { UI } from '../copy/ui'
 import { LeftPanel } from '../panel/LeftPanel'
 import { useMapStore } from '../state/useMapStore'
-import { featureId } from '../state/url'
+import { featureId, isParcelLookup } from '../state/url'
+import { ParcelLookupCard } from '../inspector/ParcelLookupCard'
 import { useUrlSync } from '../state/useUrlSync'
 import { GlassPanel } from '../ui/GlassPanel'
 import { LiquidGlassFilter } from '../ui/LiquidGlassFilter'
@@ -58,17 +59,19 @@ export default function App() {
       {/* 좌측 패널 320px (L) */}
       {s.leftOpen && <LeftPanel style={{ top: sideTop, bottom: sideBottom, left: GAP, width: LEFT_W }} />}
 
-      {/* 우측 인스펙터 400px (I). 내용은 P16 — 이번에는 선택 상태만 */}
+      {/* 우측 인스펙터 400px (I). 내용은 P16 — 지금은 선택 상태와 빈 곳 클릭 필지 조회 카드(P15) */}
       {s.rightOpen && (
         <GlassPanel
           as="aside"
           data-testid="right-panel"
           aria-label={UI.inspector.title}
-          className="absolute p-4 text-sm"
+          className="absolute overflow-y-auto p-4 text-sm"
           style={{ top: sideTop, bottom: sideBottom, right: GAP, width: RIGHT_W }}
         >
           <h2 className="font-semibold">{UI.inspector.title}</h2>
-          {s.selected ? (
+          {s.parcel.status !== 'idle' && (!s.selected || isParcelLookup(s.selected)) ? (
+            <ParcelLookupCard lookup={s.parcel} />
+          ) : s.selected ? (
             <div className="mt-2 space-y-1" data-testid="inspector-selected">
               <p>
                 {UI.inspector.selected}: <code className="font-mono text-xs">{featureId(s.selected)}</code>
@@ -76,7 +79,10 @@ export default function App() {
               <p className="text-ink-muted">{UI.inspector.placeholder}</p>
             </div>
           ) : (
-            <p className="mt-2 text-ink-muted">{UI.inspector.none}</p>
+            <>
+              <p className="mt-2 text-ink-muted">{UI.inspector.none}</p>
+              <p className="mt-1 text-xs text-ink-muted">{UI.parcel.clickHint}</p>
+            </>
           )}
           <p className="mt-2 text-xs text-ink-muted">{UI.inspector.hint}</p>
         </GlassPanel>

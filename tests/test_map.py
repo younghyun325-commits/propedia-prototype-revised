@@ -58,11 +58,24 @@ def test_manifest_status(client):
     d = {x["id"]: x for x in client.get("/api/v1/map/manifest").json()["layers"]}
     assert d["regulation-d5"]["status"] == "not_adopted"
     assert d["regulation-d5"]["note"] == "경계 확인 전, 법정동(압구정동) 단위로만 표시"
-    for lid, phase in [("ref-seoulplan", "P15"), ("ref-uije", "P15"), ("ref-zoning", "P15"), ("ref-cadastral", "P15"),
-                       ("apartments", "P17"), ("schools", "P18"), ("subway", "P18"), ("amenities", "P18")]:
+    for lid, phase in [("apartments", "P17"), ("schools", "P18"), ("subway", "P18"), ("amenities", "P18")]:
         assert d[lid]["status"] == "pending" and d[lid]["available_from"] == phase, lid
-    for lid in ("basemap-gray", "projects", "impact250", "impact500", "parcels", "regulations"):
+    for lid in ("basemap-gray", "projects", "impact250", "impact500", "parcels", "regulations",
+                "ref-seoulplan", "ref-uije", "ref-zoning", "ref-district", "ref-cadastral"):
         assert d[lid]["status"] == "ready", lid
+
+
+def test_manifest_reference_layers(client):
+    """P15 공식 참고: 빌드 GeoJSON 2종은 manifest.json ref_* 항목 그대로, WMS 3종은 Capabilities로 확인한 이름."""
+    d = {x["id"]: x for x in client.get("/api/v1/map/manifest").json()["layers"]}
+    man = _manifest_file()["layers"]
+    for lid, key in (("ref-seoulplan", "ref_seoulplan"), ("ref-uije", "ref_uije")):
+        assert d[lid]["group"] == "reference" and d[lid]["lazy"] is True and d[lid]["badge"] == "참고·비상업"
+        assert d[lid]["count"] == man[key]["count"] == len(_fc(key))
+        assert "4유형" in d[lid]["license"] and d[lid]["file"] == f"{key}.geojson"
+    assert {k for k in man if k.startswith("propedia_")} and {k for k in man if k.startswith("ref_")}
+    assert {lid: (d[lid]["wms_layer"], d[lid]["min_zoom"]) for lid in ("ref-zoning", "ref-district", "ref-cadastral")}         == {"ref-zoning": ("lt_c_uq111", 14), "ref-district": ("lt_c_upisuq161", 14),
+            "ref-cadastral": ("lp_pa_cbnd_bubun", 17)}
 
 
 def test_manifest_503(client, monkeypatch, tmp_path):

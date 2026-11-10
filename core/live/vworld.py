@@ -7,13 +7,29 @@
 - getIndvdLandPriceAttr → indvdLandPrices.field[]: pblntfPclnd(원/㎡), stdrYear, pblntfDe(공시일)
 - req/address getcoord(type=parcel) → response.result.point.x/y, response.refined.structure.level4LC(PNU)
 - req/search(type=address, category=road) → response.result.items[].id(PNU), address.parcel, point
+- req/data(LP_PA_CBND_BUBUN, geomFilter=POINT) → response.result.featureCollection.features[]:
+  properties pnu·jibun('737 대')·addr('서울특별시 강남구 역삼동 737')·bonbun·bubun·jiga·gosi_year, geometry MultiPolygon
 토지이용계획 응답에는 '관련 법률' 칸이 없다.
+
+필지 점 조회(parcel_at)·PNU 조회(parcel_by_pnu) 결과는 저장하지 않는다 (메모리 캐시도 없음, P15).
 """
-from core.live.http import LiveError, TTLCache, env_key, get_json, now_kst
+from core.geo import centroid
+from core.live.http import LiveError, TTLCache, env_key, get_bytes, get_json, now_kst
 
 NED = "https://api.vworld.kr/ned/data"
 ADDRESS_URL = "https://api.vworld.kr/req/address"
 SEARCH_URL = "https://api.vworld.kr/req/search"
+DATA_URL = "https://api.vworld.kr/req/data"
+PARCEL_DATA = "LP_PA_CBND_BUBUN"
+PARCEL_COORD_SOURCE = "vworld-2d:LP_PA_CBND_BUBUN centroid"
+WMS_URL = "https://api.vworld.kr/req/wms"
+# 참고 WMS (P15). 이름은 GetCapabilities로 확인 (pipeline/check_wms.py, 2026-11-10). 값 = 최소 타일 줌
+WMS_LAYERS = {"lt_c_uq111": 14, "lt_c_upisuq161": 14, "lp_pa_cbnd_bubun": 17}
+# 연속지적도 WMS는 0.6m/px보다 거친 요청에 빈 그림(1,784B)을 준다 [확인 2026-11-10: z16 256px 2.39·512px 1.19m/px 빈 그림,
+# z17 512px 0.6m/px 그림]. 그래서 이 레이어는 더 큰 그림을 받아 같은 타일 자리에 쓴다 (MapLibre는 큰 그림을 줄여 그림)
+WMS_MAX_MPP = {"lp_pa_cbnd_bubun": 0.6}
+WMS_TILE_MAX = 512
+_R3857 = 20037508.342789244
 KEY_ENV = "VWORLD_API_KEY"
 DOMAIN_ENV = "VWORLD_DOMAIN"
 DEFAULT_DOMAIN = "https://propedia-pretotype.vercel.app"     # 운영 키에 등록한 서비스 URL (VWORLD_DOMAIN이 없을 때)
@@ -23,6 +39,11 @@ MISSING = "불러오지 못함"
 UNAVAILABLE_NOTE = "토지 정보를 지금 불러오지 못했습니다"
 NOT_FOUND_NOTE = "브이월드 토지 정보에 이 지번이 없습니다. 지번을 확인해 주세요"
 NO_KEY_NOTE = "토지 정보 조회 키가 설정되지 않아 불러오지 못했습니다"
+PARCEL_UNAVAILABLE_NOTE = "필지 정보를 지금 불러오지 못했습니다"
+PARCEL_TIMEOUT_NOTE = "필지 조회 시간이 초과되었습니다. 다시 눌러 주세요"
+PARCEL_NO_KEY_NOTE = "필지 조회 키가 설정되지 않아 불러오지 못했습니다"
+PARCEL_NOT_FOUND_NOTE = "이 지점에서 필지를 찾지 못했습니다"
+PARCEL_OUTSIDE_NOTE = "강남구 밖입니다. 프리토타입은 강남구 필지만 조회합니다"
 
 _land_cache = TTLCache()
 
@@ -149,6 +170,104 @@ def search_road(query: str, *, fetch=None, key: str | None = None, size: int = 5
     return out
 
 
+def _parcel_result(status: str, note: str | None = None, **kw) -> dict:
+    r = {"status": status, "note": note, "pnu": None, "jibun": None, "address": None, "bjd_code": None,
+         "boundary": None, "centroid": None, "source": SOURCE, "data": PARCEL_DATA}
+    r.update(kw)
+    return r
+
+
+def _parcel_query(params: dict, *, fetch, key: str | None, allowed_bjd, click: tuple | None) -> dict:
+    """2D 데이터 연속지적도 GetFeature 1회 → 필지 1건. 실패해도 예외 없이 status로 알린다."""
+    fetch = fetch or get_json
+    key = key if key is not None else env_key(KEY_ENV)
+    if not key:
+        return _parcel_result("unavailable", PARCEL_NO_KEY_NOTE, reason="no_key")
+    try:
+        j = fetch(DATA_URL, {"service": "data", "request": "GetFeature", "version": "2.0", "data": PARCEL_DATA,
+                             "crs": "EPSG:4326", "format": "json", "size": 10, "page": 1, "geometry": "true",
+                             "attribute": "true", "key": key, "domain": domain(), **params})
+    except LiveError as e:
+        timeout = "Timeout" in str(e)
+        return _parcel_result("timeout" if timeout else "unavailable",
+                              PARCEL_TIMEOUT_NOTE if timeout else PARCEL_UNAVAILABLE_NOTE, reason=str(e))
+    resp = (j or {}).get("response") or {}
+    st = resp.get("status")
+    if st == "NOT_FOUND":
+        return _parcel_result("not_found", PARCEL_NOT_FOUND_NOTE)
+    if st != "OK":
+        return _parcel_result("unavailable", PARCEL_UNAVAILABLE_NOTE,
+                              reason=str(st or "응답 형식 다름") + (f" {(resp.get('error') or {}).get('code')}"
+                                                                if resp.get("error") else ""))
+    feats = (((resp.get("result") or {}).get("featureCollection") or {}).get("features")) or []
+    feats = [f for f in feats if len(str((f.get("properties") or {}).get("pnu") or "")) == 19]
+    if not feats:
+        return _parcel_result("not_found", PARCEL_NOT_FOUND_NOTE)
+    f = feats[0]
+    p = f.get("properties") or {}
+    pnu = str(p["pnu"])
+    geom = f.get("geometry") or None
+    c = centroid(geom) if geom else None
+    if c is None and click is not None:
+        c = (click[1], click[0])              # 면적 중심이 면 밖이면 누른 점
+    base = {"pnu": pnu, "jibun": p.get("jibun") or None, "address": p.get("addr") or None, "bjd_code": pnu[:10],
+            "boundary": geom, "centroid": {"lat": c[1], "lon": c[0], "source": PARCEL_COORD_SOURCE} if c else None}
+    if allowed_bjd is not None and pnu[:10] not in allowed_bjd:
+        return _parcel_result("outside", PARCEL_OUTSIDE_NOTE, **base)
+    return _parcel_result("ok", None, **base)
+
+
+def parcel_at(lat: float, lon: float, *, fetch=None, key: str | None = None, allowed_bjd=None) -> dict:
+    """지도에서 누른 점 → 그 점을 포함하는 필지 (연속지적도 점 필터). allowed_bjd 밖이면 status='outside'."""
+    return _parcel_query({"geomFilter": f"POINT({lon} {lat})"}, fetch=fetch, key=key, allowed_bjd=allowed_bjd,
+                         click=(lat, lon))
+
+
+def parcel_by_pnu(pnu: str, *, fetch=None, key: str | None = None, allowed_bjd=None) -> dict:
+    """PNU → 필지 경계 (URL sel=parcel:{pnu} 복원용)."""
+    return _parcel_query({"attrFilter": f"pnu:=:{pnu}"}, fetch=fetch, key=key, allowed_bjd=allowed_bjd, click=None)
+
+
+def tile_bbox_3857(z: int, x: int, y: int) -> tuple[float, float, float, float]:
+    """XYZ 타일 → EPSG:3857 범위 (서, 남, 동, 북)."""
+    span = 2 * _R3857 / (2 ** z)
+    return (-_R3857 + x * span, _R3857 - (y + 1) * span, -_R3857 + (x + 1) * span, _R3857 - y * span)
+
+
+def wms_size(layer: str, z: int) -> int:
+    span = 2 * _R3857 / (2 ** z)
+    size = 256
+    limit = WMS_MAX_MPP.get(layer)
+    while limit and span / size > limit + 1e-6 and size < WMS_TILE_MAX:
+        size *= 2
+    return size
+
+
+def wms_tile(layer: str, z: int, x: int, y: int, *, fetch_bytes=None, key: str | None = None) -> dict:
+    """참고 WMS 타일 프록시 (브이월드 WMS는 CORS 헤더가 없어 브라우저가 직접 못 받는다). 저장하지 않는다.
+    반환 {status: ok|bad_request|unavailable|timeout, content, content_type, note}."""
+    if layer not in WMS_LAYERS or not (WMS_LAYERS[layer] <= z <= 19) or not (0 <= x < 2 ** z and 0 <= y < 2 ** z):
+        return {"status": "bad_request", "content": b"", "content_type": None, "note": "허용하지 않는 레이어·타일입니다"}
+    key = key if key is not None else env_key(KEY_ENV)
+    if not key:
+        return {"status": "unavailable", "content": b"", "content_type": None, "note": PARCEL_NO_KEY_NOTE}
+    fetch_bytes = fetch_bytes or get_bytes
+    size = wms_size(layer, z)
+    w, s, e, n = tile_bbox_3857(z, x, y)
+    try:
+        body, ctype = fetch_bytes(WMS_URL, {"SERVICE": "WMS", "REQUEST": "GetMap", "VERSION": "1.3.0", "LAYERS": layer,
+                                            "STYLES": layer, "CRS": "EPSG:3857", "BBOX": f"{w},{s},{e},{n}",
+                                            "WIDTH": size, "HEIGHT": size, "FORMAT": "image/png",
+                                            "TRANSPARENT": "true", "KEY": key, "DOMAIN": domain()})
+    except LiveError as err:
+        timeout = "Timeout" in str(err)
+        return {"status": "timeout" if timeout else "unavailable", "content": b"", "content_type": None,
+                "note": str(err)}
+    if not (ctype or "").startswith("image/"):
+        return {"status": "unavailable", "content": b"", "content_type": None, "note": "응답이 그림이 아님"}
+    return {"status": "ok", "content": body, "content_type": ctype.split(";")[0], "note": None}
+
+
 def _dedupe_zones(recs: list[dict]) -> list[dict]:
     seen, out = set(), []
     for r in recs:
@@ -200,8 +319,12 @@ def unavailable(pnu: str, note: str = UNAVAILABLE_NOTE) -> dict:
     return land
 
 
-def get_land(pnu: str, jibun_address: str | None, *, fetch=None, now=None, use_cache: bool = True) -> dict:
-    """PNU → land 블록. 메모리 캐시(1시간) → 실시간. 실패해도 예외 없이 status로 알린다."""
+def get_land(pnu: str, jibun_address: str | None, *, fetch=None, now=None, use_cache: bool = True,
+             location: dict | None = None) -> dict:
+    """PNU → land 블록. 메모리 캐시(1시간) → 실시간. 실패해도 예외 없이 status로 알린다.
+
+    location({lat, lon, source})을 주면 지오코더를 부르지 않고 그 좌표(필지 경계 중심점)를 쓴다 (P15 필지 클릭).
+    """
     if use_cache:
         hit = _land_cache.get(pnu)
         if hit:
@@ -215,7 +338,10 @@ def get_land(pnu: str, jibun_address: str | None, *, fetch=None, now=None, use_c
     uses = _call(fetch, "getLandUseAttr", key, errors, pnu=pnu, numOfRows=1000, pageNo=1)
     chars = _by_year(fetch, "getLandCharacteristics", key, pnu, now.year, errors)
     prices = _by_year(fetch, "getIndvdLandPriceAttr", key, pnu, now.year, errors)
-    loc = geocode_parcel(jibun_address, fetch=fetch, key=key, errors=errors) if jibun_address else None
+    if location:
+        loc = {"lat": location["lat"], "lon": location["lon"], "source": location["source"]}
+    else:
+        loc = geocode_parcel(jibun_address, fetch=fetch, key=key, errors=errors) if jibun_address else None
     land = build_land(pnu, uses, chars, prices, loc, now.isoformat(timespec="seconds"))
     land["errors"] = errors or None        # 실패 이유 (HTTP 코드·오류 종류·결과 코드만)
     land["found"] = None if None in (uses, chars, prices) else bool(uses or chars or prices)
