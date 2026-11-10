@@ -95,8 +95,9 @@ def test_bad_as_of_400(client):
 
 def test_as_of_dates(con):
     may, nov = date(2026, 5, 1), date(2026, 11, 10)
-    h = feat(con, "project", "1", may)["sections"]["progress"]["deadlines"][0]
-    assert (h["status"], h["d_day_label"]) == ("open", "D-189")
+    # P19: 한양7차는 첫 근거 문서(D1) 발행일 전이라 그날에는 이름·안내만
+    h = feat(con, "project", "1", may)
+    assert h["shown"] is False and h["sections"] == {} and "발행" in h["note"]
     d = feat(con, "project", "2", may)["sections"]["progress"]["deadlines"][0]
     assert (d["status"], d["d_day_label"]) == ("open", "D-day")
     assert feat(con, "project", "2", may)["sections"]["status_badges"] == ["공람 중", "승인 고시 미확인"]

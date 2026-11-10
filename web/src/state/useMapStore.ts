@@ -3,6 +3,8 @@ import type { EvidenceItem } from '../api/feature'
 import type { ParcelAt } from '../api/parcel'
 import type { BasemapId } from '../map/basemaps'
 import type { Radius } from '../infra/radius'
+import { todayIso } from './dates'
+import { parseIsoDate } from './url'
 import { poiAll, poiAny, poiNone, type PoiSel } from '../infra/poiSelect'
 import {
   defaultUrlState, isParcelLookup, parseUrl, type Camera, type LayerStates, type LeftTab, type PanelLayerId, type Selected,
@@ -11,7 +13,11 @@ import {
 export type Workspace = 'gangnam' | 'project'
 
 /** 지도에 보내는 이동 요청 (nonce가 바뀔 때마다 한 번 실행) */
-export type ViewTarget = { type: 'home' } | { type: 'bbox'; bbox: [number, number, number, number] }
+export type ViewTarget =
+  | { type: 'home' }
+  | { type: 'bbox'; bbox: [number, number, number, number] }
+  /** P19: 지도에 불러온 사업·규제 도형 id (예: project:1, regulation:D10)의 범위로 */
+  | { type: 'feature'; id: string }
 export type ViewRequest = ViewTarget & { nonce: number }
 
 /** 검색으로 찾은 곳: 필지 경계가 있으면 pnu로 강조, 없으면 임시 핀 (좌표는 화면 메모리에만, 저장하지 않음) */
@@ -45,6 +51,8 @@ export type MapState = {
   poi: PoiSel
   route: string | null
   radius: Radius | null
+  /** 기준일 'YYYY-MM-DD' (P19). null = 오늘 */
+  asOf: string | null
   // ---- 화면 안 상태
   /** 반경 보기 도구가 켜져 있음 (지도를 누르면 원을 그린다) */
   radiusTool: boolean
@@ -88,6 +96,8 @@ export type MapState = {
   setRoute: (id: string | null) => void
   setRadius: (r: Radius | null) => void
   setRadiusTool: (v: boolean) => void
+  /** 기준일 바꾸기 (P19). 오늘이나 null이면 오늘로 (URL t 제거) */
+  setAsOf: (d: string | null) => void
 }
 
 function initialUrlState() {
@@ -177,5 +187,9 @@ export const useMapStore = create<MapState>()((set) => {
       set((s) => (route ? { route, layers: { ...s.layers, bus_stops: { ...s.layers.bus_stops, visible: true } } } : { route: null })),
     setRadius: (radius) => set({ radius }),
     setRadiusTool: (radiusTool) => set(radiusTool ? { radiusTool } : { radiusTool, radius: null }),
+    setAsOf: (d) => {
+      const v = parseIsoDate(d)
+      set({ asOf: v && v !== todayIso() ? v : null })
+    },
   }
 })

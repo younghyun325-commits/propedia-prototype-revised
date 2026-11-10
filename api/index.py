@@ -52,6 +52,15 @@ def _as_of(as_of: str | None) -> date:
         raise HTTPException(status_code=400, detail="기준일(as_of)은 YYYY-MM-DD 형식입니다") from None
 
 
+def _date_param(v: str | None, name: str, default: date) -> date:
+    if not v:
+        return default
+    try:
+        return date.fromisoformat(v)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"{name}은(는) YYYY-MM-DD 형식입니다") from None
+
+
 @app.get("/api/v1/map/manifest")
 def map_manifest():
     con = _con()
@@ -159,9 +168,36 @@ def apartment(cid: str):
 
 
 @app.get("/api/v1/apartments/{cid}/trades")
-def apartment_trades(cid: str, band: str | None = None, from_: str | None = Query(None, alias="from")):
-    """월별 중위 거래가·건수(해제 제외), 개별 거래 점, 최근 거래 20건(해제 표시)"""
-    return _market(lambda mcon, con: market_mod.trades(mcon, cid, band or None, from_ or None))
+def apartment_trades(cid: str, band: str | None = None, from_: str | None = Query(None, alias="from"),
+                     as_of: str | None = None):
+    """월별 중위 거래가·건수(해제 제외), 개별 거래 점, 최근 거래 20건(해제 표시). as_of(P19): 계약일 ≤ 기준일만"""
+    day = _as_of(as_of)
+    return _market(lambda mcon, con: market_mod.trades(mcon, cid, band or None, from_ or None, as_of=day))
+
+
+@app.get("/api/v1/timeline")
+def timeline(from_: str | None = Query(None, alias="from"), to: str | None = None):
+    """시간축 계열 (P19): 고시 발행·공람·효력·사업 단계·자료 기준일. from·to가 없으면 전체"""
+    frm = _date_param(from_, "from", date(1900, 1, 1))
+    end = _date_param(to, "to", date(2100, 12, 31))
+    if frm > end:
+        raise HTTPException(status_code=400, detail="from은 to보다 앞선 날짜여야 합니다")
+    con = _con()
+    try:
+        return map_mod.timeline(con, frm, end)
+    finally:
+        con.close()
+
+
+@app.get("/api/v1/feed")
+def feed(limit: int = Query(50, ge=1, le=200), as_of: str | None = None):
+    """고시 피드 (P19): 발행일 ≤ 기준일 문서, 최신순, 기한은 그날 D-day"""
+    day = _as_of(as_of)
+    con = _con()
+    try:
+        return map_mod.feed(con, day, limit)
+    finally:
+        con.close()
 
 
 @app.get("/api/v1/map/parcel")

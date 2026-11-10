@@ -1,5 +1,4 @@
 import { lazy, Suspense, useMemo } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
 import { UI } from '../copy/ui'
 import { LeftPanel } from '../panel/LeftPanel'
 import { useMapStore } from '../state/useMapStore'
@@ -18,6 +17,8 @@ const CommandPalette = lazy(() => import('../search/CommandPalette'))
 // 인스펙터·원문 모달은 따로 묶는다 (P16, 초기 JS 예산)
 const Inspector = lazy(() => import('../inspector/Inspector'))
 const EvidenceModal = lazy(() => import('../ui/EvidenceModal'))
+// 하단 타임라인 (P19): d3-scale·SVG는 따로 묶는다
+const Timeline = lazy(() => import('../timeline/Timeline'))
 
 const GAP = 12 // 패널과 화면 가장자리 사이
 const TOP_H = 56
@@ -83,19 +84,19 @@ export default function App() {
         as="section"
         data-testid="timeline"
         data-open={s.timelineOpen}
-        aria-label="타임라인"
-        className="absolute px-4 text-sm"
+        aria-label={UI.time.title}
+        className="absolute px-4 pb-1 text-sm"
         style={{ bottom: GAP, left: GAP, right: GAP, height: tlH }}
       >
-        <button
-          onClick={s.toggleTimeline}
-          aria-expanded={s.timelineOpen}
-          className="flex h-[44px] items-center gap-2 font-semibold"
+        <Suspense
+          fallback={
+            <button onClick={s.toggleTimeline} aria-expanded={s.timelineOpen} className="flex h-[44px] items-center gap-2 font-semibold">
+              {UI.time.title}
+            </button>
+          }
         >
-          {s.timelineOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
-          타임라인
-          <span className="font-normal text-ink-muted">(P19) · T 키로 펼치기</span>
-        </button>
+          <Timeline />
+        </Suspense>
       </GlassPanel>
 
       {s.evidence && (

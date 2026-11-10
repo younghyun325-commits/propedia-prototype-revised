@@ -5,6 +5,7 @@ import { UI } from '../copy/ui'
 import { useMapStore } from '../state/useMapStore'
 import { LEFT_TABS, type LeftTab } from '../state/url'
 import { GlassPanel } from '../ui/GlassPanel'
+import { FeedTab } from './FeedTab'
 import { LayersTab } from './LayersTab'
 import { ProjectsTab } from './ProjectsTab'
 import { StatusTab } from './StatusTab'
@@ -25,7 +26,7 @@ export function LeftPanel({ style }: { style: CSSProperties }) {
   const health = useHealth()
 
   const body = (t: LeftTab) => {
-    if (t === 'feed') return <p className="text-ink-muted" data-testid="feed-empty">{UI.left.feedEmpty}</p>
+    if (t === 'feed') return <FeedTab />
     if (t === 'projects')
       return projects.data ? <ProjectsTab projects={projects.data.projects} /> : <Pending error={projects.error} />
     if (!manifest.data) return <Pending error={manifest.error} />

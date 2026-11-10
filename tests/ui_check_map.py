@@ -9,6 +9,8 @@
   호버 툴팁·겹친 지점 선택 목록, 라벨 충돌, 키보드, 스크린샷 5장(--shot). 건수는 /api/v1/map/manifest에서 읽는다.
 - P15: 공식 참고 레이어(지연 로딩·출처·WMS 줌 조건·타일 200), 빈 곳 클릭 필지 조회(강조·카드·URL 복원),
   클릭 우선순위(사업 구역 먼저), 참고 구역 이름, 스크린샷 3장(--shot). 클릭 지점은 GeoJSON에서 계산한다(shapely).
+- P19: 편의시설 분류별 선택, 하단 타임라인(T·키보드·스크러버·이벤트 클릭)·'그날 기준'(사업 숨김·규제 흐림·상단 띠)·
+  고시 피드·실거래 차트 기준일 선, 원문 모달 이미지, 스크린샷 map_06f~h·07a~d
 - P18: 생활 인프라(학교·역 기본 켜짐, 정류장 줌 15 안내, 클러스터·이름, 편의시설 분류 행), 역·정류장 인스펙터, 노선 선택 모드,
   반경 보기, 겹침 보기, Ctrl+K 역·정류장 번호·노선, 스크린샷 5장(map_06a~e), --perf로 프레임 시간
 
@@ -1402,6 +1404,205 @@ def p19_poi_checks(page, url: str, check, shot: bool) -> None:
           f"{cafe['properties']['name']} → sel={sel}")
 
 
+
+# ---------- P19 하단 타임라인·고시 피드 ('그날 기준') ----------
+JS_PROJECT_IDS = """() => { const m = window.__propediaMap;
+  return [...new Set(m.queryRenderedFeatures({layers: ['propedia-project-fill']}).map(f => f.properties.id))].sort() }"""
+
+
+def _as_of(page) -> str:
+    return page.get_attribute("[data-testid=as-of]", "data-as-of") or ""
+
+
+def _wait_as_of(page, want: str, timeout=6000) -> bool:
+    try:
+        page.wait_for_function(f"() => document.querySelector('[data-testid=as-of]')?.dataset.asOf === '{want}'", timeout=timeout)
+        page.wait_for_load_state("networkidle")
+        page.evaluate(JS_IDLE)
+        page.wait_for_timeout(400)
+        return True
+    except Exception:
+        return False
+
+
+def _tl_open(page) -> None:
+    if page.get_attribute("[data-testid=timeline]", "data-open") != "true":
+        page.click("[data-testid=tl-toggle]")
+    page.wait_for_selector("[data-testid=tl-svg]", timeout=8000)
+    page.wait_for_selector("[data-testid=tl-event]", timeout=8000)
+
+
+def p19_checks(page, url: str, check, shot: bool) -> None:
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+    today = page.evaluate("() => new Intl.DateTimeFormat('en-CA', {timeZone: 'Asia/Seoul'}).format(new Date())")
+
+    # 1. T로 펼침·접힘, 오늘 선·스크러버
+    _open(page, home)
+    page.keyboard.press("t")
+    page.wait_for_selector("[data-testid=tl-svg]", timeout=8000)
+    page.wait_for_selector("[data-testid=tl-event]", timeout=8000)
+    page.wait_for_timeout(300)
+    o1 = page.get_attribute("[data-testid=timeline]", "data-open")
+    h1 = page.locator("[data-testid=timeline]").bounding_box()["height"]
+    td = page.get_attribute("[data-testid=tl-today]", "data-date")
+    sc = page.get_attribute("[data-testid=tl-scrubber]", "data-date")
+    lanes = page.locator("[data-testid^=tl-lane-]").evaluate_all("es => es.map(e => e.textContent)")
+    nev = page.locator("[data-testid=tl-event]").count()
+    if shot:
+        page.screenshot(path=str(SHOT_P19["07a_timeline"]))
+    page.keyboard.press("t")
+    page.wait_for_timeout(300)
+    o2 = page.get_attribute("[data-testid=timeline]", "data-open")
+    h2 = page.locator("[data-testid=timeline]").bounding_box()["height"]
+    check("[P19] T로 펼침(200px)·접힘(44px), 계열 5줄, 오늘 선(실선)·기준일 스크러버 = 오늘",
+          o1 == "true" and abs(h1 - 200) < 2 and o2 == "false" and abs(h2 - 44) < 2 and td == today and sc == today
+          and lanes == ["고시 발행", "공람", "효력", "사업 단계", "자료 기준일"] and nev >= 15,
+          f"{o1}/{h1} → {o2}/{h2} 오늘 {td} 스크러버 {sc} 줄 {lanes} 이벤트 {nev}")
+
+    # 2. 키보드(타임라인 포커스): ←/→ 하루, Shift 한 달, Home 오늘 + aria-live
+    _open(page, with_q + "t=2026-05-01")
+    _tl_open(page)
+    page.focus("[data-testid=tl-focus]")
+    page.keyboard.press("ArrowRight")
+    k1 = _wait_as_of(page, "2026-05-02")
+    live = _text(page, "[data-testid=tl-live]")
+    page.keyboard.press("Shift+ArrowRight")
+    k2 = _wait_as_of(page, "2026-06-02")
+    page.keyboard.press("ArrowLeft")
+    k3 = _wait_as_of(page, "2026-06-01")
+    page.keyboard.press("Home")
+    k4 = _wait_url(page, lambda u: "t=" not in u, 3000) and _as_of(page) == ""
+    check("[P19] 키보드: → 하루(05-02)·Shift+→ 한 달(06-02)·← 하루·Home 오늘(t 제거), aria-live '기준일 …'",
+          k1 and k2 and k3 and k4 and live == "기준일 2026-05-02", f"{k1} {k2} {k3} {k4} live={live!r}")
+
+    # 3. 2026-05-01: 한양7차 사라짐, 대청마을 '공람 중 · D-day', 상단 띠·'지난 시점 보기'
+    _open(page, with_q + "t=2026-05-01&sel=project:2")
+    page.click("[data-testid=left-tab-projects]")
+    _tl_open(page)
+    _inspector_ready(page)
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(500)
+    ids = page.evaluate(JS_PROJECT_IDS)
+    labels = page.locator("[data-testid=area-label][data-kind=project]").all_inner_texts()
+    cards = page.locator("[data-testid^=project-card-]").count()
+    badges = page.locator("[data-testid=inspector-header]").inner_text()
+    dday = _text(page, "[data-testid=deadline-dday]")
+    band = page.locator("[data-testid=as-of-band]").count()
+    mode = _text(page, "[data-testid=as-of-mode]")
+    sc = page.get_attribute("[data-testid=tl-scrubber]", "data-date")
+    check("[P19] 2026-05-01: 한양7차 지도·라벨·목록에서 빠짐, 대청마을 '공람 중'·'D-day', 상단 띠·'지난 시점 보기'·스크러버",
+          "project:1" not in ids and not any("한양" in t for t in labels) and cards == 1 and "공람 중" in badges
+          and "D-day" in dday and band == 1 and mode == "지난 시점 보기" and sc == "2026-05-01",
+          f"ids={ids} 카드 {cards} 배지 {badges.splitlines()[-1:]} dday={dday!r} 띠 {band} {mode} 스크러버 {sc}")
+    if shot:
+        page.screenshot(path=str(SHOT_P19["07b_2026-05-01"]))
+    # 같은 날 한양7차를 URL로 고르면 이름과 안내만
+    _open(page, with_q + "t=2026-05-01&sel=project:1")
+    _inspector_ready(page)
+    hid = _text(page, "[data-testid=inspector-hidden]")
+    check("[P19] 2026-05-01에 한양7차 선택 → '아직 근거 고시가 없습니다 (첫 근거 문서 발행일 2026.10.06)'",
+          "2026.10.06" in hid and "근거 고시가 없습니다" in hid, hid)
+
+    # 4. 2026-11-10: 둘 다 '마감'
+    out = {}
+    for pid in (1, 2):
+        _open(page, with_q + f"t=2026-11-10&sel=project:{pid}")
+        _inspector_ready(page)
+        out[pid] = _text(page, "[data-testid=deadline-dday]")
+    check("[P19] 2026-11-10: 한양7차 '마감(2026.11.06)'·대청마을 '마감(2026.05.01)'",
+          "마감(2026.11.06)" in out[1] and "마감(2026.05.01)" in out[2], str(out))
+
+    # 5. 규제 효력 전 → 흐리게(25%) + 라벨 상태 (D10 2026-03-31)
+    _open(page, with_q + "t=2026-03-31&layers=projects,regulations&c=127.06300,37.49900&z=15.00")
+    page.wait_for_timeout(600)
+    op = page.evaluate("() => window.__propediaMap.getPaintProperty('propedia-regulation-fill', 'fill-opacity')")
+    lab = page.locator("[data-testid=area-label][data-id='regulation:D10']")
+    lt = lab.inner_text() if lab.count() else ""
+    check("[P19] 2026-03-31 D10 '효력 전': 규제 레이어 켜도 25% + 라벨에 상태",
+          isinstance(op, list) and "regulation:D10" in str(op) and 0.25 in op and lt.endswith("효력 전"), f"{op} {lt!r}")
+
+    # 6. 공람 막대 클릭 → 날짜 이동 + 사업 선택, 이벤트 호버
+    _open(page, home)
+    _tl_open(page)
+    page.click("[data-testid=tl-event][data-id='review:2']")
+    ok = _wait_as_of(page, "2026-04-17")
+    check("[P19] 공람 막대(대청마을) 클릭 → 기준일 2026-04-17 + sel=project:2 + 인스펙터",
+          ok and _q(page, "t") == "2026-04-17" and _wait_url(page, lambda u: "sel=project:2" in u) and _inspector_ready(page),
+          f"t={_q(page, 't')} sel={_q(page, 'sel')}")
+    page.hover("[data-testid=tl-event][data-id='publish:D1']")
+    page.wait_for_timeout(200)
+    tip = _text(page, "[data-testid=tl-tip]")
+    check("[P19] 이벤트 호버: 제목·날짜·근거 쪽", "2026.10.06" in tip and "근거 D1" in tip, tip.replace("\n", " | "))
+
+    # 7. 고시 피드 카드 → 이동·인스펙터 (기준일 2026-05-01 목록)
+    _open(page, with_q + "t=2026-05-01")
+    page.click("[data-testid=left-tab-feed]")
+    page.wait_for_selector("[data-testid=feed-card]", timeout=8000)
+    docs = page.locator("[data-testid=feed-card]").evaluate_all("es => es.map(e => e.dataset.doc)")
+    recent = page.locator("[data-testid=feed-card]:has([data-testid=feed-recent])").evaluate_all("es => es.map(e => e.dataset.doc)")
+    page.click("[data-testid=feed-card][data-doc=D10] button")
+    sel_ok = _wait_url(page, lambda u: "sel=regulation:D10" in u)
+    ok = _inspector_ready(page)
+    title = _text(page, "[data-testid=inspector-title]")
+    if shot:
+        page.screenshot(path=str(SHOT_P19["07c_feed"]))
+    check("[P19] 피드(2026-05-01): 발행일 ≤ 기준일만 최신순(D1·D8 없음), '최근 30일' D9·D10·D5, 카드 클릭 → D10 인스펙터",
+          docs[:3] == ["D9", "D10", "D5"] and "D1" not in docs and "D8" not in docs and sorted(recent) == ["D10", "D5", "D9"]
+          and sel_ok and ok and "대치동" in title, f"{docs} 최근 {recent} 제목 {title!r}")
+
+    # 8. 지난 시점 보기 중 생활 인프라 행 안내
+    page.click("[data-testid=left-tab-layers]")
+    page.wait_for_selector("[data-testid=layer-static-schools]", timeout=4000)
+    note = _text(page, "[data-testid=layer-static-schools]")
+    n_static = page.locator("[data-testid^=layer-static-]").count()
+    check("[P19] 지난 시점 보기 중 생활 인프라·공식 참고·아파트 행에 '자료 기준 YYYY-MM, 날짜와 함께 바뀌지 않음'",
+          note == "자료 기준 2026-10, 날짜와 함께 바뀌지 않음" and n_static >= 6, f"{note!r} {n_static}행")
+
+    # 9. 은마 선택 → 거래량 줄, 2020-01-01 → 차트가 기준일에서 끊김
+    _open(page, with_q + "sel=apt:11680-218")
+    _tl_open(page)
+    page.wait_for_selector("[data-testid=tl-trade-bar]", timeout=10000)
+    nbar = page.locator("[data-testid=tl-trade-bar]").count()
+    lane = page.locator("[data-testid=tl-lane-trades]").count()
+    check("[P19] 은마 선택 → 타임라인 '거래량' 줄 (월별 건수 막대)", lane == 1 and nbar > 12, f"막대 {nbar}")
+    _open(page, with_q + "t=2020-01-01&sel=apt:11680-218")
+    _tl_open(page)
+    page.wait_for_selector("[data-testid=chart-as-of]", timeout=12000)
+    lx, pts = page.evaluate("""() => { const svg = document.querySelector('[data-testid=price-chart]');
+      const line = svg.querySelector('[data-testid=chart-as-of] line');
+      return [Number(line.getAttribute('x1')), [...svg.querySelectorAll('[data-testid=trade-point]')].map(c => Number(c.getAttribute('cx')))] }""")
+    cut = _text(page, "[data-testid=chart-cut-note]")
+    if shot:
+        page.locator("[data-testid=apt-chart]").scroll_into_view_if_needed()
+        page.screenshot(path=str(SHOT_P19["07d_trades_asof"]))
+    check("[P19] 2020-01-01: 실거래 차트가 기준일 세로선에서 끊김 (거래 점 모두 선 왼쪽, 뒤 구간 비움)",
+          len(pts) > 0 and max(pts) <= lx + 0.5 and lx < 330 and "기준일 뒤 구간" in cut,
+          f"선 x={lx:.1f} 점 {len(pts)}개 최대 {max(pts or [0]):.1f}")
+
+    # 10. ?t= 새로 열기 → 같은 화면, '오늘로' → t 제거
+    _open(page, with_q + "t=2026-05-01")
+    same = _as_of(page) == "2026-05-01" and "project:1" not in page.evaluate(JS_PROJECT_IDS)
+    page.click("[data-testid=as-of-today]")
+    gone = _wait_url(page, lambda u: "t=" not in u, 3000)
+    page.wait_for_load_state("networkidle")
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(400)
+    back = "project:1" in page.evaluate(JS_PROJECT_IDS) and page.locator("[data-testid=as-of-band]").count() == 0
+    check("[P19] ?t=2026-05-01 새로 열기 → 같은 화면, '오늘로' → t 제거·한양7차 다시 보임·띠 없음", same and gone and back,
+          f"{same} {gone} {back}")
+
+    # 11. 원문 보기 모달 이미지 (P19-0: 함수 묶음에서 public/pages 제외 뒤에도 정적 파일로 열림)
+    _open(page, with_q + "sel=project:1")
+    _inspector_ready(page)
+    page.locator("[data-testid=project-deadline] [data-testid=evidence-line]").first.click()
+    page.wait_for_selector("[data-testid=evidence-modal]", timeout=5000)
+    page.wait_for_function("() => document.querySelector('[data-testid=evidence-image]')?.dataset.state === 'ok'", timeout=8000)
+    nat = page.evaluate("() => document.querySelector('[data-testid=evidence-image]').naturalWidth")
+    page.keyboard.press("Escape")
+    check("[P19] 원문 보기 모달 쪽 이미지 표시 (/pages/D1/…)", nat > 0, f"naturalWidth={nat}")
+
+
 def poi_filter_perf(pw, url: str, check) -> dict:
     """편의시설 6분류를 모두 켠 채 하위 분류를 빠르게 20번 바꾸며 rAF 프레임 측정 (GPU 브라우저).
     setData·setStyle 호출 수를 세어 하위 분류 변경이 setFilter만 쓰는지 확인한다."""
@@ -1666,6 +1867,8 @@ def main() -> int:
             p18_checks(page, url, check, a.shot)
         if not a.only or a.only in ("p19", "p19-1"):
             p19_poi_checks(page, url, check, a.shot)
+        if not a.only or a.only == "p19":
+            p19_checks(page, url, check, a.shot)
         if a.perf:
             if not a.only:
                 perf = perf_check(p, url, check)

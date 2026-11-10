@@ -4,7 +4,7 @@ import { Contrast, Search } from 'lucide-react'
 import { useHealth, useMapProjects, useNotices, type Notice } from '../api/map'
 import { BRAND } from '../copy/brand'
 import { UI } from '../copy/ui'
-import { todayKst } from '../state/actions'
+import { todayIso, todayKst } from '../state/dates'
 import { useMapStore } from '../state/useMapStore'
 import { GlassPanel } from '../ui/GlassPanel'
 import { Popover } from '../ui/Floating'
@@ -97,10 +97,46 @@ function NoticeChips() {
   )
 }
 
+/** 기준일 (P19): 오늘이면 '오늘 · DB 기준', 다른 날이면 '기준일 2026-05-01 · 지난 시점 보기' + '오늘로' */
+function AsOf({ dbAsOf }: { dbAsOf: string | null }) {
+  const asOf = useMapStore((s) => s.asOf)
+  const setAsOf = useMapStore((s) => s.setAsOf)
+  if (!asOf)
+    return (
+      <span data-testid="as-of" data-as-of="" className="text-right leading-tight text-ink-muted">
+        {UI.topbar.today} <span className="tabular-nums text-ink">{todayKst()}</span>
+        <br />
+        {UI.topbar.dbAsOf} <span className="tabular-nums">{dbAsOf ?? '—'}</span>
+      </span>
+    )
+  const mode = asOf < todayIso() ? UI.time.past : UI.time.other
+  return (
+    <span className="flex items-center gap-2">
+      <span data-testid="as-of" data-as-of={asOf} className="text-right leading-tight">
+        <span className="font-semibold text-brand-indigo">
+          {UI.time.asOf} <span className="tabular-nums">{asOf}</span>
+        </span>
+        <br />
+        <span className="text-ink-muted" data-testid="as-of-mode">{mode}</span>
+      </span>
+      <button
+        type="button"
+        data-testid="as-of-today"
+        title={UI.time.toTodayHelp}
+        onClick={() => setAsOf(null)}
+        className="rounded-full bg-brand-indigo px-2.5 py-1 font-semibold text-white hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-indigo"
+      >
+        {UI.time.toToday}
+      </button>
+    </span>
+  )
+}
+
 export function TopBar({ style }: { style: CSSProperties }) {
   const workspace = useMapStore((s) => s.workspace)
   const selected = useMapStore((s) => s.selected)
   const reduce = useMapStore((s) => s.reduceTransparency)
+  const asOf = useMapStore((s) => s.asOf)
   const projects = useMapProjects().data?.projects ?? []
   const health = useHealth().data
   const selProject = selected?.kind === 'project' ? projects.find((p) => String(p.id) === selected.id) : undefined
@@ -173,12 +209,10 @@ export function TopBar({ style }: { style: CSSProperties }) {
         >
           <Contrast size={16} aria-hidden="true" />
         </button>
-        <span data-testid="as-of" className="text-right leading-tight text-ink-muted">
-          {UI.topbar.today} <span className="tabular-nums text-ink">{todayKst()}</span>
-          <br />
-          {UI.topbar.dbAsOf} <span className="tabular-nums">{health?.as_of ?? '—'}</span>
-        </span>
+        <AsOf dbAsOf={health?.as_of ?? null} />
       </div>
+      {/* 오늘이 아닌 날짜를 보는 동안: 상단 바 아래 가장자리에 얇은 브랜드 색 띠 (P19) */}
+      {asOf && <span aria-hidden="true" data-testid="as-of-band" className="as-of-band" />}
     </GlassPanel>
   )
 }

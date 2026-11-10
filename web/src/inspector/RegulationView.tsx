@@ -10,17 +10,20 @@ import { EvidenceLine } from '../ui/EvidenceLine'
 import { HistoryList } from './HistoryList'
 import { Badge, Card, KV, Section, dot } from './parts'
 import { periodBar } from './period'
+import { todayIso } from '../state/dates'
 
 function PeriodBar({ from, to, today, status, statusLabel }: {
   from: string | null; to: string | null; today: string; status: string | null; statusLabel: string | null
 }) {
   const bar = periodBar(from, to, today)
+  // P19: 기준일이 오늘이 아니면 선 이름을 '기준일'로
+  const mark = today === todayIso() ? UI.regulation.today : UI.time.asOf
   if (!bar) return <p className="text-xs text-ink-muted">{UI.regulation.noPeriod}</p>
   const fill = status === 'in_force' ? 'bg-layer-regulation/70' : 'bg-ink/25'
   return (
     <div data-testid="period-bar" data-status={status ?? ''}>
       <div className="relative h-8" role="img"
-        aria-label={`${UI.regulation.period} ${dot(from)} ~ ${to ? dot(to) : UI.regulation.openEnd}, ${UI.regulation.today} ${dot(today)}`}>
+        aria-label={`${UI.regulation.period} ${dot(from)} ~ ${to ? dot(to) : UI.regulation.openEnd}, ${mark} ${dot(today)}`}>
         <div className="absolute inset-x-0 top-3 h-2 rounded-full bg-ink/8" />
         <div
           data-testid="period-fill"
@@ -29,12 +32,12 @@ function PeriodBar({ from, to, today, status, statusLabel }: {
             ...(bar.openEnd ? { maskImage: 'linear-gradient(90deg, black 80%, transparent)' } : {}) }}
         />
         <div data-testid="period-today" className="absolute top-0 h-8 w-0.5 bg-brand-indigo" style={{ left: `${bar.today}%` }}>
-          <span className="absolute -top-0.5 left-1 whitespace-nowrap text-[10px] font-semibold text-brand-indigo">{UI.regulation.today}</span>
+          <span className="absolute -top-0.5 left-1 whitespace-nowrap text-[10px] font-semibold text-brand-indigo">{mark}</span>
         </div>
       </div>
       <div className="flex justify-between text-[11px] tabular-nums text-ink-muted">
         <span>{UI.regulation.start} {dot(from) || '—'}</span>
-        <span>{UI.regulation.today} {dot(today)}</span>
+        <span>{mark} {dot(today)}</span>
         <span>{UI.regulation.end} {to ? dot(to) : UI.regulation.openEnd}</span>
       </div>
       {statusLabel && <p className="mt-1"><Badge text={statusLabel} tone={status === 'in_force' ? 'info' : 'muted'} testId="period-status" /></p>}

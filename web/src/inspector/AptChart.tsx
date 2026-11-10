@@ -19,8 +19,10 @@ const INK = 'var(--color-ink)'
 const MUTED = 'var(--color-ink-muted)'
 const COLOR = 'var(--color-layer-apartment)'
 
-export default function AptChart({ data }: { data: Trades }) {
-  const s = makeScales(data.monthly, data.points, { width: W, priceHeight: PRICE_H, countHeight: COUNT_H, left: LEFT, right: RIGHT })
+/** until = 전체 거래의 마지막 계약일 (P19: 기준일로 자른 차트도 x축은 그 달까지, 뒤 구간은 비움) */
+export default function AptChart({ data, until, asOf }: { data: Trades; until?: string | null; asOf?: string | null }) {
+  const s = makeScales(data.monthly, data.points, { width: W, priceHeight: PRICE_H, countHeight: COUNT_H, left: LEFT, right: RIGHT },
+    asOf ? until : null)
   if (!s) return <p className="text-xs text-ink-muted" data-testid="apt-chart-empty">{UI.apartment.noTrades}</p>
   const bw = s.x.bandwidth()
   const cx = (ym: string) => (s.x(ym) ?? LEFT) + bw / 2
@@ -34,6 +36,16 @@ export default function AptChart({ data }: { data: Trades }) {
   const xTicks = years.filter((_, i) => i % step === 0)
   const priceTicks = s.yPrice.ticks(4)
   const countTicks = s.yCount.ticks(2).filter(Number.isInteger)
+  // 기준일 세로선 (P19): 그 뒤 구간은 거래를 받지 않았으므로 비어 있다
+  const asOfX = asOf && s.months.includes(asOf.slice(0, 7)) ? s.xDate(asOf) : null
+  const asOfLine = (h: number, label: boolean) =>
+    asOfX == null ? null : (
+      <g data-testid="chart-as-of" data-as-of={asOf}>
+        <rect x={asOfX} y={0} width={Math.max(0, W - RIGHT - asOfX)} height={h} fill={MUTED} fillOpacity={0.06} />
+        <line x1={asOfX} x2={asOfX} y1={0} y2={h} stroke="var(--color-brand-indigo)" strokeWidth={1.5} />
+        {label && <text x={asOfX + 3} y={10} fontSize={9} fill="var(--color-brand-indigo)">{UI.time.chartAsOf}</text>}
+      </g>
+    )
   const xAxis = (y: number) => (
     <g aria-hidden="true">
       <line x1={LEFT} x2={W - RIGHT} y1={y} y2={y} stroke={MUTED} strokeOpacity={0.4} />
@@ -72,6 +84,7 @@ export default function AptChart({ data }: { data: Trades }) {
             </circle>
           ))}
           {path && <path d={path} fill="none" stroke={INK} strokeWidth={1.6} data-testid="median-line" />}
+          {asOfLine(PRICE_H, true)}
           {xAxis(PRICE_H)}
         </svg>
       </figure>
@@ -89,10 +102,12 @@ export default function AptChart({ data }: { data: Trades }) {
               <title>{`${d.ym} · ${d.count}건`}</title>
             </rect>
           ))}
+          {asOfLine(COUNT_H, false)}
           {xAxis(COUNT_H)}
         </svg>
       </figure>
       <p className="text-[10px] text-ink-muted">{UI.apartment.chartNote}</p>
+      {asOf && <p className="text-[10px] text-ink-muted" data-testid="chart-cut-note">{UI.time.chartCut}</p>}
     </div>
   )
 }

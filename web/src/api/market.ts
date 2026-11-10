@@ -1,6 +1,6 @@
 /** 아파트 단지·실거래 API (P17). 값은 db/market.db 그대로 — 화면은 표기만 바꾼다. */
 import { useQuery } from '@tanstack/react-query'
-import { getJson } from './map'
+import { getJson, useAsOf } from './map'
 import type { BandSummary, BasisStatus } from '../market/format'
 import type { Monthly, Point } from '../market/chartScales'
 
@@ -59,18 +59,40 @@ export type Trades = {
   id: string
   band: string | null
   from: string | null
-  monthly: Monthly[]
+  /** P19: 계약일 ≤ 기준일 거래만 (null = 전체) */
+  as_of: string | null
+  monthly: (Monthly & { partial_to?: string })[]
   points: (Point & { exclusive_area_m2: number | null; floor: number | null })[]
   recent: Trade[]
   source: string
   fetched_on: string | null
 }
 
-export const useApartmentTrades = (id: string, band: string | null) =>
-  useQuery({
-    queryKey: ['apartment', id, 'trades', band],
-    queryFn: ({ signal }) =>
-      getJson<Trades>(`/api/v1/apartments/${encodeURIComponent(id)}/trades${band ? `?band=${encodeURIComponent(band)}` : ''}`, signal),
+export function tradesUrl(id: string, band: string | null, asOf: string | null): string {
+  const q = new URLSearchParams()
+  if (band) q.set('band', band)
+  if (asOf) q.set('as_of', asOf)
+  const qs = q.toString()
+  return `/api/v1/apartments/${encodeURIComponent(id)}/trades${qs ? `?${qs}` : ''}`
+}
+
+/** 인스펙터 차트 (P19: 계약일 ≤ 기준일) */
+export const useApartmentTrades = (id: string, band: string | null) => {
+  const asOf = useAsOf()
+  return useQuery({
+    queryKey: ['apartment', id, 'trades', band, asOf],
+    queryFn: ({ signal }) => getJson<Trades>(tradesUrl(id, band, asOf), signal),
     enabled: !!band,
+    staleTime: 5 * 60_000,
+    placeholderData: (prev, q) => (q && q.queryKey[1] === id && q.queryKey[3] === band ? prev : undefined),
+  })
+}
+
+/** 타임라인 거래량 줄 (P19): 면적대를 합친 월별 건수, 전체 기간 (해제 제외) */
+export const useApartmentMonthly = (id: string | null) =>
+  useQuery({
+    queryKey: ['apartment', id, 'monthly'],
+    queryFn: ({ signal }) => getJson<Trades>(tradesUrl(id!, null, null), signal),
+    enabled: !!id,
     staleTime: 5 * 60_000,
   })

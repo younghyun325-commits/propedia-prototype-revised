@@ -11,7 +11,7 @@ BANNED = re.compile(r"^\s*(?:import|from)\s+(httpx|requests|urllib\.request|urll
                     re.M)
 BANNED_ATTR = re.compile(r"\burllib\.request\b|\bsocket\.")
 ALLOWED_TOP = {"__future__", "json", "math", "re", "sqlite3", "sys", "os", "pathlib", "dataclasses", "datetime",
-               "unicodedata", "fastapi", "core"}
+               "unicodedata", "statistics", "fastapi", "core"}
 LIVE_ALLOWED_TOP = ALLOWED_TOP | {"urllib", "time"}
 LLM = re.compile(r"anthropic|openai|generativelanguage|api\.claude", re.I)
 

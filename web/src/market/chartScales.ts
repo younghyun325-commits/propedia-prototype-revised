@@ -36,10 +36,13 @@ export function makeScales(
   monthly: Monthly[],
   points: Point[],
   opt: { width: number; priceHeight: number; countHeight: number; left: number; right: number },
+  /** P19: x축을 이 달(YYYY-MM)까지 늘린다 — 기준일 뒤 구간을 비워 보여 줄 때 (전체 거래의 마지막 달) */
+  extendTo?: string | null,
 ): ChartScales | null {
   const yms = [...monthly.map((d) => d.ym), ...points.map((p) => p.contract_date.slice(0, 7))].sort()
   if (!yms.length) return null
-  const months = monthRange(yms[0], yms[yms.length - 1])
+  const last = extendTo && extendTo.slice(0, 7) > yms[yms.length - 1] ? extendTo.slice(0, 7) : yms[yms.length - 1]
+  const months = monthRange(yms[0], last)
   const x = scaleBand<string>().domain(months).range([opt.left, opt.width - opt.right]).paddingInner(0.15).paddingOuter(0.05)
   const xDate = (iso: string) => {
     const ym = iso.slice(0, 7)

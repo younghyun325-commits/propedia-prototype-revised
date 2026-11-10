@@ -3,6 +3,7 @@
  * 건수·원천·기준일은 모두 /api/v1/map/manifest에서 읽는다 (숫자를 코드에 적지 않음).
  */
 import { useEffect, useRef, useState } from 'react'
+import { STATIC_GROUPS, ymLabel } from '../state/dates'
 import { ChevronDown, ChevronRight, Info, SlidersHorizontal } from 'lucide-react'
 import type { Manifest, ManifestLayer } from '../api/map'
 import { UI } from '../copy/ui'
@@ -90,6 +91,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
   const setOpacity = useMapStore((s) => s.setLayerOpacity)
   const poiTri = useMapStore((s) => (l.id === 'pois' ? triAll(s.poi) : null))
   const zoom = useMapStore((s) => s.zoom)
+  const asOf = useMapStore((s) => s.asOf)
   const [open, setOpen] = useState(false)
   const enabled = l.status === 'ready' && panelId !== null
   const blockedAt = zoomBlocked(l.id, zoom)
@@ -189,6 +191,9 @@ function LayerRow({ l }: { l: ManifestLayer }) {
         <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid={`layer-zoomhint-${l.id}`}>
           {UI.reference.zoomHint(blockedAt)}
         </p>
+      )}
+      {asOf && l.status === 'ready' && (STATIC_GROUPS as readonly string[]).includes(l.group) && (
+        <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid={`layer-static-${l.id}`}>{UI.time.staticNote(ymLabel(l.as_of))}</p>
       )}
       {l.group === 'infra' && l.status === 'ready' && <InfraZoomHint l={l as InfraLayer} />}
       {l.id === 'pois' && l.status === 'ready' && <PoiCategoryRows l={l as InfraLayer} />}

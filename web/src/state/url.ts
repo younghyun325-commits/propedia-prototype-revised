@@ -2,6 +2,7 @@
  * 지도 상태 ↔ URL (docs/map/PLAN.md P14). 순수 함수 — Vitest로 검사한다.
  * 예: ?layers=projects,impact250,impact500,parcels&op=projects:80&base=gray&ov=1&sel=project:1&tab=layers&c=127.05,37.50&z=13
  * P18: route=100100025 (노선 선택), r=127.02760,37.49794,500 (반경 보기)
+ * P19: t=2026-05-01 (기준일, 없으면 오늘). 잘못된 날짜는 무시한다
  * P19-1: poi=supermarket,medical:dental+oriental,academy:language (켠 편의시설 분류·하위 분류, infra/poiSelect.ts).
  *   편의시설은 layers 파라미터에 쓰지 않는다 (layers의 'pois'는 무시하고, 켜짐 여부는 poi에서 정한다)
  * - 잘못된 값은 무시하고 기본값을 쓴다.
@@ -51,6 +52,8 @@ export type UrlState = {
   route: string | null
   /** 반경 보기 */
   radius: Radius | null
+  /** 기준일 'YYYY-MM-DD' (P19). null = 오늘 */
+  asOf: string | null
 }
 
 /** 강남구 주변만 받는다 (지도 이동 범위보다 넓게) */
@@ -66,7 +69,7 @@ export function defaultLayers(): LayerStates {
 
 export function defaultUrlState(): UrlState {
   return { layers: defaultLayers(), basemap: DEFAULT_BASEMAP, overlap: false, selected: null, leftTab: 'layers', camera: null,
-    poi: {}, route: null, radius: null }
+    poi: {}, route: null, radius: null, asOf: null }
 }
 
 /** sel=parcel:{19자리 PNU} = 지도 클릭 필지 조회 (P15). parcel:{사업}:{PNU}는 Propedia 사업 필지 */
@@ -86,6 +89,15 @@ export function parseSelected(v: string | null | undefined): Selected {
   const id = v.slice(i + 1)
   if (!SELECT_KINDS.includes(kind) || !/^[A-Za-z0-9:._-]{1,64}$/.test(id)) return null
   return { kind, id }
+}
+
+/** 'YYYY-MM-DD'이고 실제 있는 날짜(1900~2100)면 그대로, 아니면 null */
+export function parseIsoDate(v: string | null | undefined): string | null {
+  if (!v || !/^\d{4}-\d{2}-\d{2}$/.test(v)) return null
+  const [y, m, d] = v.split('-').map(Number)
+  const dt = new Date(Date.UTC(y, m - 1, d))
+  if (y < 1900 || y > 2100 || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null
+  return v
 }
 
 const isPanelId = (s: string): s is PanelLayerId => (PANEL_LAYER_IDS as readonly string[]).includes(s)
@@ -125,6 +137,7 @@ export function parseUrl(search: string): UrlState {
   const route = q.get('route')
   if (route && /^\d{1,12}$/.test(route)) s.route = route
   s.radius = parseRadius(q.get('r'))
+  s.asOf = parseIsoDate(q.get('t'))
   return s
 }
 
@@ -150,10 +163,11 @@ export function toSearch(s: UrlState): string {
   if (poi) q.set('poi', poi)
   if (s.route) q.set('route', s.route)
   if (s.radius) q.set('r', formatRadius(s.radius))
+  if (s.asOf) q.set('t', s.asOf)
   return q.toString()
 }
 
-export const URL_KEYS = ['layers', 'op', 'base', 'ov', 'sel', 'tab', 'c', 'z', 'poi', 'route', 'r'] as const
+export const URL_KEYS = ['layers', 'op', 'base', 'ov', 'sel', 'tab', 'c', 'z', 'poi', 'route', 'r', 't'] as const
 
 /** 지금 주소의 다른 파라미터(debug 등)는 두고 우리 키만 바꾼 search 문자열 */
 export function mergeSearch(current: string, ours: string): string {

@@ -155,3 +155,22 @@ html.map-moving .map-tooltip {
   filter: drop-shadow(0 1px 2px rgb(31 35 40 / 0.35));
   pointer-events: none;
 }
+
+/* P19 지난 시점·다른 날짜 보기: 상단 바 아래 가장자리 얇은 브랜드 색 띠 */
+.as-of-band {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: -1px;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--brand-gradient);
+  pointer-events: none;
+}
+
+/* P19 타임라인: 스크러버·이벤트 */
+.tl-svg { touch-action: none; user-select: none; }
+.tl-svg:focus-visible { outline: 2px solid var(--color-brand-indigo); outline-offset: -2px; border-radius: 12px; }
+.tl-event { cursor: pointer; }
+.tl-event:hover, .tl-event:focus-visible { filter: brightness(0.85); }
+.tl-scrubber { cursor: ew-resize; }

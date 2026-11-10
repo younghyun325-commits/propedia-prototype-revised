@@ -201,6 +201,7 @@ function Message({ text, testId, retry }: { text: string; testId: string; retry?
 /** 빈 곳 클릭 필지 (store.parcel, /map/parcel-at) */
 function ClickParcel() {
   const lookup = useMapStore((s) => s.parcel)
+  const asOf = useMapStore((s) => s.asOf)
   const today = todayKst().replaceAll('.', '-')
   if (lookup.status === 'loading')
     return (
@@ -231,7 +232,16 @@ function ClickParcel() {
   return (
     <div data-testid="parcel-card" data-status="ok" className="contents">
       <Shell key={d.pnu} head={head} kind="parcel">
-        {(tab) => <Body kind="parcel" tab={tab} feature={null} parcel={d} />}
+        {(tab) => (
+          <>
+            {asOf && (
+              <p className="mb-2 rounded-xl bg-brand-sky/15 p-2 text-[11px]" data-testid="parcel-live-note" role="note">
+                {UI.time.liveNote}
+              </p>
+            )}
+            <Body kind="parcel" tab={tab} feature={null} parcel={d} />
+          </>
+        )}
       </Shell>
     </div>
   )
@@ -252,10 +262,30 @@ function Selected({ kind, id }: { kind: FeatureKind; id: string }) {
   const f = q.data
   const head: Head = { kind, title: f.title, subtitle: f.subtitle, asOf: f.as_of, dataAsOf: f.data_as_of, badges: f.badges,
     unverified: f.unverified }
+  // P19: 기준일에 첫 근거 문서가 아직 없는 사업 — 이름과 안내만 (단계·기한은 그날 기준으로 없음)
+  if (f.shown === false)
+    return (
+      <Shell key={`${kind}:${id}:hidden`} head={head} kind={null}>
+        {() => (
+          <p className="rounded-xl bg-white/65 p-3 text-xs" data-testid="inspector-hidden" role="note">
+            {f.shown_from ? UI.time.hiddenProject(dot(f.shown_from)) : f.note}
+          </p>
+        )}
+      </Shell>
+    )
   const parcel = f.kind === 'parcel' ? f.sections.parcel : null
   return (
     <Shell key={`${kind}:${id}`} head={head} kind={kind}>
-      {(tab) => <Body kind={kind} tab={tab} feature={f} parcel={parcel} boundaryNote={parcel?.boundary_note} />}
+      {(tab) => (
+        <>
+          {f.kind === 'regulation' && f.published === false && (
+            <p className="mb-2 rounded-xl bg-layer-regulation/12 p-2 text-[11px]" data-testid="inspector-not-published" role="note">
+              {f.note ?? UI.time.regNotPublished}
+            </p>
+          )}
+          <Body kind={kind} tab={tab} feature={f} parcel={parcel} boundaryNote={parcel?.boundary_note} />
+        </>
+      )}
     </Shell>
   )
 }

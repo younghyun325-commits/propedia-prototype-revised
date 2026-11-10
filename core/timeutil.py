@@ -27,6 +27,8 @@ def dot(s) -> str:
 
 
 EFFECTIVE_STATUS_LABELS = {"in_force": "효력 기간 중", "ended": "효력 기간 끝남", "not_started": "효력 시작 전"}
+# 지도·타임라인용 짧은 라벨 (P19). 판정은 아래 effective() 하나
+EFFECTIVE_SHORT_LABELS = {"in_force": "효력 중", "ended": "종료", "not_started": "효력 전"}
 
 
 def effective(start, end, today: date) -> dict:

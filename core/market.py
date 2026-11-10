@@ -5,6 +5,7 @@
 - 면적대 area_band는 빌드(pipeline/build_market_db)와 화면이 같은 함수를 쓴다.
 """
 
+import statistics
 from datetime import date
 
 from core.db import loads
@@ -129,7 +130,9 @@ def apartment(mcon, con, cid: str, today: date) -> dict:
     }
 
 
-def trades(mcon, cid: str, band: str | None = None, from_: str | None = None, limit: int = 20) -> dict:
+def trades(mcon, cid: str, band: str | None = None, from_: str | None = None, limit: int = 20,
+           as_of: date | None = None) -> dict:
+    """as_of(P19): 계약일 ≤ 기준일 거래만. 월별은 기준일이 든 달만 원자료에서 다시 센다 (빌드와 같은 규칙: 해제 제외, 중위값)."""
     _row(mcon, cid)
     if band is not None and band not in BAND_IDS:
         raise ValueError("면적대(band)는 " + "·".join(BAND_IDS) + " 중 하나입니다")
@@ -143,11 +146,17 @@ def trades(mcon, cid: str, band: str | None = None, from_: str | None = None, li
     if from_:
         where.append("contract_date>=?")
         args.append(from_)
+    if as_of:
+        where.append("contract_date<=?")
+        args.append(as_of.isoformat())
     w = " AND ".join(where)
     mw, margs = ["complex_id=?"], [cid]
     if from_:
         mw.append("ym>=?")
         margs.append(from_[:7])
+    if as_of:                      # 기준일이 든 달은 아래에서 원자료로 다시 센다
+        mw.append("ym<?")
+        margs.append(as_of.isoformat()[:7])
     if band:       # 면적대 하나 → 그 달 중위값·건수 (해제 제외, 빌드 때 계산)
         monthly = [dict(x) for x in mcon.execute(
             f"""SELECT ym, median_amount, count FROM apt_trade_monthly WHERE {' AND '.join(mw)} AND area_band=?
@@ -155,6 +164,14 @@ def trades(mcon, cid: str, band: str | None = None, from_: str | None = None, li
     else:          # 면적대를 합친 월별 건수만 (중위값은 면적대별로만 낸다)
         monthly = [{"ym": x["ym"], "median_amount": None, "count": x["c"]} for x in mcon.execute(
             f"SELECT ym, SUM(count) c FROM apt_trade_monthly WHERE {' AND '.join(mw)} GROUP BY ym ORDER BY ym", margs)]
+    if as_of and (not from_ or from_[:7] <= as_of.isoformat()[:7]):
+        ym = as_of.isoformat()[:7]
+        part = [x["amount_10k_won"] for x in mcon.execute(
+            f"""SELECT amount_10k_won FROM apt_trades WHERE {w} AND is_cancelled=0 AND area_band IS NOT NULL
+                AND substr(contract_date, 1, 7)=?""", [*args, ym])]
+        if part:
+            monthly.append({"ym": ym, "median_amount": float(statistics.median(part)) if band else None,
+                            "count": len(part), "partial_to": as_of.isoformat()})
     cols = ("contract_date, exclusive_area_m2, area_band, floor, amount_10k_won, deal_type, is_cancelled, "
             "cancelled_date, apt_dong")
     points = [dict(x) for x in mcon.execute(
@@ -162,7 +179,8 @@ def trades(mcon, cid: str, band: str | None = None, from_: str | None = None, li
         "ORDER BY contract_date, id", args)]
     recent = [dict(x) for x in mcon.execute(
         f"SELECT {cols} FROM apt_trades WHERE {w} ORDER BY contract_date DESC, id DESC LIMIT ?", [*args, limit])]
-    return {"id": cid, "band": band, "from": from_, "monthly": monthly, "points": points, "recent": recent,
+    return {"id": cid, "band": band, "from": from_, "as_of": as_of.isoformat() if as_of else None,
+            "monthly": monthly, "points": points, "recent": recent,
             "source": TRADE_SOURCE, "fetched_on": meta(mcon).get("fetched_on")}
 
 

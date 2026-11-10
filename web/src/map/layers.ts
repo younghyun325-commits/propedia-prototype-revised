@@ -304,6 +304,32 @@ export const OVERLAP_TARGETS: PanelLayerId[] = ['parcels', 'regulations', 'apart
 
 const r3 = (v: number) => Math.round(v * 1000) / 1000
 
+// ---- P19 '그날 기준' (core/map.state_at 결과를 식으로만 건다 — 소스·레이어를 다시 만들지 않는다)
+/** 효력 중이 아닌(효력 전·종료) 규제 구역 투명도 배율 */
+export const REG_DIM = 0.25
+
+/** 그날 숨기는 사업에 딸린 레이어와 그 사업을 가리키는 속성 (사업 도형은 id 'project:1', 나머지는 project_id 1) */
+export const DATE_FILTER_LAYERS: Record<string, 'id' | 'project_id'> = {
+  'propedia-project-fill': 'id', 'propedia-project-line': 'id', 'propedia-project-selected': 'id',
+  'propedia-impact250-fill': 'project_id', 'propedia-impact250-line': 'project_id',
+  'propedia-impact500-fill': 'project_id', 'propedia-impact500-line': 'project_id',
+  'propedia-parcel-hit': 'project_id', 'propedia-parcel-line': 'project_id', 'propedia-parcel-line-likely': 'project_id',
+  'propedia-parcel-search': 'project_id', 'propedia-parcel-selected': 'project_id',
+}
+
+/** 숨긴 사업 번호 → 그 레이어에 걸 '숨긴 사업이 아님' 식 (없으면 null) */
+export function hiddenProjectFilter(prop: 'id' | 'project_id', hidden: number[]): unknown[] | null {
+  if (!hidden.length) return null
+  const values = prop === 'id' ? hidden.map((n) => `project:${n}`) : hidden
+  return ['!', ['in', ['get', prop], ['literal', values]]]
+}
+
+/** 기존 필터(버퍼·판정·선택)와 날짜 필터를 함께 건다 */
+export function combineFilter(base: unknown[] | undefined | null, extra: unknown[] | null): unknown[] | undefined {
+  if (!extra) return base ?? undefined
+  return base ? ['all', base, extra] : extra
+}
+
 /** 투명도 페인트 값: 겹침 보기면 영향권 밖(impact_buffer_m == null)만 OVERLAP_DIM 배 */
 export function opacityExpr(base: number, overlap: boolean): number | unknown[] {
   const v = r3(base)
@@ -312,8 +338,21 @@ export function opacityExpr(base: number, overlap: boolean): number | unknown[] 
 }
 
 /** 패널 상태 → 지도에 걸 페인트 목록 (순수 함수) */
-export function paintPlan(id: PanelLayerId, opacityPct: number, overlap: boolean): [string, string, number | unknown[]][] {
+/** 패널 상태 → 지도에 걸 페인트 목록 (순수 함수).
+ *  P19: regDim = 그날 효력 중이 아닌 규제 도형 id — 규제 레이어에서 그 도형만 REG_DIM 배 */
+export function paintPlan(
+  id: PanelLayerId, opacityPct: number, overlap: boolean, regDim: string[] = [],
+): [string, string, number | unknown[]][] {
   const k = Math.max(0, Math.min(100, opacityPct)) / 100
   const on = overlap && OVERLAP_TARGETS.includes(id)
-  return PANEL_LAYERS[id].paint.map((p) => [p.layer, p.prop, opacityExpr(p.base * k, on && !p.noOverlap)])
+  return PANEL_LAYERS[id].paint.map((p) => {
+    const v = opacityExpr(p.base * k, on && !p.noOverlap)
+    if (id !== 'regulations' || !regDim.length) return [p.layer, p.prop, v]
+    return [p.layer, p.prop, ['case', ['in', ['get', 'id'], ['literal', regDim]], opacityExpr(p.base * k * REG_DIM, on && !p.noOverlap), v]]
+  })
+}
+
+/** 규제 라벨 (P19): 효력 중이 아니면 '· 효력 전'·'· 종료'를 붙인다 */
+export function regulationLabel(text: string, statusLabel: string | null | undefined, inForce: boolean): string {
+  return inForce || !statusLabel ? text : `${text} · ${statusLabel}`
 }

@@ -19,7 +19,7 @@ import { Map, Marker, type MapRef, type MapLayerMouseEvent } from 'react-map-gl/
 import type { LayerSpecification, MapGeoJSONFeature, StyleSpecification } from 'maplibre-gl'
 import type { Feature, FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson'
 import { MapPin } from 'lucide-react'
-import { useMapProjects } from '../api/map'
+import { useMapProjects, useNotices } from '../api/map'
 import { UI } from '../copy/ui'
 import { useMapStore, type ParcelLookup } from '../state/useMapStore'
 import { featureId, isParcelLookup, parseSelected, PANEL_LAYER_IDS, type LayerStates, type Selected } from '../state/url'
@@ -38,7 +38,8 @@ import { MapControls } from './MapControls'
 import { estimateLabelWidth, placeLabels, REGULATION_LABEL_MIN_ZOOM, type Box, type Placement } from './labels'
 import {
   APARTMENT_LABEL_MIN_ZOOM, APARTMENT_SOURCE, apartmentLayers,
-  HATCH_ID, LAYER_FILES, PANEL_LAYERS, PROPEDIA_SOURCES, dot, hatchImage, idFilter, labelText, paintPlan, propediaLayers,
+  DATE_FILTER_LAYERS, DEFAULT_COLORS, HATCH_ID, LAYER_FILES, PANEL_LAYERS, PROPEDIA_SOURCES, combineFilter, dot, hatchImage,
+  hiddenProjectFilter, idFilter, labelText, paintPlan, propediaLayers, regulationLabel,
   readHighlightColors, readLayerColors, type HighlightColors, type LayerColors, type LayerKind, type PropediaFC,
   type PropediaProps,
 } from './layers'
@@ -92,7 +93,14 @@ type RefData = Partial<Record<RefGeoId, FeatureCollection<Polygon | MultiPolygon
 /** 스타일에 넣을 때와 지도에 바로 걸 때 같은 값을 쓰는 상태 묶음 */
 type Snapshot = {
   layers: LayerStates; overlap: boolean; selected: Selected; searchPnu: string | null; routeArs?: string[]; poi?: PoiSel
+  /** P19 '그날 기준': 숨긴 사업 번호, 효력 중이 아닌 규제 도형 id */
+  hidden?: number[]; regDim?: string[]
 }
+
+/** 사업·영향권·필지 레이어의 고정 필터 (버퍼·판정). 날짜 필터는 이 위에 더한다 (P19) */
+const BASE_FILTERS: Record<string, unknown[] | undefined> = Object.fromEntries(
+  propediaLayers(DEFAULT_COLORS).map((l) => [l.id, (l as { filter?: unknown[] }).filter]),
+)
 
 /** 클릭 필지 강조 도형: 결과가 있고 지금 선택이 그 필지일 때만 */
 function clickParcelData(parcel: ParcelLookup, selected: Selected): FeatureCollection {
@@ -131,7 +139,7 @@ function selectedFilterFor(layerId: string, sel: Selected): unknown[] {
 function withState(specs: LayerSpecification[], snap: Snapshot): LayerSpecification[] {
   const paints: Record<string, Record<string, unknown>> = {}
   for (const id of PANEL_LAYER_IDS)
-    for (const [layer, prop, v] of paintPlan(id, snap.layers[id].opacity, snap.overlap)) (paints[layer] ??= {})[prop] = v
+    for (const [layer, prop, v] of paintPlan(id, snap.layers[id].opacity, snap.overlap, snap.regDim)) (paints[layer] ??= {})[prop] = v
   return specs.map((l) => {
     const owner = LAYER_OWNER[l.id]
     const out = { ...l } as LayerSpecification & { layout?: Record<string, unknown>; paint?: Record<string, unknown>; filter?: unknown }
@@ -145,6 +153,13 @@ function withState(specs: LayerSpecification[], snap: Snapshot): LayerSpecificat
     if (l.id.endsWith('-selected')) out.filter = selectedFilterFor(l.id, snap.selected)
     if (l.id === 'propedia-parcel-search') out.filter = idFilter('pnu', snap.searchPnu)
     if (l.id === 'bus-route') out.filter = routeFilter(snap.routeArs ?? [])
+    const dp = DATE_FILTER_LAYERS[l.id]
+    if (dp) {
+      // 필터가 없는 레이어(사업 면·선)에 filter: undefined를 넣으면 setStyle 검사에서 오류 — 있을 때만 넣는다
+      const f = combineFilter(out.filter as unknown[] | undefined, hiddenProjectFilter(dp, snap.hidden ?? []))
+      if (f) out.filter = f
+      else delete out.filter
+    }
     return out as LayerSpecification
   })
 }
@@ -269,7 +284,17 @@ export default function MapView({ insets }: { insets: Insets }) {
   const viewRequest = useMapStore((s) => s.viewRequest)
   const mapMoving = useMapStore((s) => s.mapMoving)
   const setMapMoving = useMapStore((s) => s.setMapMoving)
-  const projects = useMapProjects().data?.projects
+  const projectsQ = useMapProjects().data
+  const projects = projectsQ?.projects
+  // P19 '그날 기준': 숨긴 사업(첫 근거 문서 발행 전)과 효력 중이 아닌 규제 — 식(setFilter·setPaintProperty)으로만 바꾼다
+  const hiddenKey = (projectsQ?.hidden ?? []).map((h) => h.id).join(',')
+  const hidden = useMemo(() => (hiddenKey ? hiddenKey.split(',').map(Number) : []), [hiddenKey])
+  const regulations = useNotices().data?.regulations
+  const regStatus = useMemo(() => new globalThis.Map((regulations ?? []).map((r) => [r.feature_id, r])), [regulations])
+  const regDimKey = (regulations ?? []).filter((r) => r.status === 'not_started' || r.status === 'ended').map((r) => r.feature_id).join(',')
+  const regDim = useMemo(() => (regDimKey ? regDimKey.split(',') : []), [regDimKey])
+  const dateRef = useRef({ hidden, regDim })
+  dateRef.current = { hidden, regDim }
   const [gu, setGu] = useState<Area | null>(null)
   const [dongs, setDongs] = useState<Area | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -371,7 +396,7 @@ export default function MapView({ insets }: { insets: Insets }) {
     const s = useMapStore.getState()
     return buildStyle(basemap, gu, dongs, propedia, colors, hl, {
       layers: s.layers, overlap: s.overlap, selected: s.selected, searchPnu: s.searchHit?.pnu ?? null, routeArs: routeArsRef.current,
-      poi: s.poi,
+      poi: s.poi, ...dateRef.current,
     }, refData, clickParcelData(s.parcel, s.selected), apartments,
     { schools: infra.schools, stations: infra.stations, bus: infra.bus, pois: infra.poiByCat }, radiusRef.current)
   }, [basemap, gu, dongs, propedia, colors, hl, refData, apartments, infra.schools, infra.stations, infra.bus, infra.poiByCat])
@@ -380,14 +405,21 @@ export default function MapView({ insets }: { insets: Insets }) {
   const areaLabels = useMemo(
     () =>
       (['project', 'regulation'] as const).flatMap((k) =>
-        (propedia[k]?.features ?? []).map((f) => ({
-          id: f.properties.id,
-          kind: k,
-          text: labelText(f.properties),
-          at: labelPoint(f.geometry as Polygon | MultiPolygon),
-        })),
+        (propedia[k]?.features ?? [])
+          .filter((f) => !(k === 'project' && hidden.includes(Number(f.properties.id.split(':')[1]))))
+          .map((f) => {
+            const r = k === 'regulation' ? regStatus.get(f.properties.id) : undefined
+            const inForce = !r || !(r.status === 'not_started' || r.status === 'ended')
+            return {
+              id: f.properties.id,
+              kind: k,
+              text: k === 'regulation' ? regulationLabel(labelText(f.properties), r?.status_label, inForce) : labelText(f.properties),
+              at: labelPoint(f.geometry as Polygon | MultiPolygon),
+              dim: !inForce,
+            }
+          }),
       ),
-    [propedia],
+    [propedia, hidden, regStatus],
   )
 
   // 공식 참고 라벨: 줌 15 이상, DGM_NM + '참고' (Propedia 라벨 다음 순위로 겹침 피하기)
@@ -450,14 +482,19 @@ export default function MapView({ insets }: { insets: Insets }) {
     for (const id of PANEL_LAYER_IDS) {
       const vis = s.layers[id].visible ? 'visible' : 'none'
       for (const l of PANEL_LAYERS[id].layers) if (map.getLayer(l)) map.setLayoutProperty(l, 'visibility', vis)
-      for (const [l, prop, v] of paintPlan(id, s.layers[id].opacity, s.overlap))
+      for (const [l, prop, v] of paintPlan(id, s.layers[id].opacity, s.overlap, dateRef.current.regDim))
         if (map.getLayer(l)) map.setPaintProperty(l, prop as never, v as never)
     }
     for (const l of Object.keys(SELECTED_LAYERS)) {
-      if (map.getLayer(l)) map.setFilter(l, selectedFilterFor(l, s.selected) as never)
+      if (map.getLayer(l) && !DATE_FILTER_LAYERS[l]) map.setFilter(l, selectedFilterFor(l, s.selected) as never)
     }
-    if (map.getLayer('propedia-parcel-search'))
-      map.setFilter('propedia-parcel-search', idFilter('pnu', s.searchHit?.pnu ?? null) as never)
+    // 사업·영향권·필지: 고정 필터(또는 선택·검색 필터) + 그날 숨긴 사업 빼기 (P19)
+    for (const [l, prop] of Object.entries(DATE_FILTER_LAYERS)) {
+      if (!map.getLayer(l)) continue
+      const base = l.endsWith('-selected') ? selectedFilterFor(l, s.selected)
+        : l === 'propedia-parcel-search' ? idFilter('pnu', s.searchHit?.pnu ?? null) : BASE_FILTERS[l]
+      map.setFilter(l, (combineFilter(base, hiddenProjectFilter(prop, dateRef.current.hidden)) ?? null) as never)
+    }
     const click = map.getSource(CLICK_SOURCE) as maplibregl.GeoJSONSource | undefined
     click?.setData(clickParcelData(s.parcel, s.selected) as never)
     // 노선 선택 모드 (P18): 그 노선 정류장만 강조, 나머지 정류장은 흐리게
@@ -480,7 +517,7 @@ export default function MapView({ insets }: { insets: Insets }) {
   }, [])
   useEffect(() => {
     if (loaded) applyState()
-  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState, route, routeArs, radiusFC, poiSel])
+  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState, route, routeArs, radiusFC, poiSel, hidden, regDim])
 
   // 새로고침: URL sel=parcel:{pnu}면 같은 필지를 다시 조회해 강조한다 (한 번)
   const restored = useRef(false)
@@ -541,6 +578,10 @@ export default function MapView({ insets }: { insets: Insets }) {
     if (!loaded || !map || !viewRequest) return
     if (viewRequest.type === 'home') {
       if (guBounds) map.fitBounds(guBounds, { padding: { ...insets, top: insets.top + 24, bottom: insets.bottom + 24 }, duration: 600 })
+    } else if (viewRequest.type === 'feature') {
+      const kind = viewRequest.id.split(':')[0] as 'project' | 'regulation'
+      const f = propedia[kind]?.features.find((x) => x.properties.id === viewRequest.id)
+      if (f) map.fitBounds(bboxOf([f as Feature<Polygon | MultiPolygon>]), { padding: padding(60), maxZoom: 17, duration: 600 })
     } else {
       const [w, s, e, n] = viewRequest.bbox
       map.fitBounds([[w, s], [e, n]], { padding: padding(60), maxZoom: 17, duration: 600 })
@@ -888,6 +929,9 @@ export default function MapView({ insets }: { insets: Insets }) {
                 data-testid="area-label"
                 data-kind={l.kind}
                 data-anchor={pl?.anchor ?? 'center'}
+                data-dim={l.dim ? '1' : '0'}
+                data-id={l.id}
+                style={l.dim ? { opacity: 0.55 } : undefined}
               >
                 {l.text}
               </span>

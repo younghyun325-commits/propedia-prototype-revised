@@ -4,7 +4,7 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import type { ParcelAt } from './parcel'
-import { getJson } from './map'
+import { getJson, useAsOf } from './map'
 import type { Apartment } from './market'
 
 export type FeatureKind = 'project' | 'regulation' | 'parcel' | 'apartment'
@@ -156,6 +156,14 @@ type Base<K extends FeatureKind, S> = {
   sections: S
   evidence: EvidenceItem[]
   disclaimer: string
+  /** P19: 그날 첫 근거 문서가 아직 없는 사업이면 false (sections는 비어 있고 note에 안내) */
+  shown?: boolean
+  shown_from?: string | null
+  note?: string | null
+  /** 규제: 그날 고시가 발행돼 있는지·효력 상태 */
+  published?: boolean
+  status?: 'in_force' | 'not_started' | 'ended' | null
+  status_label?: string | null
 }
 export type ProjectFeature = Base<'project', ProjectSections>
 export type RegulationFeature = Base<'regulation', RegulationSections>
@@ -166,11 +174,15 @@ export type Feature = ProjectFeature | RegulationFeature | ParcelFeature | Apart
 export const featureUrl = (kind: FeatureKind, id: string, asOf?: string) =>
   `/api/v1/map/feature/${kind}/${encodeURIComponent(id)}${asOf ? `?as_of=${asOf}` : ''}`
 
-export const useFeature = (kind: FeatureKind | null, id: string | null) =>
-  useQuery({
-    queryKey: ['map', 'feature', kind, id],
-    queryFn: ({ signal }) => getJson<Feature>(featureUrl(kind!, id!), signal),
+/** 인스펙터 (P19: 기준일을 쿼리 키·as_of에 넣는다. 같은 대상이면 받는 동안 이전 값 유지) */
+export const useFeature = (kind: FeatureKind | null, id: string | null) => {
+  const asOf = useAsOf()
+  return useQuery({
+    queryKey: ['map', 'feature', kind, id, asOf],
+    queryFn: ({ signal }) => getJson<Feature>(featureUrl(kind!, id!, asOf ?? undefined), signal),
     enabled: !!kind && !!id,
     retry: 1,
     staleTime: 60_000,
+    placeholderData: (prev, q) => (q && q.queryKey[2] === kind && q.queryKey[3] === id ? prev : undefined),
   })
+}

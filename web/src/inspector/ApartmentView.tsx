@@ -7,6 +7,7 @@ import { lazy, Suspense, useState } from 'react'
 import type { ApartmentFeature } from '../api/feature'
 import { useMapProjects } from '../api/map'
 import { useApartmentTrades } from '../api/market'
+import { useMapStore } from '../state/useMapStore'
 import { UI } from '../copy/ui'
 import { basisMissingText, formatManwon, pickDefaultBand } from '../market/format'
 import { selectProject } from '../state/actions'
@@ -51,15 +52,16 @@ function Sources({ a }: { a: ApartmentFeature['sections']['apartment'] }) {
   )
 }
 
-function Trades({ id, band }: { id: string; band: string }) {
+function Trades({ id, band, until }: { id: string; band: string; until: string | null }) {
   const q = useApartmentTrades(id, band)
+  const asOf = useMapStore((st) => st.asOf)
   if (q.isPending) return <Skeleton />
   if (q.isError) return <p role="alert" className="text-xs">{UI.apartment.unavailable}</p>
   const t = q.data
   return (
     <div className="space-y-3">
       <Suspense fallback={<p className="text-xs text-ink-muted" role="status">{UI.apartment.chartLoading}</p>}>
-        <AptChart data={t} />
+        <AptChart data={t} until={until} asOf={asOf} />
       </Suspense>
       <Section title={UI.apartment.recent(t.recent.length)} testId="apt-recent">
         <div className="overflow-x-auto">
@@ -146,7 +148,7 @@ export function ApartmentView({ f }: { f: ApartmentFeature }) {
           ))}
         </div>
       </Section>
-      {band ? <Trades id={a.id} band={band} /> : <p className="text-xs text-ink-muted">{UI.apartment.noTrades}</p>}
+      {band ? <Trades id={a.id} band={band} until={s.to} /> : <p className="text-xs text-ink-muted">{UI.apartment.noTrades}</p>}
       <Impacts a={a} />
       <p className="text-[10px] text-ink-muted">{a.disclaimer}</p>
     </div>
