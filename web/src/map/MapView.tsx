@@ -29,7 +29,7 @@ import {
 import { GlassPanel } from '../ui/GlassPanel'
 import { ATTRIBUTION, BASEMAPS, TILE_MAX_ZOOM, TILE_MIN_ZOOM, tileUrl } from './basemaps'
 import { Callout } from './Callout'
-import { bboxOf, labelPoint, outsideMask, padBounds, type Bounds } from './geo'
+import { bboxOf, initialFitTarget, labelPoint, outsideMask, padBounds, type Bounds } from './geo'
 import { MapControls } from './MapControls'
 import { estimateLabelWidth, placeLabels, REGULATION_LABEL_MIN_ZOOM, type Box, type Placement } from './labels'
 import {
@@ -213,6 +213,7 @@ export default function MapView({ insets }: { insets: Insets }) {
   const [dongs, setDongs] = useState<Area | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [propedia, setPropedia] = useState<Propedia>({})
+  const [propediaDone, setPropediaDone] = useState(false)
   const colors = useMemo(() => readLayerColors(), [])
   const hl = useMemo(() => readHighlightColors(), [])
   const [cursor, setCursor] = useState<{ lat: number; lon: number; dong: string | null } | null>(null)
@@ -251,6 +252,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       const failed: string[] = []
       rs.forEach((r, i) => (r.status === 'fulfilled' ? (got[KINDS[i]] = r.value) : failed.push(KINDS[i])))
       setPropedia(got)
+      setPropediaDone(true)
       if (failed.length) setLoadError(`Propedia 레이어를 불러오지 못했습니다 (${failed.join(', ')})`)
     })
   }, [])
@@ -361,14 +363,20 @@ export default function MapView({ insets }: { insets: Insets }) {
     [insets],
   )
 
-  // 첫 화면: URL에 카메라가 있으면 그대로, 없으면 패널을 뺀 영역에 강남구를 맞춘다 (한 번만)
+  // 첫 화면: URL에 카메라가 있으면 그대로. 없으면 sel 대상(사업·규제·사업 필지) bbox로, 그것도 없으면 강남구 전체를
+  // 패널을 뺀 영역에 맞춘다 (한 번만). 19자리 필지 조회(sel=parcel:{PNU})는 조회 결과 경계로 따로 이동한다 (parcel.fit)
   const fitted = useRef(initialCamera.current !== null)
+  const initialSel = useRef(useMapStore.getState().selected)
   useEffect(() => {
     const map = mapRef.current
     if (!loaded || !map || !guBounds || fitted.current) return
+    const sel = initialSel.current && !isParcelLookup(initialSel.current) ? initialSel.current : null
+    const target = initialFitTarget(sel, propedia, propediaDone)
+    if (target === 'wait') return
     fitted.current = true
-    map.fitBounds(guBounds, { padding: { ...insets, top: insets.top + 24, bottom: insets.bottom + 24 }, duration: 0 })
-  }, [loaded, guBounds, insets])
+    if (target) map.fitBounds(target, { padding: padding(80), maxZoom: 18, duration: 0 })
+    else map.fitBounds(guBounds, { padding: { ...insets, top: insets.top + 24, bottom: insets.bottom + 24 }, duration: 0 })
+  }, [loaded, guBounds, insets, propedia, propediaDone, padding])
 
   // 이동 요청 (작업 탭·사업 카드·검색)
   useEffect(() => {

@@ -71,3 +71,23 @@ function ringArea(r: Position[]): number {
   for (let i = 0; i < r.length - 1; i++) a += r[i][0] * r[i + 1][1] - r[i + 1][0] * r[i][1]
   return a / 2
 }
+
+/**
+ * 처음 열 때 이동할 대상 (P17 0단계): URL에 카메라(c·z)가 없고 sel이 Propedia 도형이면 그 도형의 bbox.
+ * - 'wait' = 그 종류의 레이어를 아직 불러오는 중
+ * - null = 대상 없음(선택 없음·필지 조회·도형 없음) → 강남구 전체
+ * 도형 id 규칙은 '{kind}:{id}' (예: project:1, parcel:1:1168011000105280000, regulation:D10).
+ */
+export function initialFitTarget(
+  sel: { kind: string; id: string } | null,
+  fcs: Partial<Record<string, FeatureCollection | undefined>>,
+  done: boolean,
+): Bounds | null | 'wait' {
+  if (!sel) return null
+  const fc = fcs[sel.kind]
+  if (!fc) return done ? null : 'wait'
+  const fid = `${sel.kind}:${sel.id}`
+  const f = fc.features.find((x) => (x.properties as { id?: string } | null)?.id === fid)
+  if (!f || (f.geometry.type !== 'Polygon' && f.geometry.type !== 'MultiPolygon')) return null
+  return bboxOf([f as Feature<Area>])
+}

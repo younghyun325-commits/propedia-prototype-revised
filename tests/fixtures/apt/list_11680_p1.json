@@ -1,0 +1,106 @@
+{
+ "response": {
+  "body": {
+   "items": [
+    {
+     "kaptCode": "A10019883",
+     "kaptName": "역삼동월드메르디앙아파트",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A10020216",
+     "kaptName": "역삼우정에쉐르2",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A10021281",
+     "kaptName": "대림역삼아파트",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A10022749",
+     "kaptName": "원에디션강남",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A10023825",
+     "kaptName": "강남센트럴아이파크",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A10024813",
+     "kaptName": "롯데캐슬노블",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A10024820",
+     "kaptName": "현대까르띠에710아파트",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A10027474",
+     "kaptName": "역삼자이아파트",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A13508001",
+     "kaptName": "역삼휴먼터치빌",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    },
+    {
+     "kaptCode": "A13508002",
+     "kaptName": "역삼경남",
+     "bjdCode": "1168010100",
+     "as1": "서울특별시",
+     "as2": "강남구",
+     "as3": "역삼동",
+     "as4": null
+    }
+   ],
+   "numOfRows": 1000,
+   "pageNo": 1,
+   "totalCount": 236
+  },
+  "header": {
+   "resultCode": "00",
+   "resultMsg": "NORMAL SERVICE."
+  }
+ },
+ "_sample_note": "P17 1단계 견본: 항목 수를 줄이고 개인 정보 성격 필드는 견본값으로 바꿈 (키 없음)"
+}

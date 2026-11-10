@@ -800,6 +800,37 @@ def p16_checks(page, url: str, check, shot: bool) -> None:
           " | ".join(t.replace("\n", " ")[:60] for t in lic))
 
 
+
+# ---- P17 0단계: 카메라(c·z) 없이 sel만 있는 URL → 그 대상이 패널을 뺀 영역 가운데
+JS_SEL_CENTER = """async ([file, fid]) => { const m = window.__propediaMap;
+  const fc = await (await fetch(file)).json(); const f = fc.features.find(x => x.properties.id === fid);
+  if (!f) return null; let w = 1e9, s = 1e9, e = -1e9, n = -1e9;
+  const walk = c => typeof c[0] === 'number' ? (w = Math.min(w, c[0]), e = Math.max(e, c[0]), s = Math.min(s, c[1]),
+    n = Math.max(n, c[1])) : c.forEach(walk);
+  walk(f.geometry.coordinates); const p = m.project([(w + e) / 2, (s + n) / 2]);
+  const r = m.getCanvas().getBoundingClientRect(); return [p.x + r.left, p.y + r.top] }"""
+JS_FREE_AREA = """() => { const box = s => { const el = document.querySelector(s); return el ? el.getBoundingClientRect() : null };
+  const L = box('[data-testid=left-panel]'), R = box('[data-testid=right-panel]'), T = box('[data-testid=topbar]');
+  return [L ? L.right : 0, T ? T.bottom : 0, R ? R.left : innerWidth, innerHeight - 60] }"""
+SEL_FIT_CASES = [("parcel:1:1168011000105280000", "/data/layers/propedia_parcels.geojson"),
+                 ("project:1", "/data/layers/propedia_projects.geojson"),
+                 ("regulation:D10", "/data/layers/propedia_regulations.geojson")]
+
+
+def p17_fit_checks(page, url: str, check) -> None:
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    for fid, file in SEL_FIT_CASES:
+        _open(page, home, f"sel={fid}")
+        page.evaluate(JS_IDLE)
+        pt = page.evaluate(JS_SEL_CENTER, [file, fid])
+        x0, y0, x1, y1 = page.evaluate(JS_FREE_AREA)
+        ok = bool(pt) and x0 < pt[0] < x1 and y0 < pt[1] < y1
+        cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+        near = bool(pt) and abs(pt[0] - cx) <= 0.15 * (x1 - x0) and abs(pt[1] - cy) <= 0.15 * (y1 - y0)
+        z = page.evaluate(JS_CENTER)[2]
+        check(f"[P17-0] 카메라 없이 sel={fid} → 패널 제외 영역 가운데 (줌 {z:.1f})", ok and near and z >= 14,
+              f"점 {[round(v) for v in pt] if pt else None} 영역 {[round(v) for v in (x0, y0, x1, y1)]}")
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
@@ -982,6 +1013,7 @@ def main() -> int:
         p14_checks(page, url, check, a.shot)
         p15_checks(page, url, check, a.shot, tiles, a.built)
         p16_checks(page, url, check, a.shot)
+        p17_fit_checks(page, url, check)
 
         if a.built:
             other = [e for e in console_errors if "api.vworld.kr" not in e and "Failed to load resource" not in e]

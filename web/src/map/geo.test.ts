@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FeatureCollection, MultiPolygon, Polygon, Position } from 'geojson'
-import { bboxOf, labelPoint, outsideMask, padBounds } from './geo'
+import { bboxOf, initialFitTarget, labelPoint, outsideMask, padBounds } from './geo'
 import guRaw from '../../../public/data/base/gangnam.geojson?raw'
 import bjdRaw from '../../../public/data/base/bjd.geojson?raw'
 import { BASEMAP_ORDER, BASEMAPS, DEFAULT_BASEMAP, tileUrl } from './basemaps'
@@ -68,4 +68,24 @@ describe('배경지도 상수', () => {
       'https://api.vworld.kr/req/wmts/1.0.0/K/Satellite/{z}/{y}/{x}.jpeg',
     )
   })
+})
+
+describe('initialFitTarget (P17 0단계: 카메라 없는 sel)', () => {
+  const sq = (x: number, y: number) => ({ type: 'Polygon' as const, coordinates: [[[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1], [x, y]]] })
+  const fc = (id: string, x: number): FeatureCollection => ({
+    type: 'FeatureCollection',
+    features: [{ type: 'Feature', properties: { id }, geometry: sq(x, 0) }],
+  })
+  const fcs = { project: fc('project:1', 10), parcel: fc('parcel:1:1168011000105280000', 20) }
+
+  it('선택 없음 → null', () => expect(initialFitTarget(null, fcs, true)).toBeNull())
+  it('사업 → 그 도형 bbox', () =>
+    expect(initialFitTarget({ kind: 'project', id: '1' }, fcs, true)).toEqual([[10, 0], [11, 1]]))
+  it('사업 필지(parcel:사업:PNU) → 그 필지 bbox', () =>
+    expect(initialFitTarget({ kind: 'parcel', id: '1:1168011000105280000' }, fcs, true)).toEqual([[20, 0], [21, 1]]))
+  it('레이어를 아직 불러오는 중 → wait, 다 불렀는데 없음 → null', () => {
+    expect(initialFitTarget({ kind: 'regulation', id: 'D10' }, fcs, false)).toBe('wait')
+    expect(initialFitTarget({ kind: 'regulation', id: 'D10' }, fcs, true)).toBeNull()
+  })
+  it('없는 id → null', () => expect(initialFitTarget({ kind: 'project', id: '9' }, fcs, true)).toBeNull())
 })
