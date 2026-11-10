@@ -51,7 +51,9 @@ def test_public_files():
 
 
 # 지도 화면(web/src): §9-6 금지어 + '시세' (docs/map/PLAN.md '먼저 정해야 할 것'). 브랜드 문구 파일만 예외.
-WEB_BANNED = BANNED + ["시세"]
+# P17 실거래: 평가어(상승·하락·저평가·고평가)도 쓰지 않는다 — 문구는 '실거래가(국토교통부 신고 자료, 계약일 기준)'
+MARKET_BANNED = ["시세", "상승", "하락", "저평가", "고평가"]
+WEB_BANNED = BANNED + MARKET_BANNED
 WEB_SRC = ROOT / "web" / "src"
 WEB_EXEMPT = {WEB_SRC / "copy" / "brand.ts"}
 
@@ -106,4 +108,33 @@ def test_review_queue_labels(con):
     bad = []
     for r in con.execute("SELECT title, reason FROM review_queue"):
         bad += [f"'{w}' in {r['title']}" for w in hits(r["title"] + " " + r["reason"])]
+    assert not bad, bad
+
+
+def test_market_api_text():
+    """P17 아파트 단지·실거래 API가 만드는 문구 (단지명·지번 같은 원자료 값은 빼고)"""
+    import pytest
+    from core.db import MARKET_DB_PATH, connect_market_ro
+    from core import market as mk
+    if not MARKET_DB_PATH.exists():
+        pytest.skip("db/market.db 없음")
+    from core.db import connect_ro
+    mcon, con = connect_market_ro(), connect_ro()
+    try:
+        cid = mcon.execute("SELECT id FROM apt_complexes ORDER BY id LIMIT 1").fetchone()[0]
+        resp = [mk.feature_apartment(mcon, con, "apt:11680-218", date(2026, 11, 11)),
+                mk.feature_apartment(mcon, con, cid, date(2026, 11, 11)),
+                mk.trades(mcon, "apt:11680-218", "60~85")]
+    finally:
+        mcon.close()
+        con.close()
+    raw_keys = ("name", "title", "aliases", "jibuns", "apt_name_raw", "deal_type", "subtitle")
+    bad = []
+    for r in resp:
+        for path, s in walk(r):
+            if any(f".{k}" in path or path.endswith(k) for k in raw_keys):
+                continue
+            bad += [f"{path} '{w}'" for w in BANNED + MARKET_BANNED if w in s]
+    for s in (mk.TRADE_SOURCE, mk.BASIS_SOURCE, mk.DISCLAIMER, mk.UNAVAILABLE, *[v for v in mk.BASIS_LABEL.values() if v]):
+        bad += [f"상수 '{w}'" for w in BANNED + MARKET_BANNED if w in s]
     assert not bad, bad

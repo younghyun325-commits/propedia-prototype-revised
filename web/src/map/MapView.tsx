@@ -3,6 +3,7 @@
  * P13: Propedia 검증 레이어 4종(사업 구역·영향권·규제 구역·포함 판정 필지, public/data/layers).
  * P14: 좌측 패널과 연결 — 켜기·끄기는 setLayoutProperty('visibility'), 투명도·겹침 보기는 setPaintProperty(식),
  *      선택·검색 강조는 setFilter (스타일을 다시 만들지 않음). 호버 툴팁, 클릭 선택(겹치면 선택 목록), 라벨 겹침 피하기.
+ * P17: 아파트 단지(실거래 신고 단지) — 레이어를 켜거나 단지를 고를 때만 불러온다. 클릭 우선순위는 사업 필지 다음.
  *
  * MapLibre v6은 ESM 전용이고, worker를 import.meta.url 옆의 maplibre-gl-worker.mjs에서 찾는다
  * (node_modules/maplibre-gl/build/readme.md). Vite는 라이브러리를 묶어 그 옆 파일이 없으므로
@@ -22,6 +23,7 @@ import { useMapStore, type ParcelLookup } from '../state/useMapStore'
 import { featureId, isParcelLookup, parseSelected, PANEL_LAYER_IDS, type LayerStates, type Selected } from '../state/url'
 import { lookupParcelAt, lookupParcelByPnu } from '../state/parcelLookup'
 import { decideClick } from './pick'
+import { useApartmentLayer, type ApartmentFC, type ApartmentProps } from '../market/apartments'
 import {
   REF_GEO_IDS, REF_GEOJSON, REF_LABEL_MIN_ZOOM, REF_WMS_IDS, WMS, refAttributions, refGeoLayers, refWmsLayer,
   wmsTileUrl, type RefGeoId,
@@ -33,6 +35,7 @@ import { bboxOf, initialFitTarget, labelPoint, outsideMask, padBounds, type Boun
 import { MapControls } from './MapControls'
 import { estimateLabelWidth, placeLabels, REGULATION_LABEL_MIN_ZOOM, type Box, type Placement } from './labels'
 import {
+  APARTMENT_LABEL_MIN_ZOOM, APARTMENT_SOURCE, apartmentLayers,
   HATCH_ID, LAYER_FILES, PANEL_LAYERS, PROPEDIA_SOURCES, dot, hatchImage, idFilter, labelText, paintPlan, propediaLayers,
   readHighlightColors, readLayerColors, type HighlightColors, type LayerColors, type LayerKind, type PropediaFC,
   type PropediaProps,
@@ -56,8 +59,13 @@ const LABEL_LIFT = 14 // .map-area-label translateY(-14px)
 type Propedia = Partial<Record<LayerKind, PropediaFC>>
 const KINDS = Object.keys(LAYER_FILES) as LayerKind[]
 // 클릭 대상은 Propedia 도형만 (참고 레이어는 클릭 대상 아님). 우선순위는 map/pick.ts
-const HIT_LAYERS = ['propedia-project-fill', 'propedia-regulation-fill', 'propedia-parcel-hit'] as const
-const HOVER_ORDER: Record<string, number> = { parcel: 0, regulation: 1, project: 2 } // 호버: 가장 작은 도형
+const HIT_LAYERS = ['propedia-project-fill', 'propedia-regulation-fill', 'propedia-parcel-hit', 'apartments-fill'] as const
+const HOVER_ORDER: Record<string, number> = { parcel: 0, apartment: 1, regulation: 2, project: 3 } // 호버: 가장 작은 도형
+/** 선택 강조 레이어 → 선택 종류 (apartments-selected → apt) */
+const SELECTED_LAYERS: Record<string, string> = {
+  'propedia-project-selected': 'project', 'propedia-regulation-selected': 'regulation',
+  'propedia-parcel-selected': 'parcel', 'apartments-selected': 'apt',
+}
 const CLICK_SOURCE = 'click-parcel'
 const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] }
 
@@ -95,7 +103,7 @@ const LAYER_OWNER: Record<string, (typeof PANEL_LAYER_IDS)[number]> = Object.fro
 )
 
 function selectedFilterFor(layerId: string, sel: Selected): unknown[] {
-  const kind = layerId.replace('propedia-', '').replace('-selected', '')
+  const kind = SELECTED_LAYERS[layerId]
   return idFilter('id', sel && sel.kind === kind ? featureId(sel) : null)
 }
 
@@ -125,6 +133,7 @@ function buildStyle(
   snap: Snapshot,
   ref: RefData = {},
   clickData: FeatureCollection = EMPTY_FC,
+  apartments: ApartmentFC | null = null,
 ): StyleSpecification {
   const sources: StyleSpecification['sources'] = {}
   const layers: StyleSpecification['layers'] = [{ id: 'bg', type: 'background', paint: { 'background-color': BG } }]
@@ -172,6 +181,11 @@ function buildStyle(
     sources[id] = { type: 'geojson', data: ref[id]! }
     layers.push(...withState(refGeoLayers(id, colors.ref), snap))
   }
+  // 아파트 단지 (P17, 불러온 것만): 참고 레이어 위, Propedia 레이어 아래
+  if (apartments) {
+    sources[APARTMENT_SOURCE] = { type: 'geojson', data: apartments, promoteId: 'id' }
+    layers.push(...withState(apartmentLayers(colors, hl), snap))
+  }
   // Propedia 검증 레이어 (스포트라이트 마스크·법정동 경계 위, 구 경계선 아래). 라벨은 HTML 마커
   const loadedKinds = KINDS.filter((k) => propedia[k])
   // 도형 id(feature.id)를 문자열 속성 id로 쓰도록 promoteId
@@ -193,8 +207,9 @@ function buildStyle(
 type Hover = { x: number; y: number; text: string; id: string }
 type Pick = { x: number; y: number; items: { id: string; kind: string; name: string }[] }
 
-function propsOf(f: MapGeoJSONFeature): PropediaProps {
-  return f.properties as unknown as PropediaProps
+type HitProps = (PropediaProps | ApartmentProps) & { id: string; kind: string; name: string; verified?: number }
+function propsOf(f: MapGeoJSONFeature): HitProps {
+  return f.properties as unknown as HitProps
 }
 
 export default function MapView({ insets }: { insets: Insets }) {
@@ -224,6 +239,13 @@ export default function MapView({ insets }: { insets: Insets }) {
   const parcel = useMapStore((s) => s.parcel)
   const [refData, setRefData] = useState<RefData>({})
   const refLoading = useRef(new Set<RefGeoId>())
+  // 아파트 단지: 레이어를 켜거나 단지를 골랐을 때만 불러온다 (검색 창과 같은 캐시)
+  const aptWanted = layerStates.apartments.visible || selected?.kind === 'apt'
+  const aptQ = useApartmentLayer(aptWanted)
+  const apartments = aptQ.data ?? null
+  useEffect(() => {
+    if (aptQ.isError) setLoadError(`${UI.apartment.unavailable} (${aptQ.error.message})`)
+  }, [aptQ.isError, aptQ.error])
 
   // 공식 참고 GeoJSON: 행을 처음 켤 때만 불러온다 (켤 때 불러오기). 한 번 받은 것은 다시 받지 않는다
   useEffect(() => {
@@ -273,8 +295,8 @@ export default function MapView({ insets }: { insets: Insets }) {
     const s = useMapStore.getState()
     return buildStyle(basemap, gu, dongs, propedia, colors, hl, {
       layers: s.layers, overlap: s.overlap, selected: s.selected, searchPnu: s.searchHit?.pnu ?? null,
-    }, refData, clickParcelData(s.parcel, s.selected))
-  }, [basemap, gu, dongs, propedia, colors, hl, refData])
+    }, refData, clickParcelData(s.parcel, s.selected), apartments)
+  }, [basemap, gu, dongs, propedia, colors, hl, refData, apartments])
 
   // 사업·규제 구역 라벨 (사람 확인 전이면 '확인 전')
   const areaLabels = useMemo(
@@ -305,6 +327,18 @@ export default function MapView({ insets }: { insets: Insets }) {
     [refData, refVisible],
   )
 
+  // 아파트 단지 라벨: 줌 15 이상, 화면 안의 단지만 (relayout에서 고른다)
+  const aptVisible = layerStates.apartments.visible
+  const aptLabels = useMemo(
+    () =>
+      aptVisible
+        ? (apartments?.features ?? []).map((f) => ({
+            id: f.properties.id, text: f.properties.name, at: [f.properties.lon, f.properties.lat] as [number, number],
+          }))
+        : [],
+    [apartments, aptVisible],
+  )
+
   const [loaded, setLoaded] = useState(false)
   const getMap = () => mapRef.current?.getMap()
 
@@ -319,8 +353,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       for (const [l, prop, v] of paintPlan(id, s.layers[id].opacity, s.overlap))
         if (map.getLayer(l)) map.setPaintProperty(l, prop as never, v as never)
     }
-    for (const k of ['project', 'regulation', 'parcel']) {
-      const l = `propedia-${k}-selected`
+    for (const l of Object.keys(SELECTED_LAYERS)) {
       if (map.getLayer(l)) map.setFilter(l, selectedFilterFor(l, s.selected) as never)
     }
     if (map.getLayer('propedia-parcel-search'))
@@ -371,12 +404,13 @@ export default function MapView({ insets }: { insets: Insets }) {
     const map = mapRef.current
     if (!loaded || !map || !guBounds || fitted.current) return
     const sel = initialSel.current && !isParcelLookup(initialSel.current) ? initialSel.current : null
-    const target = initialFitTarget(sel, propedia, propediaDone)
+    const aptDone = sel?.kind !== 'apt' || aptQ.isFetched
+    const target = initialFitTarget(sel, { ...propedia, apt: apartments ?? undefined }, propediaDone && aptDone)
     if (target === 'wait') return
     fitted.current = true
     if (target) map.fitBounds(target, { padding: padding(80), maxZoom: 18, duration: 0 })
     else map.fitBounds(guBounds, { padding: { ...insets, top: insets.top + 24, bottom: insets.bottom + 24 }, duration: 0 })
-  }, [loaded, guBounds, insets, propedia, propediaDone, padding])
+  }, [loaded, guBounds, insets, propedia, propediaDone, padding, apartments, aptQ.isFetched])
 
   // 이동 요청 (작업 탭·사업 카드·검색)
   useEffect(() => {
@@ -447,8 +481,19 @@ export default function MapView({ insets }: { insets: Insets }) {
       const p = map.project(l.at as [number, number])
       return { id: l.id, x: p.x, y: p.y - LABEL_LIFT, w: estimateLabelWidth(l.text), h: LABEL_H, minZoom: REF_LABEL_MIN_ZOOM }
     })
-    setPlacements(placeLabels([...inputs, ...refInputs], zoom, obstacles))
-  }, [labels, areaLabels, refLabels])
+    // 아파트 라벨은 줌 15 이상에서 화면 안 단지만 배치한다 (모든 단지를 마커로 그리지 않음)
+    const bounds = map.getBounds()
+    const aptInputs =
+      zoom < APARTMENT_LABEL_MIN_ZOOM
+        ? []
+        : aptLabels
+            .filter((l) => bounds.contains(l.at))
+            .map((l) => {
+              const p = map.project(l.at)
+              return { id: l.id, x: p.x, y: p.y, w: estimateLabelWidth(l.text), h: LABEL_H, minZoom: APARTMENT_LABEL_MIN_ZOOM }
+            })
+    setPlacements(placeLabels([...inputs, ...refInputs, ...aptInputs], zoom, obstacles))
+  }, [labels, areaLabels, refLabels, aptLabels])
   useEffect(() => {
     if (loaded) relayout()
   }, [loaded, relayout])
@@ -457,13 +502,15 @@ export default function MapView({ insets }: { insets: Insets }) {
   const hoverText = useCallback(
     (f: MapGeoJSONFeature): string => {
       const p = propsOf(f)
-      const tail = p.verified ? '' : ` · ${UI.map.unverified}`
+      if (p.kind === 'apartment') return UI.apartment.hover(p.name, (p as ApartmentProps).build_year)
+      const r = p as PropediaProps
+      const tail = r.verified ? '' : ` · ${UI.map.unverified}`
       if (p.kind === 'project') {
-        const line = projects?.find((x) => x.feature_id === p.id)?.hover_line ?? p.short_name ?? p.name
+        const line = projects?.find((x) => x.feature_id === p.id)?.hover_line ?? r.short_name ?? p.name
         return `${line}${tail}`
       }
-      if (p.kind === 'parcel') return `${p.name} · ${UI.map.inclusion[p.inclusion ?? ''] ?? ''}${tail}`
-      const eff = p.effective_from && p.effective_to ? ` · ${dot(p.effective_from)}~${dot(p.effective_to)}` : ''
+      if (p.kind === 'parcel') return `${p.name} · ${UI.map.inclusion[r.inclusion ?? ''] ?? ''}${tail}`
+      const eff = r.effective_from && r.effective_to ? ` · ${dot(r.effective_from)}~${dot(r.effective_to)}` : ''
       return `${p.name}${eff}${tail}`
     },
     [projects],
@@ -520,7 +567,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       y: e.point.y,
       items: d.items.map((it) => {
         const p = byId.get(it.id)!
-        return { id: p.id, kind: p.kind, name: p.kind === 'project' ? (p.short_name ?? p.name) : p.name }
+        return { id: p.id, kind: p.kind, name: p.kind === 'project' ? ((p as PropediaProps).short_name ?? p.name) : p.name }
       }),
     })
   }
@@ -608,6 +655,16 @@ export default function MapView({ insets }: { insets: Insets }) {
               >
                 {l.text}
               </span>
+            </Marker>
+          )
+        })}
+        {aptLabels.map((l) => {
+          const pl = placements[l.id]
+          if (!pl || !pl.visible) return null
+          if (selected && featureId(selected) === l.id) return null
+          return (
+            <Marker key={l.id} longitude={l.at[0]} latitude={l.at[1]} anchor="center" offset={[pl.dx, pl.dy]}>
+              <span className="map-area-label map-area-label--apartment" data-testid="apartment-label">{l.text}</span>
             </Marker>
           )
         })}

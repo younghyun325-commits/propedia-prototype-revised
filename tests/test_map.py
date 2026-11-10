@@ -58,10 +58,10 @@ def test_manifest_status(client):
     d = {x["id"]: x for x in client.get("/api/v1/map/manifest").json()["layers"]}
     assert d["regulation-d5"]["status"] == "not_adopted"
     assert d["regulation-d5"]["note"] == "경계 확인 전, 법정동(압구정동) 단위로만 표시"
-    for lid, phase in [("apartments", "P17"), ("schools", "P18"), ("subway", "P18"), ("amenities", "P18")]:
+    for lid, phase in [("schools", "P18"), ("subway", "P18"), ("amenities", "P18")]:
         assert d[lid]["status"] == "pending" and d[lid]["available_from"] == phase, lid
     for lid in ("basemap-gray", "projects", "impact250", "impact500", "parcels", "regulations",
-                "ref-seoulplan", "ref-uije", "ref-zoning", "ref-district", "ref-cadastral"):
+                "ref-seoulplan", "ref-uije", "ref-zoning", "ref-district", "ref-cadastral", "apartments"):
         assert d[lid]["status"] == "ready", lid
 
 

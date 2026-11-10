@@ -4,6 +4,7 @@
  * - 탭(role=tablist, ←/→/Home/End): 개요 · 근거 · (사업만) 필지 · 이력
  * - 내용은 패널 안에서만 스크롤. 지도 이동 중(.map-moving)에도 그대로 둔다
  * 대상: 사업·규제 = /api/v1/map/feature, 사업 필지 = /api/v1/map/feature/parcel, 빈 곳 클릭 = /map/parcel-at(store.parcel)
+ * P17 아파트 단지: sel=apt:{단지키} → /api/v1/map/feature/apartment/apt:{단지키} (탭 하나)
  */
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { Link2, X } from 'lucide-react'
@@ -16,14 +17,16 @@ import { useMapStore } from '../state/useMapStore'
 import { EvidenceLine } from '../ui/EvidenceLine'
 import { GlassPanel } from '../ui/GlassPanel'
 import { Badge, Skeleton, dot } from './parts'
+import { ApartmentView } from './ApartmentView'
 import { ParcelView } from './ParcelView'
 import { ProjectView } from './ProjectView'
 import { RegulationView } from './RegulationView'
 
 const TABS: Record<FeatureKind, string[]> = {
-  project: ['overview', 'evidence', 'parcels', 'history'],
+  project: ['overview', 'evidence', 'parcels', 'nearby', 'history'],
   regulation: ['overview', 'evidence', 'history'],
   parcel: ['overview', 'evidence'],
+  apartment: ['overview'],
 }
 
 type Head = { kind: FeatureKind; title: string; subtitle: string | null; asOf: string; dataAsOf: string | null;
@@ -145,6 +148,7 @@ function Body({ kind, tab, feature, parcel, boundaryNote }: {
   if (tab === 'evidence') return <EvidenceTab items={evidence} />
   if (kind === 'project' && feature?.kind === 'project') return <ProjectView f={feature} tab={tab} />
   if (kind === 'regulation' && feature?.kind === 'regulation') return <RegulationView f={feature} tab={tab} />
+  if (kind === 'apartment' && feature?.kind === 'apartment') return <ApartmentView f={feature} />
   if (parcel) return <ParcelView d={parcel} boundaryNote={boundaryNote} />
   return null
 }
@@ -156,12 +160,12 @@ function Shell({ head, kind, children }: { head: Head | null; kind: FeatureKind 
   return (
     <>
       {head && <Header h={head} />}
-      {kind && <Tabs tabs={tabs} active={tab} onChange={setTab} idBase={idBase} />}
+      {kind && tabs.length > 1 && <Tabs tabs={tabs} active={tab} onChange={setTab} idBase={idBase} />}
       <div
         id={`${idBase}-panel`}
-        role={kind ? 'tabpanel' : undefined}
-        aria-labelledby={kind ? `${idBase}-tab-${tab}` : undefined}
-        tabIndex={kind ? 0 : undefined}
+        role={kind && tabs.length > 1 ? 'tabpanel' : undefined}
+        aria-labelledby={kind && tabs.length > 1 ? `${idBase}-tab-${tab}` : undefined}
+        tabIndex={kind && tabs.length > 1 ? 0 : undefined}
         className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-3 text-sm"
         data-testid="inspector-body"
         data-tab={tab}
@@ -271,7 +275,11 @@ export default function Inspector({ style }: { style: CSSProperties }) {
       {clickMode ? (
         <ClickParcel />
       ) : selected ? (
-        <Selected kind={selected.kind} id={selected.id} />
+        selected.kind === 'apt' ? (
+          <Selected kind="apartment" id={featureId(selected)} />
+        ) : (
+          <Selected kind={selected.kind} id={selected.id} />
+        )
       ) : (
         <div className="space-y-2 p-4" data-testid="inspector-empty">
           <h2 className="font-semibold">{UI.inspector.title}</h2>

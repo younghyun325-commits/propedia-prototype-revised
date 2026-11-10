@@ -28,7 +28,28 @@ export type ManifestLayer = {
   size_bytes?: number | null
   disclaimer?: string | null
   ref?: boolean
+  // P17 아파트 단지
+  points_file?: string | null
+  fill_min_zoom?: number | null
+  boundary_note?: string | null
 }
+export type Ratio = { num: number; den: number }
+export type MarketStatus =
+  | { available: false; layer_count: number | null }
+  | {
+      available: true
+      trade_from: string | null
+      trade_to: string | null
+      trade_count: number
+      cancelled_count: number
+      fetched_on: string | null
+      m22: Ratio | null
+      m23: Ratio | null
+      basis_linked: number
+      list_total: number | null
+      basis_check: string | null
+      layer_count: number | null
+    }
 export type Manifest = {
   generated_as_of: string | null
   db_as_of: string | null
@@ -36,6 +57,7 @@ export type Manifest = {
   groups: { id: string; name: string }[]
   layers: ManifestLayer[]
   notes: string[]
+  market?: MarketStatus
 }
 
 export type Source = { doc_id: string; short_title: string; pdf_page: number | null; page_image: string | null }

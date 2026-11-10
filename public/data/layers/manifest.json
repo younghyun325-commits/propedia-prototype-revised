@@ -3,6 +3,18 @@
  "crs": "EPSG:4326",
  "generated_as_of": "2026-10-06",
  "layers": {
+  "apartments": {
+   "as_of": "2026-11-11",
+   "boundary_note": "단지 경계는 실거래 신고 지번의 필지 경계를 합쳐 표시. 신고되지 않은 필지는 빠질 수 있음",
+   "count": 685,
+   "doc_ids": [],
+   "file": "apartments.geojson",
+   "license": "실거래가: 국토교통부(공공데이터포털, 이용허락범위 제한 없음) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "note": "실거래 신고 단지 기준",
+   "size_bytes": 634651,
+   "source": "국토교통부 아파트 매매 실거래가 상세 자료 (공공데이터포털) · 필지 경계 브이월드 LP_PA_CBND_BUBUN",
+   "title": "아파트 단지 (실거래 신고 단지 기준)"
+  },
   "propedia_impact": {
    "as_of": "2026-10-06",
    "count": 4,

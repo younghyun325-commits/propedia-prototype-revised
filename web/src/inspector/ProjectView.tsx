@@ -161,8 +161,58 @@ function Parcels({ f }: { f: ProjectFeature }) {
   )
 }
 
+/** 영향권 안 단지 (P17): 250m·500m 구분, 이름·준공연도·최근 거래일만 (집계 없음). 행 → 그 단지 선택 */
+function Nearby({ f }: { f: ProjectFeature }) {
+  const n = f.sections.nearby_apartments ?? { '250': [], '500': [] }
+  const layerOn = useMapStore((s) => s.layers.apartments.visible)
+  const pick = (id: string) => {
+    const s = useMapStore.getState()
+    s.setLayerVisible('apartments', true)
+    s.select({ kind: 'apt', id: id.replace(/^apt:/, '') })
+  }
+  return (
+    <div className="space-y-4" data-testid="project-nearby">
+      <p className="text-[11px] text-ink-muted">{UI.nearbyApartments.note}</p>
+      {!layerOn && <p className="text-[11px] text-ink-muted">{UI.nearbyApartments.layerOff}</p>}
+      {(['250', '500'] as const).map((m) => (
+        <Section key={m} title={UI.nearbyApartments.title(Number(m))} testId={`project-nearby-${m}`}
+          aside={<span className="text-[11px] text-ink-muted tabular-nums">{n[m].length}</span>}>
+          {n[m].length ? (
+            <table className="w-full border-collapse text-xs">
+              <thead className="text-left text-ink-muted">
+                <tr>
+                  <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.name}</th>
+                  <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.year}</th>
+                  <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.last}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {n[m].map((a) => (
+                  <tr key={a.id} className="cursor-pointer border-t border-ink/10 hover:bg-white/70" onClick={() => pick(a.id)}
+                    data-testid="project-nearby-row">
+                    <td className="py-1">
+                      <button type="button" className="text-left hover:underline" onClick={(e) => { e.stopPropagation(); pick(a.id) }}>
+                        {a.name}
+                      </button>
+                    </td>
+                    <td className="py-1 tabular-nums">{a.build_year ?? '—'}</td>
+                    <td className="py-1 tabular-nums">{a.last_trade_date ? dot(a.last_trade_date) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p className="text-xs text-ink-muted">{UI.nearbyApartments.none}</p>
+          )}
+        </Section>
+      ))}
+    </div>
+  )
+}
+
 export function ProjectView({ f, tab }: { f: ProjectFeature; tab: string }) {
   if (tab === 'parcels') return <Parcels f={f} />
+  if (tab === 'nearby') return <Nearby f={f} />
   if (tab === 'history') return <HistoryList rows={f.sections.history} items={f.evidence} />
   return <Overview f={f} />
 }

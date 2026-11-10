@@ -155,9 +155,9 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     check("[P14] D5 행: 비활성 + '경계 확인 전'",
           page.locator("[data-testid=layer-toggle-regulation-d5]").is_disabled()
           and "경계 확인 전" in page.inner_text("[data-testid=layer-row-regulation-d5]"))
-    pend = [i for i in ("apartments", "schools", "subway")
+    pend = [i for i in ("schools", "subway", "amenities")
             if page.locator(f"[data-testid=layer-toggle-{i}]").is_disabled()]
-    check("[P14] 준비 중 레이어(P17·P18) 비활성", len(pend) == 3, str(pend))
+    check("[P14] 준비 중 레이어(P18) 비활성", len(pend) == 3, str(pend))
     page.hover("[data-testid=layer-row-projects] button[aria-label$='레이어 정보']")
     page.wait_for_timeout(200)
     tip = _text(page, "[data-testid=layer-info-projects]")
@@ -349,10 +349,10 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     page.click("[data-testid=left-tab-status]")
     page.wait_for_selector("[data-testid=status-table]")
     st = {r: page.get_attribute(f"[data-testid=status-row-{r}]", "data-status")
-          for r in ("projects", "regulation-d5", "ref-seoulplan", "apartments")}
+          for r in ("projects", "regulation-d5", "ref-seoulplan", "schools")}
     keys = _text(page, "[data-testid=status-keys]")
     check("[P14] 데이터 상태: ready·not_adopted·pending, 키는 있음/없음만",
-          st == {"projects": "ready", "regulation-d5": "not_adopted", "ref-seoulplan": "ready", "apartments": "pending"}
+          st == {"projects": "ready", "regulation-d5": "not_adopted", "ref-seoulplan": "ready", "schools": "pending"}
           and re.fullmatch(r"실시간 조회 키: 브이월드 (있음|없음) · 도로명주소 (있음|없음)", keys) is not None, f"{st} {keys}")
     if shot:
         page.screenshot(path=str(SHOT_STATUS))
@@ -641,7 +641,8 @@ def p16_checks(page, url: str, check, shot: bool) -> None:
     tl = page.get_attribute("[data-testid=inspector-tabs]", "role")
     tabs = page.eval_on_selector_all("[data-testid=inspector-tabs] [role=tab]",
                                      "es => es.map(e => [e.textContent, e.getAttribute('aria-selected')])")
-    check("[P16] 탭 role=tablist: 개요·근거·필지·이력", tl == "tablist" and [t for t, _ in tabs] == ["개요", "근거", "필지", "이력"]
+    check("[P16] 탭 role=tablist: 개요·근거·필지·영향권 안 단지·이력", tl == "tablist"
+          and [t for t, _ in tabs] == ["개요", "근거", "필지", "영향권 안 단지", "이력"]
           and tabs[0][1] == "true", str(tabs))
     page.focus("[data-testid=inspector-tab-overview]")
     page.keyboard.press("ArrowRight")
@@ -831,6 +832,173 @@ def p17_fit_checks(page, url: str, check) -> None:
         check(f"[P17-0] 카메라 없이 sel={fid} → 패널 제외 영역 가운데 (줌 {z:.1f})", ok and near and z >= 14,
               f"점 {[round(v) for v in pt] if pt else None} 영역 {[round(v) for v in (x0, y0, x1, y1)]}")
 
+# ---- P17 아파트 단지·실거래 (docs/map/PLAN.md P17 7·8단계)
+SHOT_P17 = {k: SCREENS / f"map_05{k}.png" for k in ("a_apartments", "b_apartment_inspector", "c_project_nearby")}
+EUNMA = "apt:11680-218"
+JS_APT_OVERLAP = """() => { const m = window.__propediaMap;
+  const ev = (e, v) => Array.isArray(e) && e[0] === 'case' ? (v === null || v === undefined ? e[2] : e[3]) : e;
+  const e = m.getPaintProperty('apartments-fill', 'fill-opacity'); const seen = new Set(); const out = {inside: [], outside: []};
+  for (const f of m.querySourceFeatures('apartments')) { if (seen.has(f.properties.id)) continue; seen.add(f.properties.id);
+    const v = ev(e, f.properties.impact_buffer_m); (f.properties.impact_buffer_m == null ? out.outside : out.inside).push(v) }
+  return out }"""
+
+
+def _apt_points() -> dict:
+    """은마 대표점(빌드 GeoJSON lon·lat = 필지 경계 대표점) + 최근 거래 20건 안에 해제가 있는 단지 (market.db 읽기 전용)"""
+    import json as _json
+    import sqlite3
+    fc = _json.loads((ROOT / "public" / "data" / "layers" / "apartments.geojson").read_text(encoding="utf-8"))["features"]
+    by = {f["properties"]["id"]: f["properties"] for f in fc}
+    con = sqlite3.connect((ROOT / "db" / "market.db").as_uri() + "?mode=ro", uri=True)
+    cancel = None
+    for cid, band in con.execute("""SELECT complex_id, area_band FROM apt_trades WHERE is_cancelled=1 AND complex_id IS NOT NULL
+                                     GROUP BY complex_id, area_band ORDER BY MAX(contract_date) DESC"""):
+        n_bands = con.execute("SELECT COUNT(DISTINCT area_band) FROM apt_trades WHERE complex_id=?", (cid,)).fetchone()[0]
+        rows = con.execute("""SELECT is_cancelled FROM apt_trades WHERE complex_id=? AND area_band=?
+                              ORDER BY contract_date DESC, id DESC LIMIT 20""", (cid, band)).fetchall()
+        if cid in by and n_bands >= 2 and any(r[0] for r in rows):
+            cancel = (cid, band)
+            break
+    con.close()
+    e = by[EUNMA]
+    return {"eunma": (e["lon"], e["lat"]), "cancel": cancel}
+
+
+def p17_checks(page, url: str, check, shot: bool) -> None:
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+    pts = _apt_points()
+    # 1. 레이어: 켤 때만 불러오기 → 면 28% + 외곽선, 범례 '실거래 신고 단지 기준'
+    reqs: list[str] = []
+    page.on("request", lambda r: "apartments.geojson" in r.url and reqs.append(r.url))
+    _open(page, home)
+    before = len(reqs)
+    page.click("[data-testid=layer-toggle-apartments]")
+    page.wait_for_function("() => !!window.__propediaMap.getLayer('apartments-fill')", timeout=10000)
+    page.evaluate(JS_JUMP, [127.0605, 37.4985, 14.6])
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(400)
+    n = page.evaluate(JS_RENDERED, ["apartments-fill"])
+    fill = page.evaluate(JS_PAINT, ["apartments-fill", "fill-opacity"])
+    note = _text(page, "[data-testid=apartment-legend-note]")
+    check("[P17] 아파트 단지 레이어: 켤 때 1번 불러옴·그려짐·면 28%·범례 '실거래 신고 단지 기준'",
+          before == 0 and len(reqs) == 1 and n > 0 and fill == 0.28 and "실거래 신고 단지 기준" in note,
+          f"요청 {before}→{len(reqs)} 도형 {n} 면 {fill} '{note[:40]}'")
+    page.evaluate(JS_JUMP, [pts["eunma"][0], pts["eunma"][1], 15.6])
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(500)
+    labels = page.locator("[data-testid=apartment-label]").all_inner_texts()
+    check("[P17] 단지 라벨 줌 15 이상 (은마 포함)", "은마" in labels, f"{len(labels)}개")
+    if shot:
+        page.screenshot(path=str(SHOT_P17["a_apartments"]))
+
+    # 2. 은마 클릭 → 인스펙터: 기본 정보 없음 문구·준공연도·차트 두 개·최근 거래 표
+    sel = _click_map(page, *pts["eunma"], 16.2, EUNMA)
+    ok = _inspector_ready(page)
+    page.wait_for_selector("[data-testid=price-chart]", timeout=12000)
+    page.wait_for_timeout(300)
+    title = _text(page, "[data-testid=inspector-title]")
+    basis = _text(page, "[data-testid=apt-basis-missing]")
+    year = _text(page, "[data-testid=apt-build-year]")
+    check("[P17] 은마 클릭 → 인스펙터 '은마' · '기본 정보 확인 전' · 준공연도(실거래 신고 기준)",
+          ok and sel == EUNMA and title == "은마" and basis == "기본 정보 확인 전" and "1979년 (실거래 신고 기준)" in year,
+          f"sel={sel} '{title}' '{basis}' '{year}'")
+    pc = page.locator("[data-testid=price-chart]").bounding_box()
+    cc = page.locator("[data-testid=count-chart]").bounding_box()
+    line_n = page.locator("[data-testid=median-line]").count()
+    pts_n = page.locator("[data-testid=trade-point]").count()
+    bars_n = page.locator("[data-testid=count-bar]").count()
+    check("[P17] 차트 두 개 위아래 분리 (가격 선·점 / 건수 막대, 같은 너비)",
+          bool(pc and cc) and pc["y"] + pc["height"] <= cc["y"] + 1 and abs(pc["width"] - cc["width"]) < 1
+          and line_n == 1 and pts_n > 0 and bars_n > 0, f"{pc} {cc} 선 {line_n} 점 {pts_n} 막대 {bars_n}")
+    rows = page.locator("[data-testid=apt-recent-row]").count()
+    src = _text(page, "[data-testid=apt-sources]")
+    check("[P17] 최근 거래 20건 표 + 출처 '실거래가(국토교통부 신고 자료, 계약일 기준) · 수집일'",
+          rows == 20 and "실거래가(국토교통부 신고 자료, 계약일 기준)" in src and "수집일" in src, f"{rows}행 '{src}'")
+    pressed = page.eval_on_selector_all("[data-testid^=apt-band-]",
+                                        "es => es.map(e => [e.dataset.testid, e.getAttribute('aria-pressed')])")
+    check("[P17] 면적대 칩: 기본 = 최근 3년 최다 (은마 60~85)", ["apt-band-60~85", "true"] in pressed, str(pressed))
+    if shot:
+        page.screenshot(path=str(SHOT_P17["b_apartment_inspector"]))
+
+    # 3. 해제 표시 + 면적대 칩 전환 (최근 20건 안에 해제 거래가 있고 면적대가 둘 이상인 단지)
+    cid, band = pts["cancel"] or (None, None)
+    check("[P17] 해제 거래가 있는 단지를 market.db에서 찾음", cid is not None, str(pts["cancel"]))
+    if cid:
+        _open(page, with_q + f"layers=projects,impact250,impact500,parcels,apartments&sel=apt:{cid.split(':', 1)[1]}")
+        _inspector_ready(page)
+        page.wait_for_selector("[data-testid=apt-recent-table]", timeout=12000)
+        chip = f"[data-testid='apt-band-{band}']"
+        if page.get_attribute(chip, "aria-pressed") != "true":
+            page.click(chip)
+            page.wait_for_timeout(500)
+            page.wait_for_selector("[data-testid=apt-recent-table]", timeout=12000)
+        page.wait_for_timeout(300)
+        canc = page.locator("[data-testid=apt-cancelled]").all_inner_texts()
+        hollow = page.locator("[data-testid=trade-point][data-cancelled='1']").count()
+        check(f"[P17] 해제 표시: 표 '해제 (날짜)' + 차트 빈 원 ({cid} {band})",
+              bool(canc) and all(t.startswith("해제") for t in canc) and hollow > 0, f"{canc[:2]} 빈 원 {hollow}")
+        chips = page.eval_on_selector_all("[data-testid^=apt-band-]", "es => es.map(e => e.dataset.testid)")
+        other = next((c for c in chips if c != f"apt-band-{band}"), None)
+        first_before = page.locator("[data-testid=apt-recent-row]").first.inner_text()
+        page.click(f"[data-testid='{other}']")
+        page.wait_for_timeout(500)
+        page.wait_for_selector("[data-testid=apt-recent-table]", timeout=12000)
+        page.wait_for_timeout(300)
+        now = page.get_attribute(f"[data-testid='{other}']", "aria-pressed")
+        first_after = page.locator("[data-testid=apt-recent-row]").first.inner_text()
+        check("[P17] 면적대 칩 전환 → 차트·표가 그 면적대로", now == "true" and first_after != first_before,
+              f"{other} {now} '{first_before[:30]}' → '{first_after[:30]}'")
+
+    # 4. 겹침 보기: 영향권 밖 단지 25%
+    _open(page, with_q + "layers=projects,impact250,impact500,parcels,apartments&ov=1")
+    page.wait_for_function("() => !!window.__propediaMap.getLayer('apartments-fill')", timeout=10000)
+    page.evaluate(JS_IDLE)
+    ov = page.evaluate(JS_APT_OVERLAP)
+    ins, outs = ov["inside"], ov["outside"]
+    check("[P17] 겹침 보기: 영향권 밖 단지 28%→7% (25%), 안은 28%",
+          bool(ins) and bool(outs) and all(v == 0.28 for v in ins) and all(v == 0.07 for v in outs),
+          f"안 {len(ins)} {set(ins)} 밖 {len(outs)} {set(outs)}")
+
+    # 5. Ctrl+K '은마' → 단지 그룹 → 선택
+    _open(page, home)
+    _palette(page, "은마")
+    groups = page.locator("[data-testid=palette-group]").all_inner_texts()
+    items = page.locator("[data-testid=palette-item-apartment]").all_inner_texts()
+    ok = "단지" in groups and any(t.startswith("은마") for t in items)
+    if ok:
+        page.locator("[data-testid=palette-item-apartment]").first.dispatch_event("mousedown")
+        _wait_url(page, lambda u: _q(page, "sel") == EUNMA, 5000)
+    check("[P17] Ctrl+K '은마' → '단지' 그룹 → 은마 선택·레이어 켜짐",
+          ok and _q(page, "sel") == EUNMA and "apartments" in (_q(page, "layers") or ""),
+          f"{groups} {items[:2]} sel={_q(page, 'sel')} layers={_q(page, 'layers')}")
+
+    # 6. 한양7차 '영향권 안 단지' 탭
+    _open(page, with_q + "sel=project:1")
+    _inspector_ready(page)
+    page.click("[data-testid=inspector-tab-nearby]")
+    page.wait_for_selector("[data-testid=project-nearby]")
+    t250 = _text(page, "[data-testid=project-nearby-250]")
+    t500 = _text(page, "[data-testid=project-nearby-500]")
+    rows = page.locator("[data-testid=project-nearby-row]").count()
+    check("[P17] 한양7차 '영향권 안 단지' 탭: 250m·500m 구분, 이름·준공연도·최근 거래일",
+          "영향권 250m 안 단지" in t250 and "영향권 500m 안 단지" in t500 and rows > 0 and "준공연도" in t250
+          and "한양7" in t250, f"{rows}행")
+    if shot:
+        page.screenshot(path=str(SHOT_P17["c_project_nearby"]))
+    page.locator("[data-testid=project-nearby-row] button").first.click()
+    _wait_url(page, lambda u: (_q(page, "sel") or "").startswith("apt:"), 4000)
+    check("[P17] 영향권 안 단지 행 → 그 단지 선택", (_q(page, "sel") or "").startswith("apt:"), str(_q(page, "sel")))
+
+    # 7. 데이터 상태 탭: 실거래·단지·M22·M23·기본 정보 연결 / 236
+    _open(page, home)
+    page.click("[data-testid=left-tab-status]")
+    page.wait_for_selector("[data-testid=status-market]")
+    mk = _text(page, "[data-testid=status-market]")
+    check("[P17] 데이터 상태: 실거래 기간·건수·수집일·M23 / 단지 수·M22·기본 정보 연결 n / 236",
+          all(k in mk for k in ("M22", "M23", "수집일", "해제", "기본 정보 연결 0 / 236")), mk.replace("\n", " / ")[:200])
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
@@ -1014,6 +1182,7 @@ def main() -> int:
         p15_checks(page, url, check, a.shot, tiles, a.built)
         p16_checks(page, url, check, a.shot)
         p17_fit_checks(page, url, check)
+        p17_checks(page, url, check, a.shot)
 
         if a.built:
             other = [e for e in console_errors if "api.vworld.kr" not in e and "Failed to load resource" not in e]

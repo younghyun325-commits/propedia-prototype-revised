@@ -10,6 +10,8 @@ export const PANEL_LAYER_IDS = [
   'projects', 'impact250', 'impact500', 'parcels', 'regulations',
   // P15 공식 참고 (기본 꺼짐): 빌드 GeoJSON 2종 + 브이월드 WMS 3종
   'ref-seoulplan', 'ref-uije', 'ref-zoning', 'ref-district', 'ref-cadastral',
+  // P17 시장 (기본 꺼짐, 켤 때 불러오기)
+  'apartments',
 ] as const
 export type PanelLayerId = (typeof PANEL_LAYER_IDS)[number]
 export const DEFAULT_VISIBLE: PanelLayerId[] = ['projects', 'impact250', 'impact500', 'parcels']
@@ -20,7 +22,8 @@ export type LayerStates = Record<PanelLayerId, LayerState>
 export const LEFT_TABS = ['layers', 'projects', 'feed', 'status'] as const
 export type LeftTab = (typeof LEFT_TABS)[number]
 
-export const SELECT_KINDS = ['project', 'parcel', 'regulation'] as const
+// apt = 아파트 단지 (P17): sel=apt:11680-218 → 도형 id apt:11680-218, 인스펙터 /map/feature/apartment/apt:11680-218
+export const SELECT_KINDS = ['project', 'parcel', 'regulation', 'apt'] as const
 export type SelectKind = (typeof SELECT_KINDS)[number]
 /** id는 도형 id에서 kind를 뺀 나머지 (예: project:1 → '1', parcel:1:1168011000105280000 → '1:1168011000105280000') */
 export type Selected = { kind: SelectKind; id: string } | null

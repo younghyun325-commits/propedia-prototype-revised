@@ -38,12 +38,16 @@ export const LAYER_FILES: Record<LayerKind, string> = {
   regulation: '/data/layers/propedia_regulations.geojson',
 }
 
-export type LayerColors = { project: string; regulation: string; regulationLine: string; ref: string }
+export type LayerColors = { project: string; regulation: string; regulationLine: string; ref: string; apartment: string }
 
 /** tokens.css 값과 같게 둔 기본값 (CSS 변수를 못 읽을 때) */
-export const DEFAULT_COLORS: LayerColors = { project: '#5d34a9', regulation: '#eda100', regulationLine: '#b07a00', ref: '#5b6270' }
+export const DEFAULT_COLORS: LayerColors = {
+  project: '#5d34a9', regulation: '#eda100', regulationLine: '#b07a00', ref: '#5b6270', apartment: '#e0567a',
+}
 
 export const OPACITY = { projectFill: 0.32, impactFill: 0.08 } as const
+/** 아파트 단지 (P17): 면 28% + 외곽선 */
+export const APARTMENT_OPACITY = { fill: 0.28, line: 0.9 } as const
 export const WIDTH = { project: 2, impact: 1.5, regulation: 2, parcel: 1.25 } as const
 export const HATCH_ID = 'propedia-hatch'
 export const UNVERIFIED = '확인 전'
@@ -62,6 +66,7 @@ export function readLayerColors(root?: CssReader): LayerColors {
     regulation: get('--color-layer-regulation', DEFAULT_COLORS.regulation),
     regulationLine: get('--color-layer-regulation-line', DEFAULT_COLORS.regulationLine),
     ref: get('--color-layer-ref', DEFAULT_COLORS.ref),
+    apartment: get('--color-layer-apartment', DEFAULT_COLORS.apartment),
   }
 }
 
@@ -221,6 +226,31 @@ export const PANEL_LAYERS: Record<PanelLayerId, { layers: string[]; paint: Paint
   'ref-zoning': refWmsPanel('ref-zoning'),
   'ref-district': refWmsPanel('ref-district'),
   'ref-cadastral': refWmsPanel('ref-cadastral'),
+  // P17 아파트 단지 (map/layers.ts apartmentLayers)
+  apartments: {
+    layers: ['apartments-fill', 'apartments-line', 'apartments-selected'],
+    paint: [
+      { layer: 'apartments-fill', prop: 'fill-opacity', base: APARTMENT_OPACITY.fill },
+      { layer: 'apartments-line', prop: 'line-opacity', base: APARTMENT_OPACITY.line },
+    ],
+  },
+}
+
+/**
+ * 아파트 단지 (P17): 면 28% + 외곽선 1px (--color-layer-apartment). 라벨은 줌 15 이상 HTML 마커.
+ * 소스 id = 'apartments' (켤 때·고를 때·검색할 때만 불러온다). 사업·규제·필지 레이어 아래에 둔다.
+ */
+export const APARTMENT_LABEL_MIN_ZOOM = 15
+export const APARTMENT_SOURCE = 'apartments'
+export function apartmentLayers(c: LayerColors, h: HighlightColors = DEFAULT_HIGHLIGHT): LayerSpecification[] {
+  return [
+    { id: 'apartments-fill', type: 'fill', source: APARTMENT_SOURCE,
+      paint: { 'fill-color': c.apartment, 'fill-opacity': APARTMENT_OPACITY.fill } },
+    { id: 'apartments-line', type: 'line', source: APARTMENT_SOURCE,
+      paint: { 'line-color': c.apartment, 'line-width': 1, 'line-opacity': APARTMENT_OPACITY.line } },
+    { id: 'apartments-selected', type: 'line', source: APARTMENT_SOURCE, filter: idFilter('id', null) as never,
+      paint: { 'line-color': h.selected, 'line-width': 3.5, 'line-blur': 0.5 } },
+  ]
 }
 
 function refGeoPanel(id: 'ref-seoulplan' | 'ref-uije'): { layers: string[]; paint: PaintSlot[] } {
@@ -237,7 +267,7 @@ function refWmsPanel(id: 'ref-zoning' | 'ref-district' | 'ref-cadastral'): { lay
  * 겹침 보기 대상 (설정 하나). 도형 속성 impact_buffer_m(빌드 때 계산한 within_impact)이 null이면 흐리게.
  * P17 아파트·P18 생활 인프라도 같은 속성을 빌드에 넣고 여기에 id만 더한다.
  */
-export const OVERLAP_TARGETS: PanelLayerId[] = ['parcels', 'regulations']
+export const OVERLAP_TARGETS: PanelLayerId[] = ['parcels', 'regulations', 'apartments']
 
 const r3 = (v: number) => Math.round(v * 1000) / 1000
 

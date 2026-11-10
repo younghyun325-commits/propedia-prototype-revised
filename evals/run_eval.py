@@ -17,6 +17,7 @@ import sys
 import time
 import traceback
 import warnings
+from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
@@ -524,6 +525,9 @@ def evaluate(live: bool = False) -> dict:
     # M19·M20 지도 경계·레이어 (docs/map/PLAN.md P13)
     g_bnd = load_yaml("boundaries.yaml")
     metrics += map_metrics(g_bnd, errors)
+    # M22·M23 실거래 단지 (docs/map/PLAN.md P17)
+    mk_metrics, market = market_metrics(errors)
+    metrics += mk_metrics
 
     drafts = [g_ext.get("draft"), g_addr.get("draft"), g_scope.get("draft"), g_land.get("draft"), g_bnd.get("draft")]
     return {
@@ -542,6 +546,7 @@ def evaluate(live: bool = False) -> dict:
         "layers": layer_rows,
         "addresses": addr_rows,
         "excluded_addresses": g_addr.get("excluded", []),
+        "market": market,
         "errors": errors,
     }
 
@@ -609,6 +614,62 @@ def map_metrics(g_bnd: dict, errors: list) -> list[dict]:
     return out
 
 
+APT_SEED = ROOT / "seed" / "apartments.geojson"
+MARKET_DB = ROOT / "db" / "market.db"
+APT_UNMATCHED = ROOT / "build" / "apartments_unmatched.csv"
+
+
+def market_metrics(errors: list) -> tuple[list[dict], dict | None]:
+    """M22 단지 위치 매칭률 = 필지 경계를 찾은 실거래 단지 ÷ 실거래 단지 (seed/apartments.geojson)
+    M23 거래 연결률 = 위치가 있는 단지에 연결된 거래 ÷ 강남구 아파트 거래 (db/market.db apt_trades, 해제 포함)
+    참고(목표 없음): 기본 정보가 연결된 단지 수 / 단지 목록 수. 자료가 없으면 '자료 없음'(미달 아님 표시)."""
+    if not APT_SEED.exists() or not MARKET_DB.exists():
+        none = {"value": None, "display": "자료 없음 (pipeline.build_trade_complexes·build_market_db 실행 전)", "pass": False}
+        return [{"id": "M22", "name": "단지 위치 매칭률", "target": "≥ 90%", **none},
+                {"id": "M23", "name": "거래 연결률", "target": "≥ 95%", **none}], None
+    feats = json.loads(APT_SEED.read_text(encoding="utf-8"))["features"]
+    located = {f["properties"]["id"] for f in feats if f.get("geometry")}
+    reasons = {}
+    if APT_UNMATCHED.exists():
+        import csv
+        with open(APT_UNMATCHED, encoding="utf-8-sig", newline="") as fh:
+            reasons = {r["id"]: r["reason"] for r in csv.DictReader(fh)}
+    unmatched = Counter(reasons.get(f["properties"]["id"]) or ("PNU 없음" if not f["properties"]["pnus"] else "필지 없음")
+                        for f in feats if not f.get("geometry"))
+    con = sqlite3.connect(MARKET_DB.as_uri() + "?mode=ro", uri=True)
+    try:
+        total = con.execute("SELECT COUNT(*) FROM apt_trades").fetchone()[0]
+        rows = con.execute("SELECT complex_id, COUNT(*) FROM apt_trades GROUP BY complex_id").fetchall()
+        mm = dict(con.execute("SELECT key, value FROM meta").fetchall())
+        linked = con.execute("SELECT COUNT(*) FROM apt_complexes WHERE basis_info_status='linked'").fetchone()[0]
+    finally:
+        con.close()
+    ok = sum(n for cid, n in rows if cid in located)
+    unlinked = Counter()
+    for cid, n in rows:
+        if cid is None:
+            unlinked["단지에 연결 못 함"] += n
+        elif cid not in located:
+            unlinked["연결된 단지의 위치 없음 (필지 경계 못 찾음)"] += n
+    missing = [f"{f['properties']['id']} {f['properties']['name']} ({', '.join(f['properties']['pnus']) or 'PNU 없음'})"
+               for f in feats if not f.get("geometry")]
+    lt = mm.get("list_total")
+    basis = (f"{linked} / {lt}" if lt else f"{linked}") + (" (기본 정보 API 미등록으로 건너뜀)"
+                                                           if mm.get("basis_info_check") == "not_registered" else "")
+    out = [{"id": "M22", "name": "단지 위치 매칭률", "value": pct(len(located), len(feats)),
+            "display": disp(len(located), len(feats)), "target": "≥ 90%",
+            "pass": bool(feats) and len(located) / len(feats) >= 0.9,
+            "note": "필지 경계를 찾은 실거래 단지 ÷ 실거래 단지 (aptSeq·PNU 기준)"},
+           {"id": "M23", "name": "거래 연결률", "value": pct(ok, total), "display": disp(ok, total), "target": "≥ 95%",
+            "pass": total > 0 and ok / total >= 0.95,
+            "note": f"위치가 있는 단지에 연결된 거래 ÷ 강남구 아파트 거래(해제 포함) · 참고: 기본 정보 연결 단지 {basis}"}]
+    market = {"complexes": len(feats), "located": len(located), "trades": total, "trades_linked_located": ok,
+              "unmatched_reasons": dict(unmatched.most_common()), "unlinked_reasons": dict(unlinked.most_common()),
+              "basis_linked": linked, "list_total": int(lt) if lt else None, "basis_check": mm.get("basis_info_check"),
+              "unmatched": missing}
+    return out, market
+
+
 def write_report_md(rep: dict) -> None:
     lines = ["# 평가 리포트", "",
              f"- 실행: {rep['run_at']} · DB 빌드: {rep['build_at']}",
@@ -648,6 +709,19 @@ def write_report_md(rep: dict) -> None:
                 lines.append(f"| {x['label']} | `{x['pnu']}` | `{x['got']}` | {x['status']} | {x['land'] or '—'} | {x['ms']} |")
     else:
         lines += ["", "실시간 조회(M18)는 `python -m evals.run_eval --live`로 잽니다 (이번 실행에는 없음)."]
+    mk = rep.get("market")
+    if mk:
+        lines += ["", "## 실거래 단지 (M22·M23)", "",
+                  f"- 실거래 단지 {mk['complexes']} · 위치 찾음 {mk['located']} · 거래 {mk['trades']} · "
+                  f"위치 있는 단지에 연결 {mk['trades_linked_located']}",
+                  f"- 참고(목표 없음): 기본 정보 연결 단지 {mk['basis_linked']} / 단지 목록 {mk['list_total'] or '—'}"
+                  + (" — 기본 정보 API 미등록으로 건너뜀" if mk.get("basis_check") == "not_registered" else ""), "",
+                  "| 구분 | 사유 | 수 |", "|---|---|---|"]
+        lines += [f"| 단지 위치 못 찾음 | {k} | {v} |" for k, v in mk["unmatched_reasons"].items()]
+        lines += [f"| 거래 연결 안 됨 | {k} | {v} |" for k, v in mk["unlinked_reasons"].items()]
+        if mk.get("unmatched"):
+            lines += ["", "위치를 못 찾은 단지 (신고 지번의 필지가 지금 연속지적도에 없음 — 재건축 뒤 지번이 바뀐 단지 등일 수 있음, "
+                      "build/apartments_unmatched.csv):", ""] + [f"- {x}" for x in mk["unmatched"]]
     lines += ["", "## 오류 목록", ""]
     if rep["errors"]:
         lines += [f"- [{e['type']}] {e['detail']}" for e in rep["errors"]]

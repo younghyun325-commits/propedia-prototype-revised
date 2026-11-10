@@ -1,15 +1,19 @@
 /**
  * 명령 팔레트 (P14 5). App에서 lazy()로 불러온다 (초기 JS 예산).
  * - 사업: /api/v1/map/projects 결과에서 이름·대표 지번 부분 일치 (searchProjects)
+ * - 단지 (P17): 아파트 단지 레이어(실거래 신고 단지)의 단지명·다른 이름·신고 지번 부분 일치. 창을 열 때 불러온다.
+ *   그룹 순서는 사업 → 주소 → 단지 (지번을 넣으면 Enter가 주소를 고른다)
  * - 주소: 기존 /api/v1/lookup 그대로. ambiguous면 후보 목록, 실패하면 응답의 안내 문구 그대로
  * - 고르면: 사업 → 그 구역으로 이동 + 선택 / 주소 → 필지 경계가 있으면 강조, 없으면 임시 핀 (좌표는 화면 메모리에만)
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Clock, MapPin, Search, Shapes } from 'lucide-react'
+import { Building2, Clock, MapPin, Search, Shapes } from 'lucide-react'
 import { getJson, useMapProjects, type MapProject } from '../api/map'
 import { UI } from '../copy/ui'
 import { selectProject } from '../state/actions'
+import { searchApartments, useApartmentLayer, type ApartmentProps } from '../market/apartments'
+import { bboxOf } from '../map/geo'
 import { useMapStore } from '../state/useMapStore'
 import { GlassPanel } from '../ui/GlassPanel'
 import { addressQuery, loadRecent, pushRecent, saveRecent, searchProjects } from './search'
@@ -26,6 +30,7 @@ type Lookup = {
 
 type Item =
   | { kind: 'project'; key: string; label: string; sub: string; project: MapProject }
+  | { kind: 'apartment'; key: string; label: string; sub: string; apt: ApartmentProps }
   | { kind: 'address'; key: string; label: string; sub: string; lookup: Lookup }
   | { kind: 'candidate'; key: string; label: string; sub: string; query: string }
   | { kind: 'recent'; key: string; label: string; sub: string; query: string }
@@ -42,6 +47,8 @@ export default function CommandPalette() {
   const close = () => useMapStore.getState().setPaletteOpen(false)
   const projectsData = useMapProjects().data
   const projects = useMemo(() => projectsData?.projects ?? [], [projectsData])
+  const aptData = useApartmentLayer(true).data
+  const aptProps = useMemo(() => (aptData?.features ?? []).map((f) => f.properties), [aptData])
   const [q, setQ] = useState('')
   const [debounced, setDebounced] = useState('')
   const [lookup, setLookup] = useState<Lookup | null>(null)
@@ -70,6 +77,7 @@ export default function CommandPalette() {
   }, [debounced])
 
   const projectHits = useMemo(() => searchProjects(projects, debounced), [projects, debounced])
+  const aptHits = useMemo(() => searchApartments(aptProps, debounced), [aptProps, debounced])
   const items: Item[] = useMemo(() => {
     if (!debounced) return recent.map((r) => ({ kind: 'recent', key: `r:${r}`, label: r, sub: UI.palette.recent, query: r }))
     const out: Item[] = projectHits.map((h) => ({
@@ -96,8 +104,17 @@ export default function CommandPalette() {
           sub: [c.jibun_address, c.bld_name].filter(Boolean).join(' · '),
           query: c.jibun_address ?? c.road_address ?? '',
         })
+    // 단지는 주소 다음 (지번 입력이면 주소 결과가 먼저, Enter = 주소)
+    for (const h of aptHits)
+      out.push({
+        kind: 'apartment',
+        key: `apt:${h.props.id}`,
+        label: h.props.name,
+        sub: [h.props.jibuns.slice(0, 2).join(', '), h.props.aliases.length ? h.props.aliases.join(', ') : null].filter(Boolean).join(' · '),
+        apt: h.props,
+      })
     return out
-  }, [debounced, projectHits, lookup, recent])
+  }, [debounced, projectHits, aptHits, lookup, recent])
 
   useEffect(() => setActive(0), [items.length, debounced])
 
@@ -117,6 +134,15 @@ export default function CommandPalette() {
     if (it.kind === 'project') {
       s.setSearchHit(null)
       selectProject(it.project)
+    } else if (it.kind === 'apartment') {
+      s.setSearchHit(null)
+      s.setLayerVisible('apartments', true)
+      s.select({ kind: 'apt', id: it.apt.id.replace(/^apt:/, '') })
+      const f = aptData?.features.find((x) => x.properties.id === it.apt.id)
+      if (f) {
+        const [[w, so], [e, n]] = bboxOf([f])
+        s.requestView({ type: 'bbox', bbox: [w, so, e, n] })
+      }
     } else {
       const pnu = it.lookup.normalized?.pnu ?? null
       s.setSearchHit({ label: it.label, pnu, point: pointOf(it.lookup) })
@@ -145,6 +171,7 @@ export default function CommandPalette() {
     ? [
         [UI.palette.projects, items.filter((i) => i.kind === 'project')],
         [UI.palette.addresses, items.filter((i) => i.kind === 'address' || i.kind === 'candidate')],
+        [UI.palette.apartments, items.filter((i) => i.kind === 'apartment')],
       ]
     : [[UI.palette.recent, items]]
   const message =
@@ -191,7 +218,7 @@ export default function CommandPalette() {
                 <ul role="group" aria-label={title}>
                   {list.map((it) => {
                     const idx = items.indexOf(it)
-                    const Icon = it.kind === 'project' ? Shapes : it.kind === 'recent' ? Clock : MapPin
+                    const Icon = it.kind === 'project' ? Shapes : it.kind === 'apartment' ? Building2 : it.kind === 'recent' ? Clock : MapPin
                     return (
                       <li
                         key={it.key}

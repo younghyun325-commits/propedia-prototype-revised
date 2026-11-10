@@ -11,14 +11,15 @@ sys.path.insert(0, str(ROOT))
 
 from datetime import date  # noqa: E402
 
-from fastapi import Body, FastAPI, HTTPException  # noqa: E402
+from fastapi import Body, FastAPI, HTTPException, Query  # noqa: E402
 from fastapi.responses import RedirectResponse, Response  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from core import catalog  # noqa: E402
 from core import live as live_mod  # noqa: E402
 from core import map as map_mod  # noqa: E402
-from core.db import connect_ro, meta  # noqa: E402
+from core import market as market_mod  # noqa: E402
+from core.db import connect_market_ro, connect_ro, meta  # noqa: E402
 from core.lookup import lookup, parcel_summary  # noqa: E402
 from core.progress import progress  # noqa: E402
 from core.timeutil import today_kst  # noqa: E402
@@ -121,6 +122,8 @@ def map_feature(kind: str, fid: str, as_of: str | None = None):
     """인스펙터 내용 (P16). 사업 = progress(), 규제 = applicability_rules 항목, 필지 = /map/parcel과 같은 조립.
     as_of(YYYY-MM-DD)를 주면 그날 기준 기한·효력 상태 (P19 타임라인)."""
     day = _as_of(as_of)
+    if kind == "apartment":
+        return _market(lambda mcon, con: market_mod.feature_apartment(mcon, con, fid, day))
     con = _con()
     try:
         return map_mod.map_feature(con, kind, fid, live_mod.default() if kind == "parcel" else None, day)
@@ -128,6 +131,37 @@ def map_feature(kind: str, fid: str, as_of: str | None = None):
         raise HTTPException(status_code=404, detail=str(e)) from None
     finally:
         con.close()
+
+
+def _market(fn):
+    """market.db(실거래)를 쓰는 응답. 파일이 없으면 503 + 한국어 안내 (다른 기능은 그대로)."""
+    try:
+        mcon = connect_market_ro()
+    except FileNotFoundError:
+        raise HTTPException(status_code=503, detail=market_mod.UNAVAILABLE) from None
+    con = _con()
+    try:
+        return fn(mcon, con)
+    except market_mod.ApartmentNotFound as e:
+        raise HTTPException(status_code=404, detail=str(e)) from None
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e) if "면적대" in str(e) else
+                            "from은 YYYY-MM 또는 YYYY-MM-DD 형식입니다") from None
+    finally:
+        mcon.close()
+        con.close()
+
+
+@app.get("/api/v1/apartments/{cid}")
+def apartment(cid: str):
+    """아파트 단지 (P17): 기본 정보(없으면 상태 문구), 준공연도(실거래 신고 기준), 면적대별 거래 요약, 걸친 영향권, 출처"""
+    return _market(lambda mcon, con: market_mod.apartment(mcon, con, cid, today_kst()))
+
+
+@app.get("/api/v1/apartments/{cid}/trades")
+def apartment_trades(cid: str, band: str | None = None, from_: str | None = Query(None, alias="from")):
+    """월별 중위 거래가·건수(해제 제외), 개별 거래 점, 최근 거래 20건(해제 표시)"""
+    return _market(lambda mcon, con: market_mod.trades(mcon, cid, band or None, from_ or None))
 
 
 @app.get("/api/v1/map/parcel")

@@ -1,0 +1,12 @@
+# 단지명 정규화 규칙 (docs/map/PLAN.md P17 4단계). 거래 → 단지 ③ 법정동 + 정규화 단지명, 기본 정보 연결에 쓴다.
+# 위에서부터 차례로 적용한다. 정규식은 Python re 문법. 사람이 고칠 수 있게 규칙만 둔다 (예외 목록은 두지 않음).
+version: 1
+steps:
+  - {id: nfkc,      kind: unicode_nfkc}                       # 전각 숫자·괄호 등을 반각으로
+  - {id: lower,     kind: lower}                              # 영문 대소문자 통일
+  - {id: paren,     kind: regex, pattern: '\([^)]*\)|\[[^\]]*\]', repl: ''}   # 괄호 안 내용 제거 (예: 래미안(대치))
+  - {id: space,     kind: regex, pattern: '[\s·・.\-_,]+', repl: ''}         # 공백·가운뎃점·점·하이픈 제거
+  - {id: suffix,    kind: regex, pattern: '(아파트|apt|apartment)$', repl: ''} # '아파트' 접미사
+  - {id: dong_pre,  kind: regex, pattern: '^(서울)?(강남구)?', repl: ''}      # 시·구 접두
+  - {id: cha,       kind: regex, pattern: '제?(\d+)차', repl: '\1'}          # 차수 표기: '제7차'·'7차' → '7'
+  - {id: danji,     kind: regex, pattern: '제?(\d+)단지', repl: '\1'}        # '1단지' → '1'

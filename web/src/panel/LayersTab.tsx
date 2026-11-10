@@ -21,6 +21,7 @@ function swatchOf(l: ManifestLayer): SwatchKind {
   if (l.id.startsWith('impact')) return 'impact'
   if (l.id === 'parcels') return 'parcel'
   if (l.id.startsWith('regulation')) return 'regulation'
+  if (l.id === 'apartments' && l.status === 'ready') return 'apartment'
   if (l.ref) return l.kind === 'raster' ? 'raster' : 'reference'
   if (l.status !== 'ready') return l.kind === 'symbol' ? 'symbol' : l.kind === 'raster' ? 'raster' : 'pending'
   return 'pending'
@@ -153,6 +154,12 @@ function LayerRow({ l }: { l: ManifestLayer }) {
         </label>
       )}
       {l.id === 'impact500' && <p className="mt-1 ml-6 text-xs text-ink-muted">{UI.layers.impactNote}</p>}
+      {l.id === 'apartments' && l.status === 'ready' && (
+        <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid="apartment-legend-note">
+          {l.note ?? UI.apartment.layerNote}
+          {l.boundary_note ? ` · ${l.boundary_note}` : ''}
+        </p>
+      )}
       {enabled && blockedAt !== null && (
         <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid={`layer-zoomhint-${l.id}`}>
           {UI.reference.zoomHint(blockedAt)}

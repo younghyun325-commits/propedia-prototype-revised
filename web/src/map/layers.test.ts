@@ -5,6 +5,7 @@ import parcelsRaw from '../../../public/data/layers/propedia_parcels.geojson?raw
 import regsRaw from '../../../public/data/layers/propedia_regulations.geojson?raw'
 import manifestRaw from '../../../public/data/layers/manifest.json?raw'
 import {
+  apartmentLayers,
   DEFAULT_COLORS, HATCH_ID, OPACITY, OVERLAP_DIM, OVERLAP_TARGETS, PANEL_LAYERS, UNVERIFIED, WIDTH, hatchImage, idFilter,
   labelText, likelyFilter, opacityExpr, paintPlan, propediaLayers, readLayerColors,
   type PropediaFC,
@@ -125,6 +126,7 @@ describe('P14 겹침 보기·점선·강조 식', () => {
       ...propediaLayers(DEFAULT_COLORS),
       ...REF_GEO_IDS.flatMap((id) => refGeoLayers(id, DEFAULT_COLORS.ref)),
       ...REF_WMS_IDS.map(refWmsLayer),
+      ...apartmentLayers(DEFAULT_COLORS),
     ].map((l) => l.id))
     for (const p of Object.values(PANEL_LAYERS)) for (const l of p.layers) expect(ids.has(l)).toBe(true)
   })

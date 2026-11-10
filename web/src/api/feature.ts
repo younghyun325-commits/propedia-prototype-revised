@@ -5,8 +5,9 @@
 import { useQuery } from '@tanstack/react-query'
 import type { ParcelAt } from './parcel'
 import { getJson } from './map'
+import type { Apartment } from './market'
 
-export type FeatureKind = 'project' | 'regulation' | 'parcel'
+export type FeatureKind = 'project' | 'regulation' | 'parcel' | 'apartment'
 
 export type SourceRef = {
   doc_id: string
@@ -84,7 +85,11 @@ export type ProjectParcel = {
   bbox: [number, number, number, number] | null
 }
 
+export type NearbyApartment = { id: string; name: string; build_year: number | null; last_trade_date: string | null }
+
 export type ProjectSections = {
+  /** P17: 영향권 안 단지 (250·500, 이름·준공연도·최근 거래일만) */
+  nearby_apartments?: { '250': NearbyApartment[]; '500': NearbyApartment[] }
   progress: {
     project_id: number
     name: string
@@ -155,7 +160,8 @@ type Base<K extends FeatureKind, S> = {
 export type ProjectFeature = Base<'project', ProjectSections>
 export type RegulationFeature = Base<'regulation', RegulationSections>
 export type ParcelFeature = Base<'parcel', ParcelSections>
-export type Feature = ProjectFeature | RegulationFeature | ParcelFeature
+export type ApartmentFeature = Base<'apartment', { apartment: Apartment }>
+export type Feature = ProjectFeature | RegulationFeature | ParcelFeature | ApartmentFeature
 
 export const featureUrl = (kind: FeatureKind, id: string, asOf?: string) =>
   `/api/v1/map/feature/${kind}/${encodeURIComponent(id)}${asOf ? `?as_of=${asOf}` : ''}`

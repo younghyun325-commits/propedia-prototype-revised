@@ -12,6 +12,19 @@ def connect_ro() -> sqlite3.Connection:
     return con
 
 
+MARKET_DB_PATH = DB_PATH.parent / "market.db"
+
+
+def connect_market_ro(path: Path | None = None) -> sqlite3.Connection:
+    """db/market.db 읽기 전용 (P17). 파일이 없으면 FileNotFoundError — API는 503으로 알린다."""
+    p = path or MARKET_DB_PATH
+    if not p.is_file():
+        raise FileNotFoundError(str(p.name))
+    con = sqlite3.connect(p.as_uri() + "?mode=ro&immutable=1", uri=True, check_same_thread=False)
+    con.row_factory = sqlite3.Row
+    return con
+
+
 def meta(con) -> dict:
     return {r["key"]: r["value"] for r in con.execute("SELECT key, value FROM meta")}
 

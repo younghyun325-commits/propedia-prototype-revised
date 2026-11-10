@@ -1,11 +1,38 @@
 /** 데이터 상태 탭 (P14 3-4): 레이어별 원천·기준일·건수·라이선스·상태 + DB 빌드 기준일 + 운영 메모. 키는 '있음/없음'만. */
-import type { Health, Manifest, ManifestLayer } from '../api/map'
+import type { Health, Manifest, ManifestLayer, MarketStatus } from '../api/map'
 import { UI } from '../copy/ui'
 
 function stateLabel(l: ManifestLayer): string {
   if (l.status === 'ready') return UI.status.ready
   if (l.status === 'not_adopted') return UI.status.notAdopted
   return UI.status.pending(l.available_from)
+}
+
+/** 실거래·아파트 단지 (P17): 기간·건수·수집일·M23 / 단지 수·M22·기본 정보 연결 수 */
+function MarketRows({ m }: { m: MarketStatus | undefined }) {
+  if (!m) return null
+  if (!m.available) return <p data-testid="status-market" data-available="0">{UI.status.marketNone}</p>
+  const dotted = (s: string | null) => (s ? s.replaceAll('-', '.') : '—')
+  return (
+    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1" data-testid="status-market" data-available="1">
+      <dt className="text-ink-muted">{UI.status.trades}</dt>
+      <dd data-testid="status-market-trades">
+        {UI.status.tradePeriod} <span className="tabular-nums">{dotted(m.trade_from)} ~ {dotted(m.trade_to)}</span> ·{' '}
+        <span className="tabular-nums">{UI.status.tradeCount(m.trade_count, m.cancelled_count)}</span> · {UI.status.fetchedOn}{' '}
+        <span className="tabular-nums">{dotted(m.fetched_on)}</span>
+        {m.m23 && <span className="block tabular-nums">{UI.status.ratio('M23', m.m23.num, m.m23.den)}</span>}
+      </dd>
+      <dt className="text-ink-muted">{UI.status.complexes}</dt>
+      <dd data-testid="status-market-complexes">
+        <span className="tabular-nums">{UI.status.complexCount(m.m22?.den ?? m.layer_count ?? 0)}</span>
+        {m.m22 && <span className="block tabular-nums">{UI.status.ratio('M22', m.m22.num, m.m22.den)}</span>}
+        <span className="block tabular-nums" data-testid="status-market-basis">
+          {UI.status.basisLinked(m.basis_linked, m.list_total)}
+          {m.basis_check === 'not_registered' ? ` · ${UI.status.basisPending}` : ''}
+        </span>
+      </dd>
+    </dl>
+  )
 }
 
 export function StatusTab({ manifest, health }: { manifest: Manifest; health: Health | undefined }) {
@@ -37,6 +64,11 @@ export function StatusTab({ manifest, health }: { manifest: Manifest; health: He
           ))}
         </tbody>
       </table>
+
+      <section aria-label={UI.status.marketTitle} className="space-y-1">
+        <h3 className="font-semibold">{UI.status.marketTitle}</h3>
+        <MarketRows m={manifest.market} />
+      </section>
 
       <section aria-label={UI.status.dbTitle} className="space-y-1">
         <h3 className="font-semibold">{UI.status.dbTitle}</h3>

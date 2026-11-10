@@ -79,6 +79,11 @@ body {
   color: var(--color-ink-muted);
   font-weight: 500;
 }
+/* 아파트 단지 라벨 (P17): 줌 15 이상, 단지 색 띠 */
+.map-area-label--apartment {
+  border-left: 3px solid var(--color-layer-apartment);
+  font-weight: 500;
+}
 
 /* 배경지도·3D 칩에서 켜진 것 */
 .map-chip-on {

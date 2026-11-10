@@ -7,7 +7,10 @@
   propedia_impact.geojson       영향권: 사업 구역을 EPSG:5186에서 250m·500m 넓힌 면 (링 아님)
   propedia_parcels.geojson      포함 판정 필지 (project_parcels)
   propedia_regulations.geojson  규제 구역 (D10, D5는 경계를 채택했을 때만)
+  apartments.geojson            아파트 단지 (P17, seed/apartments.geojson 중 위치를 찾은 실거래 단지)
   manifest.json                 레이어별 원천·기준일·건수·라이선스. 실행 시각은 넣지 않는다 (멱등).
+- P17 아파트 단지: within_impact는 대표점(seed lon·lat) 기준(아래와 같은 규칙), impacts는 단지 면이 걸친 영향권을
+  사업마다 가장 작은 거리로 [{project_id, buffer_m}] (인스펙터 '걸친 영향권'·사업 '영향권 안 단지' 탭).
 - P14 겹침 보기: 필지·규제 도형마다 within_impact {project_id, buffer_m} — 중심점이 들어가는 가장 작은 영향권
   (EPSG:5186, 같으면 project_id 작은 쪽, 밖이면 둘 다 null). MapLibre 식용으로 impact_buffer_m(같은 값)도 넣는다.
 - 좌표 소수 6자리, sort_keys. 같은 입력이면 같은 바이트.
@@ -41,6 +44,40 @@ def within_impact(pt5186, zones: list) -> dict:
         if g.contains(pt5186):
             return {"project_id": pid, "buffer_m": m}
     return {"project_id": None, "buffer_m": None}
+
+
+APT_SEED = SEED / "apartments.geojson"
+APT_SPLIT_BYTES = 1_500_000          # 넘으면 라벨용 점 레이어와 면 레이어를 나눈다
+APT_TITLE = "아파트 단지 (실거래 신고 단지 기준)"
+APT_NOTE = "실거래 신고 단지 기준"
+APT_LICENSE = "실거래가: 국토교통부(공공데이터포털, 이용허락범위 제한 없음) · 필지선 " + LICENSE_VWORLD
+
+
+def impacts_of(g5186, zones: list) -> list[dict]:
+    """단지 면이 걸친(겹치는) 영향권 — 사업마다 가장 작은 거리 하나"""
+    best: dict[int, int] = {}
+    for m, pid, z in zones:
+        if g5186.intersects(z) and m < best.get(pid, 10 ** 9):
+            best[pid] = m
+    return [{"project_id": pid, "buffer_m": best[pid]} for pid in sorted(best)]
+
+
+def apartment_features(zones: list) -> list[dict]:
+    """seed/apartments.geojson 중 위치를 찾은 단지 + 겹침 보기 속성"""
+    if not APT_SEED.exists():
+        return []
+    fc = json.loads(APT_SEED.read_text(encoding="utf-8"))
+    out = []
+    for f in fc["features"]:
+        if not f.get("geometry"):
+            continue                   # 위치를 못 찾은 단지는 지도에 올리지 않는다 (M22 분자에서 빠짐)
+        p = dict(f["properties"])
+        wi = within_impact(to_5186(Point(p["lon"], p["lat"])), zones)
+        p |= {"kind": "apartment", "within_impact": wi, "impact_buffer_m": wi["buffer_m"],
+              "impacts": impacts_of(to_5186(shape(f["geometry"])), zones), "doc_ids": []}
+        p.pop("pnus_missing", None)
+        out.append({"type": "Feature", "id": p["id"], "properties": p, "geometry": f["geometry"]})
+    return out
 
 
 def main() -> None:
@@ -123,6 +160,7 @@ def main() -> None:
         props |= {"within_impact": wi, "impact_buffer_m": wi["buffer_m"]}
         regs.append({"type": "Feature", "id": props["id"], "properties": props, "geometry": b["geometry"]})
     con.close()
+    apts = apartment_features(zones)
 
     layers = {
         "propedia_projects": (projects, "사업 구역 (고시 도면 정합)", SOURCE_MAP),
@@ -149,7 +187,30 @@ def main() -> None:
         old = json.loads(mp.read_text(encoding="utf-8")).get("layers") or {}
     except (OSError, ValueError):
         old = {}
-    manifest["layers"].update({k: v for k, v in old.items() if not k.startswith("propedia_")})
+    manifest["layers"].update({k: v for k, v in old.items() if not k.startswith("propedia_") and k != "apartments"})
+    # 아파트 단지 (P17): 켤 때 불러오는 레이어. 1.5MB를 넘으면 점(라벨·검색)과 면(줌 14 이상)으로 나눈다
+    if apts:
+        path = OUT / "apartments.geojson"
+        write_fc(path, apts, name="apartments", title=APT_TITLE, note=APT_NOTE)
+        size = path.stat().st_size
+        entry = {"file": "apartments.geojson", "title": APT_TITLE, "source": "국토교통부 아파트 매매 실거래가 상세 자료 "
+                 "(공공데이터포털) · 필지 경계 브이월드 LP_PA_CBND_BUBUN", "count": len(apts),
+                 "as_of": max(f["properties"]["as_of"] or "" for f in apts) or None, "doc_ids": [],
+                 "license": APT_LICENSE, "note": APT_NOTE, "size_bytes": size,
+                 "boundary_note": json.loads(APT_SEED.read_text(encoding="utf-8")).get("note")}
+        pts = OUT / "apartments_points.geojson"
+        if size > APT_SPLIT_BYTES:
+            keep = ("id", "name", "aliases", "jibuns", "build_year", "last_trade_date", "impact_buffer_m")
+            write_fc(pts, [{"type": "Feature", "id": f["id"], "properties": {k: f["properties"].get(k) for k in keep},
+                            "geometry": {"type": "Point", "coordinates": [f["properties"]["lon"], f["properties"]["lat"]]}}
+                           for f in apts], name="apartments_points", title=APT_TITLE)
+            entry |= {"points_file": pts.name, "fill_min_zoom": 14}
+        elif pts.exists():
+            pts.unlink()
+        manifest["layers"]["apartments"] = entry
+        total += size
+        log(f"public/data/layers/apartments.geojson: {len(apts)}건 {size:,} B sha256 {sha256(path)[:16]}"
+            f"{' (점 레이어 분리)' if size > APT_SPLIT_BYTES else ''}")
     mp.write_text(json.dumps(manifest, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     log(f"manifest.json sha256 {sha256(mp)[:16]} · 메모 {notes}")
     log(f"레이어 합계 {total:,} B ({total / 1024 / 1024:.2f} MB, 목표 2MB 이하)")

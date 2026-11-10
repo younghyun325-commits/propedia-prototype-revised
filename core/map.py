@@ -16,6 +16,7 @@ from core.db import loads, meta, source
 from core import refzones
 from core.lookup import DISCLAIMER, load_items, lookup_pnu
 from core.progress import progress
+from core.market import nearby_for_project
 from core.review import Overrides
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -59,10 +60,8 @@ REF_WMS = [
 ]
 WMS_BADGE = "참고"
 
-# 아직 데이터가 없는 레이어 (P17·P18에서 채움)
+# 아직 데이터가 없는 레이어 (P18에서 채움)
 PENDING = [
-    {"id": "apartments", "group": "market", "name": "아파트 단지", "kind": "fill",
-     "source": "국토교통부 공동주택 단지 목록·기본 정보", "license": "이용허락범위 제한 없음", "available_from": "P17"},
     {"id": "schools", "group": "infra", "name": "학교", "kind": "symbol",
      "source": "전국초중등학교위치표준데이터", "license": "이용허락범위 제한 없음", "available_from": "P18"},
     {"id": "subway", "group": "infra", "name": "지하철역", "kind": "symbol",
@@ -176,6 +175,12 @@ def map_manifest(con) -> dict:
               tile_url=f"/api/v1/map/wms/{w['wms_layer']}/{{z}}/{{x}}/{{y}}.png",
               legend_url=None, ref=True)
 
+    ap = L.get("apartments")
+    entry("apartments", "market", "아파트 단지", "fill", ap, status="ready" if ap else "pending",
+          note=(ap or {}).get("note") or "pipeline.build_map_layers 실행 전", lazy=True, file=(ap or {}).get("file"),
+          size_bytes=(ap or {}).get("size_bytes"), points_file=(ap or {}).get("points_file"),
+          fill_min_zoom=(ap or {}).get("fill_min_zoom"), boundary_note=(ap or {}).get("boundary_note"))
+
     for p in PENDING:
         layers.append({"id": p["id"], "group": p["group"], "name": p["name"], "kind": p["kind"], "source": p["source"],
                        "license": p["license"], "as_of": None, "count": None, "status": "pending",
@@ -189,7 +194,28 @@ def map_manifest(con) -> dict:
                "count": len(fc["features"]) if fc else None}, status="ready" if fc else "pending")
 
     return {"generated_as_of": man.get("generated_as_of"), "db_as_of": m.get("as_of"), "build_at": m.get("build_at"),
-            "crs": man.get("crs"), "groups": GROUPS, "layers": layers, "notes": man.get("notes") or []}
+            "crs": man.get("crs"), "groups": GROUPS, "layers": layers, "notes": man.get("notes") or [],
+            "market": market_status(ap)}
+
+
+def market_status(ap: dict | None) -> dict:
+    """데이터 상태 탭: 실거래(기간·건수·수집일·M23), 아파트 단지(단지 수·M22·기본 정보 연결 수 / 단지 목록 수).
+    market.db가 없으면 available=False (다른 기능은 그대로)."""
+    from core.db import connect_market_ro, loads
+    try:
+        mcon = connect_market_ro()
+    except FileNotFoundError:
+        return {"available": False, "layer_count": (ap or {}).get("count")}
+    try:
+        mm = {r["key"]: r["value"] for r in mcon.execute("SELECT key, value FROM meta")}
+        linked = mcon.execute("SELECT COUNT(*) FROM apt_complexes WHERE basis_info_status='linked'").fetchone()[0]
+        return {"available": True, "trade_from": mm.get("trade_from"), "trade_to": mm.get("trade_to"),
+                "trade_count": int(mm.get("raw_count") or 0), "cancelled_count": int(mm.get("raw_cancelled") or 0),
+                "fetched_on": mm.get("fetched_on"), "m22": loads(mm.get("m22"), None), "m23": loads(mm.get("m23"), None),
+                "basis_linked": linked, "list_total": int(mm["list_total"]) if mm.get("list_total") else None,
+                "basis_check": mm.get("basis_info_check"), "layer_count": (ap or {}).get("count")}
+    finally:
+        mcon.close()
 
 
 def map_notices(con, today) -> dict:
@@ -459,7 +485,7 @@ def parcel_by_pnu(con, pnu: str, live, today=None) -> dict:
 # ---- 인스펙터 (P16): GET /api/v1/map/feature/{kind}/{id} ----
 # 사업 = progress(), 규제 = load_items(), 필지 = parcel_by_pnu()/_assemble() 결과를 고르고 묶기만 한다.
 # 새로 계산하는 값은 '남은 단계 수 = 템플릿 단계 수 − 현재 단계 번호' 하나뿐이다.
-FEATURE_KINDS = {"project": "사업", "regulation": "규제", "parcel": "필지"}
+FEATURE_KINDS = {"project": "사업", "regulation": "규제", "parcel": "필지", "apartment": "아파트 단지"}
 REGULATION_DOC_KINDS = ("designation", "restriction", "press")
 ROLE_LABELS = {"stage_basis": "단계 근거 문서", "related": "관련 문서"}
 BOUNDARY_LABEL = "구역 경계 (결정도와 연속지적도 대조, 사람 확인 전)"
@@ -609,6 +635,7 @@ def feature_project(con, pid: int, today) -> dict | None:
                         "next_title": pr["next"]["title"] if pr["next"] else None},
             "status_badges": card["status_badges"],
             "boundary": boundary, "parcels": parcels, "history": _date_desc(hist),
+            "nearby_apartments": nearby_for_project(con, pid),
         },
         "evidence": ev.items, "disclaimer": DISCLAIMER,
     }

@@ -4,8 +4,70 @@
 - 작업은 `feat/map-console`에서만 한다. `main` 병합은 P20에서 사람이 한다. (로컬 `.git/hooks/pre-commit`·`pre-push`가 main 커밋·push를 막음, 커밋되지 않는 로컬 훅)
 - `origin/main`에는 2026-11-10까지 P13~P15가 실수로 먼저 올라가 있다(`c79cac0`). 되돌리지 않기로 결정. 운영 배포 영향은 HUMAN_TODO 45에서 확인.
 
-현재 단계: P16 우측 인스펙터 완료 (2026-11-10) — 첫 시연(관문 1) 가능. 다음은 docs/map/PLAN.md P17 아파트 단지·실거래
+현재 단계: P17 아파트 단지·실거래 완료 (2026-11-11). 다음은 docs/map/PLAN.md P18 생활 인프라
 
+
+## P17 아파트 단지·실거래 — 완료 (2026-11-11)
+강남구 아파트 단지를 지도에 올리고, 누르면 실거래가 이력(국토교통부 신고 자료, 계약일 기준)을 보여 준다. **단지의 기준은 '실거래 단지'**(영현 결정): 실거래 응답의 aptSeq와 신고 지번 PNU로 단지를 만들고, 공동주택 단지 목록(236)·기본 정보는 덧붙이는 정보. 기본 정보 API(15058453)는 키 미등록이라 건너뜀(HUMAN_TODO 28 다시 열림).
+
+### 0. 정리 (커밋 65e53ad `P17-0`)
+- `git fetch --prune origin` → HEAD = origin/feat/map-console (1a50069) 확인 후 0단계 변경(MapView·geo·테스트)·`pipeline/check_market_api.py`·견본 커밋. 견본의 개인 정보 성격 필드(buyerGbn·slerGbn·estateAgentSggNm)는 '견본' 값 대신 **아예 뺌**(규칙: fixtures에 넣지 않음) — 저장한 원 응답으로 오프라인 재생성. 키 4종 미포함 검사 0건. push 안 함
+
+### 2. 실거래 수집
+- **2-0 옛 자료 형식** (`python -m pipeline.fetch_trades --probe`, 각 1쪽):
+
+  | 월 | 건수 | aptSeq | umdCd | landCd | bonbun | bubun | cdealType | cdealDay | rgstDate | dealingGbn |
+  |---|---|---|---|---|---|---|---|---|---|---|
+  | 201601 | 277 | 0% 빈 | 0% | 0% | 0% | 0% | 100% 빈 | 100% 빈 | 100% 빈 | 100% 빈 |
+  | 201901 | 74 | 0% 빈 | 0% | 0% | 0% | 0% | 100% 빈 | 100% 빈 | 100% 빈 | 100% 빈 |
+  | 202201 | 62 | 0% 빈 | 0% | 0% | 0% | 0% | 92% 빈 | 92% 빈 | 100% 빈 | 0% |
+  | 202401 | 195 | 0% 빈 | 0% | 0% | 0% | 0% | 94% 빈 | 94% 빈 | 6% 빈 | 0% |
+
+  aptSeq·PNU 재료는 모든 기간에 있음 → `pnu:` 단지 키는 쓰이지 않음(코드는 둠). 해제·등기·거래유형은 2021년 무렵부터 채워짐
+- `pipeline/rtms_parse.py`(순수 함수): 금액 쉼표 → 만원 정수, 계약일, 해제 'O' + 두 자리 연도 해제일(20YY), 등기일, PNU 자리 수 검사(사유), 음수 층, 면적 소수 2자리, `raw_hash` = 저장 필드 고정 순서 sha256. 같은 달 응답 안에서 저장 필드가 모두 같은 레코드 168건(2016~2026, 2021년 전 동 표기 없음 등)은 서로 다른 거래로 보고 `#n` 순번을 해시에 붙여 모두 저장(다른 달에 다시 나온 같은 레코드는 0건)
+- `pipeline/fetch_trades.py`: 2016-01~2026-11 **131개월 · 133쪽 · 41,566건 · 해제 1,167건**, 첫 실행 호출 128회(체크포인트 시험 5회 뒤) · 호출 7.7초 · 전체 35초. 두 번째 실행은 최근 2개월만 다시 받음(호출 2회). `--max-calls`로 멈추면 체크포인트 저장 + 종료 코드 2 + '내일 이어서 실행' 안내 확인. 원 응답 `build/rtms_raw/`, 리포트 `build/trades_report.csv`(월별 건수·해제·호출)
+
+### 3. 실거래 단지와 위치 (`pipeline/build_trade_complexes.py`)
+- 단지 **697개** (aptSeq 697 · pnu: 0), PNU 2개 이상인 단지 **0개** — 이 API는 단지(aptSeq)마다 신고 지번 하나만 보냄(은마도 대치동 316 하나)
+- 신고 지번 필지 경계(LP_PA_CBND_BUBUN) 합집합 → 대표점(지오코더 아님): **685/697 위치 찾음**, 못 찾음 12(전부 '필지 없음' — 개포주공 2·3·4단지 등, 신고 지번이 지금 연속지적도에 없음, HUMAN_TODO 47). 브이월드 요청 680회 40초(시간 초과 1건은 재실행 때 받음), 두 번째 실행 0회·sha256 같음(`616c5c39…`)
+- `seed/apartments.geojson` 0.57MB → `build_map_layers`가 `public/data/layers/apartments.geojson`(685개, 0.63MB — 1.5MB 미만이라 점·면 분리 안 함) + `within_impact`(대표점, 기존 규칙)·`impacts`(면이 걸친 영향권, 사업별 최소 거리). 영향권 안 55개(250m 14 · 500m 41), 밖 630. 기존 propedia_* 레이어 바이트 같음
+
+### 4. market.db (`db/market_schema.sql`, `pipeline/build_market_db.py`)
+- `apt_complexes` 697 · `apt_trades` 41,566 · `apt_trade_monthly` 21,453행. 연결 aptSeq 41,566 · PNU 0 · 단지명 0 · 못 이음 0
+- 검사: 월별 count 합 40,399 = 해제 제외 원자료 40,399 · raw_hash 중복 0 · 해제 1,167 = 원자료 1,167
+- **db/market.db 14.54MB** (VACUUM 후, 20MB 미만). 재빌드 sha256 같음(`09dd05fb…`), 기본 정보 열·meta(list_total 등)는 재빌드 때 보존. **커밋하지 않음 — 사람 결정 대기(HUMAN_TODO 48)**
+- **M22 98.3% (685/697)**, **M23 98.0% (40,745/41,566)** — 못 이은 거래 821건은 모두 '연결된 단지의 위치 없음'(위 12개 단지)
+
+### 5. 기본 정보 (`pipeline/fetch_apt_basis.py`)
+- `getAphusBassInfoV5` 1회 → `SERVICE_KEY_IS_NOT_REGISTERED_ERROR` → **미등록으로 건너뜀**. basis_info_status 전부 pending, meta `list_total=236`·`basis_info_check=not_registered`, HUMAN_TODO 28 다시 열림(이전 문구 유지). 참고 수치 '기본 정보 연결 0 / 236'
+- 등록 뒤 쓸 연결 단계(목록 236 → 지번 → PNU → 단지, 안 되면 법정동 + 정규화 단지명, 목록 밖 실거래 단지는 not_in_list)는 구현·순수 함수 테스트만. 응답 필드 이름은 확인 전이라 `FIELD_MAP`을 비워 두고, 비어 있으면 DB를 바꾸지 않음
+
+### 6. API (`core/market.py`, `core/db.connect_market_ro`)
+- `GET /api/v1/apartments/{id}`(기본 정보 또는 '기본 정보 확인 전'/'공동주택 기본 정보 목록에 없음', 준공연도 = 실거래 신고 기준, 면적대별 최근 12개월·3년 건수·마지막 거래일, 걸친 영향권, 출처), `/apartments/{id}/trades?band=&from=`(월별 중위값·건수, 개별 거래 점, 최근 20건), `/map/feature/apartment/{id}`(인스펙터 공통 틀). market.db 없으면 503 + 한국어 안내(다른 기능 정상). p95 **약 30ms**(로컬 20회)
+- `/map/manifest`: apartments 레이어 ready + `market`(기간·건수·해제·수집일·M22·M23·기본 정보 연결/236). `/map/feature/project/{id}`에 `nearby_apartments`(250·500, 이름·준공연도·최근 거래일만)
+- 면적대(Propedia 표시 구간): ~60 / 60~85 / 85~102 / 102~135 / 135~ ㎡, 하한 포함·상한 미포함(60.00 → 60~85)
+
+### 7. 화면 (`web/src`)
+- 레이어 '아파트 단지'(시장 그룹, 기본 꺼짐, 켤 때 한 번 불러옴): 면 28% + 외곽선 1px(`--color-layer-apartment`), 라벨 줌 15 이상(화면 안 단지만), 범례 '실거래 신고 단지 기준 · 단지 경계는 …'. 겹침 보기 대상(영향권 밖 25%)
+- 클릭 우선순위: 사업 구역 → 규제 구역 → 사업 필지 → 아파트 단지 → (P18) → 빈 곳 필지 조회. 선택 `sel=apt:11680-218`
+- `inspector/ApartmentView` + `inspector/AptChart`(따로 불러오는 청크, d3-scale·d3-shape SVG): 위 = 월별 중위 거래가 선 + 개별 거래 점(해제 = 빈 원), 아래 = 월별 거래 건수 막대, 같은 x축·위아래 분리. 면적대 칩(최근 3년 최다가 기본), 최근 거래 20건 표(계약일·전용면적·층·금액·거래 유형·해제(해제일)·동), 영향권 안 사업 + 이동, 출처 줄 '실거래가(국토교통부 신고 자료, 계약일 기준) · 수집일'. 금액 표기 `market/format.ts` (319000 → '31억 9,000만', 50000 → '5억')
+- 사업 인스펙터 '영향권 안 단지' 탭(250m·500m, 이름·준공연도·최근 거래일, 행 → 그 단지 선택). 데이터 상태 탭에 실거래·아파트 단지 행
+- 검색(Ctrl+K) '단지' 그룹: 단지명·다른 이름·신고 지번 부분 일치. 그룹 순서는 사업 → 주소 → 단지(지번 입력이면 Enter = 주소 — 기존 '압구정동 528' 점검 유지)
+- 문구는 모두 `copy/ui.ts`. 금지어에 시세·상승·하락·저평가·고평가 추가(`tests/test_wording.py`, web/src + 실거래 API 문구)
+
+### 완료 확인 (2026-11-11)
+- `pytest -q` **239 passed** (전 198 → `test_rtms_parse.py` 10, `test_market.py` 30, wording 실거래 1)
+- `npm --prefix web run test` **94 passed** (`market/market.test.ts` 금액 표기·면적대 기본·기본 정보 문구·차트 스케일·단지 검색)
+- `npm --prefix web run build`: 초기 JS `index` **97.21 kB gzip**(전 95.76), `AptChart` 42.8 kB(14.2 kB gzip) 따로 나뉜 청크
+- `python -m evals.run_eval`: M1~M20 직전과 같음(M10 시간만), **M22 98% (685/697)**, **M23 98% (40,745/41,566)** 통과, 오류 0
+- `tests/ui_check_map.py --shot`(3000) **111/111**, `--built`(8000) **111/111**, 콘솔 오류 0. P17 점검 18개(레이어 켤 때 1번 불러옴·면 28%·범례, 라벨 줌 15, 은마 클릭 → '기본 정보 확인 전'·1979년(실거래 신고 기준)·차트 두 개 위아래·20건 표·출처, 면적대 기본 60~85, 해제 표시(표 '해제 (2026.11.03)' + 빈 원), 칩 전환, 겹침 보기 28%/7%, Ctrl+K '은마', 한양7차 '영향권 안 단지' 47행·행 → 단지 선택, 데이터 상태 M22·M23·0/236). P14 '준비 중 레이어'·데이터 상태, P16 탭 목록은 apartments ready·'영향권 안 단지' 탭에 맞게 바꿈
+- 스크린샷: `docs/screens/map_05a_apartments.png`, `map_05b_apartment_inspector.png`(은마), `map_05c_project_nearby.png`
+- 사람 대조표: HUMAN_TODO 46 아래 '실거래 대조표'(은마·청담자이·압구정동 426 = 신고명 '신현대9차', 각 10건)
+
+### 남은 것
+- 기본 정보 API 활용신청 뒤 `python -m pipeline.fetch_apt_basis` (응답 필드 확인 → FIELD_MAP 확정) — HUMAN_TODO 28
+- `db/market.db` 커밋·배포 여부(HUMAN_TODO 48), 위치 못 찾은 12개 단지(47), 실거래 대조(46)
+- 5단계 등록 전이라 '공동주택 기본 정보 목록에 없음' 문구는 화면에 아직 나오지 않음(모두 '기본 정보 확인 전')
 
 ## P16 우측 인스펙터 — 완료 (2026-11-10) · 첫 시연(관문 1) 가능
 지도에서 누른 사업 구역·규제 구역·필지의 사실을 근거(문서·쪽·기준일)와 함께 우측 인스펙터에 보여 준다. 새 계산 없이 사업 = `progress()`, 규제 = `load_items()`(효력 판정 `timeutil.effective`), 필지 = `parcel_by_pnu()`/`_assemble()`(→ `lookup_pnu`)을 고르고 묶기만 한다. 새로 계산하는 값은 지시된 '남은 단계 수 = 템플릿 단계 수 − 현재 단계 번호' 하나.

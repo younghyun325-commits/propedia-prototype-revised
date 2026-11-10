@@ -1,11 +1,12 @@
 /** 레이어 색 칩: 지도 스타일과 같은 모양 (면·선·빗금·점선). 색은 tokens.css 변수만. */
-export type SwatchKind = 'project' | 'impact' | 'parcel' | 'parcel-likely' | 'regulation' | 'reference' | 'pending' | 'symbol' | 'raster'
+export type SwatchKind = 'project' | 'impact' | 'parcel' | 'parcel-likely' | 'regulation' | 'reference' | 'apartment' | 'pending' | 'symbol' | 'raster'
 
 const PROJECT = 'var(--color-layer-project)'
 const REG = 'var(--color-layer-regulation)'
 const REG_LINE = 'var(--color-layer-regulation-line)'
 const MUTED = 'var(--color-ink-muted)'
 const REF = 'var(--color-layer-ref)'
+const APT = 'var(--color-layer-apartment)'
 
 export function LayerSwatch({ kind, opacity = 1 }: { kind: SwatchKind; opacity?: number }) {
   const common = { width: 28, height: 16, viewBox: '0 0 28 16', 'aria-hidden': true as const, style: { opacity: Math.max(0.15, opacity) } }
@@ -49,6 +50,12 @@ export function LayerSwatch({ kind, opacity = 1 }: { kind: SwatchKind; opacity?:
       return (
         <svg {...common}>
           <rect x="1" y="1" width="26" height="14" rx="2" fill={REF} fillOpacity="0.08" stroke={REF} strokeWidth="1.25" strokeDasharray="3 3" />
+        </svg>
+      )
+    case 'apartment': // 아파트 단지 (P17): 면 28% + 외곽선 1px
+      return (
+        <svg {...common}>
+          <rect x="1" y="1" width="26" height="14" rx="2" fill={APT} fillOpacity="0.28" stroke={APT} strokeWidth="1" />
         </svg>
       )
     case 'symbol':
