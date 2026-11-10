@@ -47,6 +47,8 @@ export type PoiCategory = {
   icon: string
   note: string | null
   sub_categories: string[]
+  /** 하위 분류 라벨 → slug (P19-1, URL·레이어 필터용) */
+  sub_keys?: Record<string, string>
   codes: Record<string, string>
   count: number
   sub_counts: Record<string, number>
@@ -74,31 +76,31 @@ export const useBusStops = (enabled: boolean) =>
 export const useBusRoutes = (enabled: boolean) =>
   useQuery({ queryKey: ['layer', 'bus_routes'], queryFn: ({ signal }) => getJson<BusRoutes>(`${DIR}bus_routes.json`, signal), enabled, ...opts })
 
-/** 편의시설: 분류별 파일이면 wanted 분류만, 한 파일이면 하나를 불러와 분류별로 나눈다 */
+/**
+ * 편의시설 (P19-1): 분류별 파일(manifest categories[].file)을 wanted 분류만 불러온다.
+ * 반환: 분류별 FeatureCollection(지도 소스 하나씩) + 불러온 전체 점(반경 보기·인스펙터)
+ */
 export function usePois(categories: PoiCategory[] | undefined, wanted: string[]) {
-  const split = !!categories?.length && categories.every((c) => c.file)
-  const files = split ? categories!.filter((c) => wanted.includes(c.key)).map((c) => c.file!) : wanted.length ? ['pois.geojson'] : []
+  const cats = (categories ?? []).filter((c) => c.file && wanted.includes(c.key))
   const qs = useQueries({
-    queries: files.map((f) => ({
-      queryKey: ['layer', 'pois', f],
-      queryFn: ({ signal }: { signal: AbortSignal }) => getJson<InfraFC<PoiProps>>(`${DIR}${f}`, signal),
+    queries: cats.map((c) => ({
+      queryKey: ['layer', 'pois', c.file],
+      queryFn: ({ signal }: { signal: AbortSignal }) => getJson<InfraFC<PoiProps>>(`${DIR}${c.file}`, signal),
       ...opts,
     })),
   })
   const stamp = qs.map((q) => q.dataUpdatedAt).join(',')
-  const key = wanted.join(',')
-  const features = useMemo(
-    () => qs.flatMap((q) => q.data?.features ?? []).filter((f) => key.split(',').includes(f.properties.category)),
+  const key = cats.map((c) => c.key).join(',')
+  const byCat = useMemo(() => {
+    const out: Record<string, InfraFC<PoiProps>> = {}
+    qs.forEach((q, i) => {
+      if (q.data) out[cats[i].key] = q.data
+    })
+    return out
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [stamp, key],
-  )
-  return { features, loading: qs.some((q) => q.isPending), error: qs.find((q) => q.error)?.error ?? null }
-}
-
-/** 편의시설 숨김 키: 'cafe'(분류) 또는 'clinic/치과'(하위 분류) */
-export function poiVisible(p: Pick<PoiProps, 'category' | 'sub_category'>, hidden: string[]): boolean {
-  if (hidden.includes(p.category)) return false
-  return !(p.sub_category && hidden.includes(`${p.category}/${p.sub_category}`))
+  }, [stamp, key])
+  const features = useMemo(() => Object.values(byCat).flatMap((fc) => fc.features), [byCat])
+  return { byCat, features, loading: qs.some((q) => q.isPending), error: qs.find((q) => q.error)?.error ?? null }
 }
 
 /** 노선 id → 노선 */

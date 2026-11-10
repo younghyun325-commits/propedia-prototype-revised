@@ -67,7 +67,8 @@
      "label": "슈퍼마켓",
      "note": "대형마트 업종 코드는 원자료에 없음 (종합 소매 G204의 소분류는 슈퍼마켓·편의점·그 외 기타 종합 소매업 3개뿐)",
      "sub_categories": [],
-     "sub_counts": {}
+     "sub_counts": {},
+     "sub_keys": {}
     },
     {
      "codes": {
@@ -80,7 +81,8 @@
      "label": "편의점",
      "note": null,
      "sub_categories": [],
-     "sub_counts": {}
+     "sub_counts": {},
+     "sub_keys": {}
     },
     {
      "codes": {
@@ -103,9 +105,9 @@
       "Q10212": "방사선 진단/병리 검사 의원"
      },
      "count": 3020,
-     "file": "pois_clinic.geojson",
+     "file": "pois_medical.geojson",
      "icon": "hospital",
-     "key": "clinic",
+     "key": "medical",
      "label": "병원·의원",
      "note": null,
      "sub_categories": [
@@ -119,6 +121,12 @@
       "의원": 2097,
       "치과": 509,
       "한방": 360
+     },
+     "sub_keys": {
+      "병원": "hospital",
+      "의원": "clinic",
+      "치과": "dental",
+      "한방": "oriental"
      }
     },
     {
@@ -132,7 +140,8 @@
      "label": "약국",
      "note": null,
      "sub_categories": [],
-     "sub_counts": {}
+     "sub_counts": {},
+     "sub_keys": {}
     },
     {
      "codes": {
@@ -145,7 +154,8 @@
      "label": "카페",
      "note": null,
      "sub_categories": [],
-     "sub_counts": {}
+     "sub_counts": {},
+     "sub_keys": {}
     },
     {
      "codes": {
@@ -171,6 +181,11 @@
       "교과": 2030,
       "예체능·기타": 758,
       "외국어": 245
+     },
+     "sub_keys": {
+      "교과": "subject",
+      "예체능·기타": "arts",
+      "외국어": "language"
      }
     }
    ],
@@ -182,7 +197,7 @@
    "lazy": true,
    "license": "이용허락범위 제한 없음",
    "note": "seed/poi_categories.yaml에 있는 업종만 싣는다. 은행은 원자료에 없음",
-   "size_bytes": 4450119,
+   "size_bytes": 4453140,
    "source": "소상공인시장진흥공단 상가(상권)정보 (sdsc2 storeListInDong, 강남구)",
    "title": "편의시설",
    "url": "https://www.data.go.kr/data/15012005/openapi.do"

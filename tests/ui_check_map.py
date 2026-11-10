@@ -1028,6 +1028,10 @@ def _infra_props() -> dict:
     return out
 
 
+POI_KEYS = ["supermarket", "convenience", "medical", "pharmacy", "cafe", "academy"]
+POI_ICON_LAYERS = [f"poi-{k}" for k in POI_KEYS]
+
+
 def _infra_wait(page, layer: str, timeout=10000) -> None:
     page.wait_for_function(f"() => !!window.__propediaMap.getLayer('{layer}')", timeout=timeout)
 
@@ -1074,11 +1078,12 @@ def p18_checks(page, url: str, check, shot: bool) -> None:
     # 3. 편의시설 켜기 → 클러스터(개수 마커) → 줌 16 이름, 분류·하위 분류 행
     _open(page, with_q + "c=127.03500,37.50300&z=13.5")
     page.click("[data-testid=layer-toggle-pois]")
-    _infra_wait(page, "pois-cluster")
+    _infra_wait(page, "poi-academy-cluster", 20000)
+    page.wait_for_load_state("networkidle")
     page.evaluate(JS_IDLE)
     page.wait_for_timeout(800)
     cl = page.locator("[data-testid=cluster-count]").count()
-    cl_pois = page.locator("[data-testid=cluster-count][data-source=infra-pois]").count()
+    cl_pois = page.locator("[data-testid=cluster-count][data-source^=infra-poi-]").count()
     cl_sch = page.locator("[data-testid=cluster-count][data-source=infra-schools]").count()
     rows = page.locator("[data-testid=poi-categories] > li").count()
     check("[P18] 줌 15 미만 클러스터(개수 원): 편의시설·학교, 편의시설 분류 행 6개",
@@ -1090,21 +1095,21 @@ def p18_checks(page, url: str, check, shot: bool) -> None:
     page.wait_for_timeout(800)
     names = page.locator("[data-testid=infra-label][data-kind=poi]").count()
     check("[P18] 줌 16 이상 이름 (편의시설)", names > 0 and page.locator("[data-testid=cluster-count]").count() == 0, f"{names}개")
-    before = page.evaluate(JS_RENDERED, ["pois-icon"])
+    before = page.evaluate(JS_RENDERED, POI_ICON_LAYERS)
     page.click("[data-testid=poi-cat-toggle-cafe]")
     page.wait_for_timeout(600)
     page.evaluate(JS_IDLE)
-    after = page.evaluate(JS_RENDERED, ["pois-icon"])
-    page.click("[data-testid=poi-cat-expand-clinic]")
-    page.click("[data-testid=poi-sub-row][data-key='clinic/치과'] [data-testid=poi-sub-toggle]")
-    _wait_url(page, lambda u: "clinic/" in (_q(page, "ph") or ""), 3000)
-    ph = _q(page, "ph") or ""
+    after = page.evaluate(JS_RENDERED, POI_ICON_LAYERS)
+    page.click("[data-testid=poi-cat-expand-medical]")
+    page.click("[data-testid=poi-sub-row][data-key='medical:dental'] [data-testid=poi-sub-toggle]")
+    _wait_url(page, lambda u: "medical:" in (_q(page, "poi") or ""), 3000)
+    poi = page.url.split("poi=")[-1].split("&")[0]      # '+'를 그대로 보려고 주소 문자열에서 읽는다
     subs = page.locator("[data-testid=poi-sub-row]").all_inner_texts()
-    check("[P18] 편의시설 분류 끄기(카페) → 그려진 수 줄어듦, 병원·의원 펼쳐 '치과' 끄기 → URL ph",
-          after < before and "cafe" in ph and "clinic/치과" in ph and len(subs) == 4, f"{before}→{after} ph={ph} 하위 {len(subs)}")
-    page.click("[data-testid=poi-cat-toggle-cafe]")
-    page.click("[data-testid=poi-sub-row][data-key='clinic/치과'] [data-testid=poi-sub-toggle]")
-    _wait_url(page, lambda u: _q(page, "ph") is None, 3000)
+    check("[P18] 편의시설 분류 끄기(카페) → 그려진 수 줄어듦, 병원·의원 펼쳐 '치과' 끄기 → URL poi",
+          after < before and "cafe" not in poi and "medical:hospital+clinic+oriental" in poi and len(subs) == 4,
+          f"{before}→{after} poi={poi} 하위 {len(subs)}")
+    page.click("[data-testid=layer-toggle-pois]")       # 일부 → 모두 켜기
+    _wait_url(page, lambda u: _q(page, "poi") == ",".join(POI_KEYS), 3000)
 
     # 4. 역 클릭 → 인스펙터: 호선·원자료 이름 (삼성 = 삼성 + 삼성(무역센터))
     _open(page, home)
@@ -1198,10 +1203,10 @@ def p18_checks(page, url: str, check, shot: bool) -> None:
     bus = _text(page, "[data-testid=radius-row-bus]")
     pois = _text(page, "[data-testid=radius-row-pois]")
     r = _q(page, "r") or ""
-    check("[P18] 반경 보기 500m: 표에 정류장 수·이름 수·지나는 노선 수, 학원·병원·의원 하위 분류 괄호, URL r",
+    check("[P18] 반경 보기 500m: 표에 정류장 수·이름 수·지나는 노선 수, 학원·병원·의원 하위 분류 줄, URL r",
           r.endswith(",500") and re.search(r"정류장 \d+곳 · 이름 \d+개 · 지나는 노선 \d+개", bus) is not None
-          and re.search(r"학원 \d+ \(교과 \d+ · 외국어 \d+ · 예체능·기타 \d+\)", pois) is not None
-          and "병원·의원" in pois and "(병원" in pois, f"r={r} | {bus} | {pois.replace(chr(10), ' / ')[:160]}")
+          and re.search(r"학원 \d+.*\n교과 \d+.*\n외국어 \d+.*\n예체능·기타 \d+", pois) is not None
+          and re.search(r"병원·의원 \d+.*\n병원 \d+", pois) is not None, f"r={r} | {bus} | {pois.replace(chr(10), ' / ')[:160]}")
     if shot:
         page.screenshot(path=str(SHOT_P18["b_radius"]))
     page.click("[data-testid=radius-250]")
@@ -1244,6 +1249,201 @@ def p18_checks(page, url: str, check, shot: bool) -> None:
     page.click("[data-testid=route-clear]")
 
 
+# ---------- P19-1 편의시설 분류별·하위 분류별 선택 ----------
+SHOT_P19 = {k: SCREENS / f"map_{k}.png" for k in
+            ("06g_poi_convenience_only", "06h_poi_dental", "07a_timeline", "07b_2026-05-01", "07c_feed", "07d_trades_asof")}
+JS_POI_RENDERED = """(keys) => { const m = window.__propediaMap; const out = {};
+  for (const k of keys) { const l = 'poi-' + k; out[k] = m.getLayer(l) && m.getLayoutProperty(l, 'visibility') !== 'none'
+    ? m.queryRenderedFeatures({layers: [l, l + '-cluster']}).length : 0 } return out }"""
+JS_POI_SUBS = """(k) => { const m = window.__propediaMap;
+  return [...new Set(m.queryRenderedFeatures({layers: ['poi-' + k]}).map(f => f.properties.sub_category))] }"""
+
+
+def _poi_manifest() -> dict:
+    import json
+    m = json.loads((LAYER_FILES / "manifest.json").read_text(encoding="utf-8"))["layers"]["pois"]
+    return {c["key"]: c for c in m["categories"]}
+
+
+def _poi_state(page, key: str) -> str | None:
+    return page.get_attribute(f"[data-testid=poi-cat-toggle-{key}]", "data-state")
+
+
+def p19_poi_checks(page, url: str, check, shot: bool) -> None:
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+    cats = _poi_manifest()
+    view = with_q + "c=127.03000,37.50000&z=14.50"
+
+    # 1. '편의점'만 → 편의점 아이콘·클러스터만, 다른 분류 0개, 상위 '편의시설' 일부 선택
+    _open(page, view)
+    page.click("[data-testid=poi-cat-toggle-convenience]")
+    _infra_wait(page, "poi-convenience", 20000)
+    page.wait_for_load_state("networkidle")
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(800)
+    r = page.evaluate(JS_POI_RENDERED, POI_KEYS)
+    top = page.locator("[data-testid=layer-toggle-pois]")
+    srcs = set(page.locator("[data-testid=cluster-count][data-source^=infra-poi-]").evaluate_all("es => es.map(e => e.dataset.source)"))
+    legend = page.get_attribute("[data-testid=poi-legend]", "data-on")
+    check("[P19-1] '편의점'만 켬 → 편의점만 그려짐·다른 분류 0, 상위 체크박스 일부 선택(aria-checked=mixed), 범례 편의점만",
+          r["convenience"] > 0 and all(v == 0 for k, v in r.items() if k != "convenience")
+          and top.get_attribute("aria-checked") == "mixed" and top.evaluate("e => e.indeterminate")
+          and srcs <= {"infra-poi-convenience"} and _q(page, "poi") == "convenience" and legend == "convenience",
+          f"{r} 클러스터 소스 {sorted(srcs)} 범례 {legend} poi={_q(page, 'poi')}")
+    if shot:
+        page.screenshot(path=str(SHOT_P19["06g_poi_convenience_only"]))
+
+    # 2. 병원·의원 펼쳐 '치과'만 → 치과만, 클러스터 숫자 합이 치과 건수 안
+    _open(page, view)
+    page.click("[data-testid=poi-cat-expand-medical]")
+    page.click("[data-testid=poi-sub-row][data-key='medical:dental'] [data-testid=poi-sub-toggle]")
+    _infra_wait(page, "poi-medical", 20000)
+    page.wait_for_load_state("networkidle")
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(1000)
+    nums = page.locator("[data-testid=cluster-count][data-source=infra-poi-medical]").evaluate_all(
+        "es => es.map(e => +e.textContent.replace(/,/g, ''))")
+    dental = cats["medical"]["sub_counts"]["치과"]
+    st = _poi_state(page, "medical")
+    # 화면에 그려진 체크 상태(DOM checked·indeterminate)가 상태와 같은지 (preventDefault로 되돌아가는 문제 방지)
+    dom = page.evaluate("""() => ({subs: [...document.querySelectorAll('[data-testid=poi-sub-row]')].map(r =>
+        r.dataset.key + ':' + r.querySelector('input').checked),
+      cat: document.querySelector('[data-testid=poi-cat-toggle-medical]').indeterminate})""")
+    check("[P19-1] 체크박스 표시 = 상태: 치과만 checked, 병원·의원 indeterminate",
+          dom["subs"] == ["medical:hospital:false", "medical:clinic:false", "medical:dental:true", "medical:oriental:false"]
+          and dom["cat"], str(dom))
+    if shot:
+        page.screenshot(path=str(SHOT_P19["06h_poi_dental"]))
+    page.evaluate(JS_JUMP, [127.0276, 37.4990, 16.6])
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(600)
+    subs = page.evaluate(JS_POI_SUBS, "medical")
+    check("[P19-1] 병원·의원 펼쳐 '치과'만 → 낱점은 치과만, 클러스터 숫자 합 ≤ 치과 건수, 분류 행 일부 선택, URL medical:dental",
+          st == "mixed" and _q(page, "poi") == "medical:dental" and 0 < sum(nums) <= dental and subs == ["치과"],
+          f"클러스터 {len(nums)}개 합 {sum(nums)} / 치과 {dental}, 낱점 하위 분류 {subs}, 행 {st}")
+
+    # 3. 학원 '외국어'+'예체능·기타' → URL poi=academy:language+arts, 새로고침 후 복원
+    _open(page, view)
+    page.click("[data-testid=poi-cat-expand-academy]")
+    page.click("[data-testid=poi-sub-row][data-key='academy:language'] [data-testid=poi-sub-toggle]")
+    page.click("[data-testid=poi-sub-row][data-key='academy:arts'] [data-testid=poi-sub-toggle]")
+    _wait_url(page, lambda u: _q(page, "poi") == "academy:language arts", 3000)
+    raw = page.url
+    page.reload()
+    _ready(page)
+    page.click("[data-testid=poi-cat-expand-academy]")
+    sub_states = {k: page.get_attribute(f"[data-testid=poi-sub-row][data-key='academy:{k}']", "data-state")
+                  for k in ("subject", "language", "arts")}
+    check("[P19-1] 학원 '외국어'+'예체능·기타' → URL poi=academy:language+arts, 새로고침 후 같은 선택",
+          "poi=academy:language+arts" in raw and sub_states == {"subject": "off", "language": "on", "arts": "on"}
+          and _poi_state(page, "academy") == "mixed", f"{raw.split('?')[-1]} {sub_states}")
+
+    # 4. '이것만 보기'(약국) → 약국만 / 상위 체크 → 6분류 모두 → 다시 누르면 모두 꺼짐
+    page.hover("[data-testid=poi-cat-row-pharmacy]")
+    page.click("[data-testid=poi-only-pharmacy]")
+    _wait_url(page, lambda u: _q(page, "poi") == "pharmacy", 3000)
+    only = _q(page, "poi")
+    page.click("[data-testid=layer-toggle-pois]")
+    _wait_url(page, lambda u: _q(page, "poi") == ",".join(POI_KEYS), 3000)
+    all_on = [_poi_state(page, k) for k in POI_KEYS]
+    top_all = page.get_attribute("[data-testid=layer-toggle-pois]", "aria-checked")
+    page.click("[data-testid=layer-toggle-pois]")
+    _wait_url(page, lambda u: _q(page, "poi") is None, 3000)
+    none = [_poi_state(page, k) for k in POI_KEYS]
+    check("[P19-1] '이것만 보기'(약국) → 약국만, 상위 '편의시설' 체크 → 6분류 모두 켜짐 → 다시 누르면 모두 꺼짐(poi 없음)",
+          only == "pharmacy" and all_on == ["on"] * 6 and top_all == "true" and none == ["off"] * 6 and _q(page, "poi") is None,
+          f"{only} / {all_on} {top_all} / {none}")
+    # Alt+클릭 = 이것만 보기
+    page.click("[data-testid=poi-cat-toggle-pharmacy]")
+    page.click("[data-testid=poi-cat-toggle-cafe]", modifiers=["Alt"])
+    _wait_url(page, lambda u: _q(page, "poi") == "cafe", 3000)
+    check("[P19-1] Alt+클릭(카페) → 카페만 (약국 꺼짐)", _q(page, "poi") == "cafe", str(_q(page, "poi")))
+
+    # 5. 반경 보기: 꺼진 분류 줄 흐리게 + '지도에서 꺼짐', 분류 이름 클릭 → 그것만
+    _open(page, with_q + "poi=pharmacy")
+    page.evaluate(JS_JUMP, [127.0276, 37.4979, 15.2])
+    page.evaluate(JS_IDLE)
+    page.click("[data-testid=radius-tool]")
+    page.mouse.click(*page.evaluate(JS_PT, [127.0276, 37.4979]))
+    page.wait_for_selector("[data-testid=radius-panel]", timeout=5000)
+    page.wait_for_function("() => !document.querySelector('[data-testid=radius-row-pois]').textContent.includes('불러오는')",
+                           timeout=20000)
+    rows = page.locator("[data-testid=radius-row-pois] li[data-cat]")
+    info = {rows.nth(i).get_attribute("data-cat"): (rows.nth(i).get_attribute("data-on"), rows.nth(i).get_attribute("class") or "")
+            for i in range(rows.count())}
+    off_txt = page.locator("[data-testid=radius-row-pois] li[data-cat=cafe] > [data-testid=radius-poi-off]").count()
+    page.click("[data-testid=radius-row-pois] li[data-cat=cafe] > [data-testid=radius-poi-cat]")
+    _wait_url(page, lambda u: _q(page, "poi") == "cafe", 3000)
+    check("[P19-1] 반경 보기: 6분류 개수, 꺼진 분류(약국 외) 흐리게·'지도에서 꺼짐', 분류 이름 클릭 → 그것만(cafe)",
+          len(info) == 6 and info.get("pharmacy", ("", ""))[0] == "1" and "opacity-50" not in info.get("pharmacy", ("", ""))[1]
+          and all(v[0] == "0" and "opacity-50" in v[1] for k, v in info.items() if k != "pharmacy")
+          and off_txt == 1 and _q(page, "poi") == "cafe", f"{ {k: v[0] for k, v in info.items()} } poi={_q(page, 'poi')}")
+    page.click("[data-testid=radius-tool]")
+
+    # 6. 꺼진 분류의 점은 클릭해도 선택 안 됨: 약국만 켠 채 카페 점(주변 40m에 다른 편의시설·학교·역 없음)을 누른다
+    import json
+    feats = {k: json.loads((LAYER_FILES / cats[k]["file"]).read_text(encoding="utf-8"))["features"] for k in POI_KEYS}
+    others = [f["geometry"]["coordinates"] for k in POI_KEYS if k != "cafe" for f in feats[k]]
+    for name in ("schools", "stations"):
+        others += [f["geometry"]["coordinates"] for f in
+                   json.loads((LAYER_FILES / f"{name}.geojson").read_text(encoding="utf-8"))["features"]]
+
+    def far(c):
+        return all(abs(c[0] - o[0]) > 0.00045 or abs(c[1] - o[1]) > 0.00036 for o in others)
+    cafe = next(f for f in feats["cafe"] if far(f["geometry"]["coordinates"]))
+    lon, lat = cafe["geometry"]["coordinates"]
+    _open(page, with_q + f"poi=pharmacy&c={lon:.5f},{lat:.5f}&z=17.5")
+    page.wait_for_timeout(500)
+    page.mouse.click(*page.evaluate(JS_PT, [lon, lat]))
+    page.wait_for_timeout(800)
+    sel = _q(page, "sel") or ""
+    check("[P19-1] 꺼진 분류(카페)의 점은 클릭해도 선택되지 않음", sel != cafe["id"] and not sel.startswith("poi:"),
+          f"{cafe['properties']['name']} → sel={sel}")
+
+
+def poi_filter_perf(pw, url: str, check) -> dict:
+    """편의시설 6분류를 모두 켠 채 하위 분류를 빠르게 20번 바꾸며 rAF 프레임 측정 (GPU 브라우저).
+    setData·setStyle 호출 수를 세어 하위 분류 변경이 setFilter만 쓰는지 확인한다."""
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+    b = pw.chromium.launch(args=PERF_ARGS)
+    page = b.new_page(viewport={"width": 1440, "height": 900})
+    _open(page, with_q + "poi=" + ",".join(POI_KEYS) + "&c=127.02760,37.49790&z=14.5")
+    for pk in POI_KEYS:
+        _infra_wait(page, f"poi-{pk}", 20000)
+    page.wait_for_load_state("networkidle")
+    page.evaluate(JS_IDLE)
+    page.click("[data-testid=poi-cat-expand-medical]")
+    page.click("[data-testid=poi-cat-expand-academy]")
+    page.evaluate(JS_POI_SPY, POI_KEYS)
+    keys = ["medical:dental", "medical:clinic", "academy:language", "academy:arts", "medical:hospital"]
+    for i in range(20):
+        page.click(f"[data-testid=poi-sub-row][data-key='{keys[i % len(keys)]}'] [data-testid=poi-sub-toggle]")
+        page.wait_for_timeout(60)
+    page.wait_for_timeout(800)
+    out = page.evaluate(JS_POI_SPY_END)
+    b.close()
+    check("[P19-1] 성능(GPU): 6분류 켠 채 하위 분류 20회 빠르게 바꿈 — setData·setStyle 0회(setFilter만), 프레임 p95 ≤ 20ms",
+          out["spy"]["setData"] == 0 and out["spy"]["setStyle"] == 0 and out["spy"]["setFilter"] > 0 and out["p95"] <= 20,
+          f"평균 {out['avg']:.1f}ms p95 {out['p95']:.1f}ms 최대 {out['max']:.1f}ms 33ms 초과 {out['over33']}/{out['frames']} 호출 {out['spy']}")
+    return out
+
+
+JS_POI_SPY = """(keys) => { const m = window.__propediaMap; window.__spy = {setData: 0, setStyle: 0, setFilter: 0};
+  for (const k of keys) { const s = m.getSource('infra-poi-' + k); const o = s.setData.bind(s);
+    s.setData = (...a) => { window.__spy.setData++; return o(...a) } }
+  const os = m.setStyle.bind(m); m.setStyle = (...a) => { window.__spy.setStyle++; return os(...a) };
+  const of = m.setFilter.bind(m); m.setFilter = (...a) => { window.__spy.setFilter++; return of(...a) };
+  window.__ft = []; let last = performance.now(); window.__run = true;
+  const tick = (t) => { window.__ft.push(t - last); last = t; if (window.__run) requestAnimationFrame(tick) };
+  requestAnimationFrame(tick) }"""
+JS_POI_SPY_END = """() => { window.__run = false; const ts = window.__ft.slice(1).sort((a, b) => a - b);
+  const avg = ts.reduce((a, b) => a + b, 0) / ts.length;
+  return {frames: ts.length, avg, p95: ts[Math.floor(ts.length * 0.95)], max: ts[ts.length - 1],
+          over33: ts.filter(x => x > 33.4).length, spy: window.__spy} }"""
+
+
 PERF_ARGS = ["--use-angle=d3d11", "--enable-gpu", "--ignore-gpu-blocklist"]
 
 
@@ -1258,10 +1458,11 @@ def perf_check(pw, url: str, check) -> dict:
                        "const d = c && c.getExtension('WEBGL_debug_renderer_info'); return d ? c.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'n/a' }")
     out = {"gl": gl}
     for k, layers in (("off", "projects,impact250,impact500,parcels"),
-                      ("all", "projects,impact250,impact500,parcels,schools,stations,bus_stops,pois")):
-        _open(page, with_q + f"layers={layers}&c=127.02760,37.49790&z=15")
+                      ("all", "projects,impact250,impact500,parcels,schools,stations,bus_stops")):
+        _open(page, with_q + f"layers={layers}&c=127.02760,37.49790&z=15" + ("&poi=" + ",".join(POI_KEYS) if k == "all" else ""))
         if k == "all":
-            _infra_wait(page, "pois-icon", 20000)
+            for pk in POI_KEYS:
+                _infra_wait(page, f"poi-{pk}", 20000)
             _infra_wait(page, "bus-icon", 20000)
         page.wait_for_timeout(2000)
         page.evaluate(JS_IDLE)
@@ -1281,6 +1482,7 @@ def main() -> int:
     ap.add_argument("--built", action="store_true", help="빌드본 http://127.0.0.1:8000/map/ 점검")
     ap.add_argument("--shot", action="store_true", help=f"스크린샷 저장 {SHOT.relative_to(ROOT)}")
     ap.add_argument("--perf", action="store_true", help="P18 프레임 시간 측정")
+    ap.add_argument("--only", choices=["p19", "p19-1"], help="기본 점검 + 이 단계만 (반복 확인용)")
     a = ap.parse_args()
     url = "http://127.0.0.1:8000/map/?debug=1" if a.built else "http://localhost:3000/map/"
 
@@ -1455,15 +1657,20 @@ def main() -> int:
             if a.shot:
                 page.screenshot(path=str(shot))
 
-        p14_checks(page, url, check, a.shot)
-        p15_checks(page, url, check, a.shot, tiles, a.built)
-        p16_checks(page, url, check, a.shot)
-        p17_fit_checks(page, url, check)
-        p17_checks(page, url, check, a.shot)
-        p18_checks(page, url, check, a.shot)
+        if not a.only:
+            p14_checks(page, url, check, a.shot)
+            p15_checks(page, url, check, a.shot, tiles, a.built)
+            p16_checks(page, url, check, a.shot)
+            p17_fit_checks(page, url, check)
+            p17_checks(page, url, check, a.shot)
+            p18_checks(page, url, check, a.shot)
+        if not a.only or a.only in ("p19", "p19-1"):
+            p19_poi_checks(page, url, check, a.shot)
         if a.perf:
-            perf = perf_check(p, url, check)
-            print(f"성능(P18): {perf}")
+            if not a.only:
+                perf = perf_check(p, url, check)
+                print(f"성능(P18): {perf}")
+            print(f"성능(P19-1): {poi_filter_perf(p, url, check)}")
 
         if a.built:
             other = [e for e in console_errors if "api.vworld.kr" not in e and "Failed to load resource" not in e]

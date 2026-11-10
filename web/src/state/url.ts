@@ -1,12 +1,15 @@
 /**
  * 지도 상태 ↔ URL (docs/map/PLAN.md P14). 순수 함수 — Vitest로 검사한다.
  * 예: ?layers=projects,impact250,impact500,parcels&op=projects:80&base=gray&ov=1&sel=project:1&tab=layers&c=127.05,37.50&z=13
- * P18: ph=cafe,clinic/치과 (숨긴 편의시설 분류·하위 분류), route=100100025 (노선 선택), r=127.02760,37.49794,500 (반경 보기)
+ * P18: route=100100025 (노선 선택), r=127.02760,37.49794,500 (반경 보기)
+ * P19-1: poi=supermarket,medical:dental+oriental,academy:language (켠 편의시설 분류·하위 분류, infra/poiSelect.ts).
+ *   편의시설은 layers 파라미터에 쓰지 않는다 (layers의 'pois'는 무시하고, 켜짐 여부는 poi에서 정한다)
  * - 잘못된 값은 무시하고 기본값을 쓴다.
  * - 기본값과 같은 항목은 URL에 쓰지 않는다 (layers는 기본과 다를 때만, 카메라는 이동한 뒤에만).
  */
 import { BASEMAP_ORDER, DEFAULT_BASEMAP, type BasemapId } from '../map/basemaps'
 import { formatRadius, parseRadius, type Radius } from '../infra/radius'
+import { formatPoi, parsePoi, poiAny, type PoiSel } from '../infra/poiSelect'
 
 export const PANEL_LAYER_IDS = [
   'projects', 'impact250', 'impact500', 'parcels', 'regulations',
@@ -42,8 +45,8 @@ export type UrlState = {
   selected: Selected
   leftTab: LeftTab
   camera: Camera
-  /** 숨긴 편의시설 분류('cafe') 또는 하위 분류('clinic/치과') */
-  poiHidden: string[]
+  /** 켠 편의시설 분류 → 켠 하위 분류 (P19-1). layers.pois.visible은 이 값에서 정한다 */
+  poi: PoiSel
   /** 노선 선택 모드: 노선 id */
   route: string | null
   /** 반경 보기 */
@@ -63,7 +66,7 @@ export function defaultLayers(): LayerStates {
 
 export function defaultUrlState(): UrlState {
   return { layers: defaultLayers(), basemap: DEFAULT_BASEMAP, overlap: false, selected: null, leftTab: 'layers', camera: null,
-    poiHidden: [], route: null, radius: null }
+    poi: {}, route: null, radius: null }
 }
 
 /** sel=parcel:{19자리 PNU} = 지도 클릭 필지 조회 (P15). parcel:{사업}:{PNU}는 Propedia 사업 필지 */
@@ -95,10 +98,10 @@ export function parseUrl(search: string): UrlState {
   const lv = q.get('layers')
   if (lv !== null) {
     const ids = lv.split(',').map((x) => x.trim()).filter(Boolean)
-    const valid = ids.filter(isPanelId)
+    const valid = ids.filter(isPanelId).filter((id) => id !== 'pois')
     // 비어 있으면 '모두 끔', 모르는 이름만 있으면 기본값
     if (ids.length === 0 || valid.length > 0)
-      for (const id of PANEL_LAYER_IDS) s.layers[id].visible = valid.includes(id)
+      for (const id of PANEL_LAYER_IDS) if (id !== 'pois') s.layers[id].visible = valid.includes(id)
   }
   for (const part of (q.get('op') ?? '').split(',')) {
     const [id, v] = part.split(':')
@@ -117,21 +120,19 @@ export function parseUrl(search: string): UrlState {
   const z = Number(q.get('z'))
   if (c.length === 2 && inRange(c[0], LON) && inRange(c[1], LAT) && q.get('z') !== null && inRange(z, ZOOM))
     s.camera = { lon: c[0], lat: c[1], zoom: z }
-  const ph = (q.get('ph') ?? '').split(',').map((x) => x.trim()).filter((x) => POI_HIDDEN_RE.test(x))
-  s.poiHidden = [...new Set(ph)].sort()
+  s.poi = parsePoi(q.get('poi'))
+  s.layers.pois.visible = poiAny(s.poi)
   const route = q.get('route')
   if (route && /^\d{1,12}$/.test(route)) s.route = route
   s.radius = parseRadius(q.get('r'))
   return s
 }
 
-const POI_HIDDEN_RE = /^[a-z]{2,20}(\/[^,/]{1,12})?$/
-
 /** 우리 키만 쓴 쿼리 문자열 (앞의 ? 없음). 기본값과 같은 항목은 뺀다. */
 export function toSearch(s: UrlState): string {
   const d = defaultUrlState()
   const q = new URLSearchParams()
-  const visible = PANEL_LAYER_IDS.filter((id) => s.layers[id]?.visible)
+  const visible = PANEL_LAYER_IDS.filter((id) => id !== 'pois' && s.layers[id]?.visible)
   if (visible.join(',') !== DEFAULT_VISIBLE.join(',')) q.set('layers', visible.join(','))
   const op = PANEL_LAYER_IDS.filter((id) => s.layers[id] && s.layers[id].opacity !== 100).map(
     (id) => `${id}:${Math.round(s.layers[id].opacity)}`,
@@ -145,19 +146,20 @@ export function toSearch(s: UrlState): string {
     q.set('c', `${s.camera.lon.toFixed(5)},${s.camera.lat.toFixed(5)}`)
     q.set('z', s.camera.zoom.toFixed(2))
   }
-  if (s.poiHidden.length) q.set('ph', [...s.poiHidden].sort().join(','))
+  const poi = formatPoi(s.poi)
+  if (poi) q.set('poi', poi)
   if (s.route) q.set('route', s.route)
   if (s.radius) q.set('r', formatRadius(s.radius))
   return q.toString()
 }
 
-export const URL_KEYS = ['layers', 'op', 'base', 'ov', 'sel', 'tab', 'c', 'z', 'ph', 'route', 'r'] as const
+export const URL_KEYS = ['layers', 'op', 'base', 'ov', 'sel', 'tab', 'c', 'z', 'poi', 'route', 'r'] as const
 
 /** 지금 주소의 다른 파라미터(debug 등)는 두고 우리 키만 바꾼 search 문자열 */
 export function mergeSearch(current: string, ours: string): string {
   const q = new URLSearchParams(current)
   for (const k of URL_KEYS) q.delete(k)
   for (const [k, v] of new URLSearchParams(ours)) q.set(k, v)
-  const s = q.toString().replaceAll('%2C', ',').replaceAll('%3A', ':').replaceAll('%2F', '/')
+  const s = q.toString().replaceAll('%2C', ',').replaceAll('%3A', ':').replaceAll('%2F', '/').replaceAll('%2B', '+')
   return s ? `?${s}` : ''
 }

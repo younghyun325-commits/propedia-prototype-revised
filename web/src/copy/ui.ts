@@ -337,6 +337,12 @@ export const UI = {
     expandSubs: '하위 분류 펼치기',
     collapseSubs: '하위 분류 접기',
     poiNote: '표에 있는 업종만 싣습니다 (seed/poi_categories.yaml)',
+    // P19-1 분류별·하위 분류별 선택
+    poiCats: '편의시설 분류',
+    only: '이것만',
+    onlyLabel: (name: string) => `${name}만 보기 (나머지 편의시설 끄기)`,
+    onlyHelp: 'Alt+클릭: 이것만 보기',
+    offOnMap: '지도에서 꺼짐',
     excluded: (reasons: string) => `제외: ${reasons}`,
     loading: '불러오는 중',
     loadError: '생활 인프라 레이어를 불러오지 못했습니다',

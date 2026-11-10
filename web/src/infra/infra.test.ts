@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import manifestRaw from '../../../public/data/layers/manifest.json?raw'
 import type { BusRoute, BusStopProps, PoiCategory, PoiProps, SchoolProps, StationProps } from './data'
-import { poiVisible, routeIndex } from './data'
+import { routeIndex } from './data'
 import { HIT_PX, iconHit, isArsQuery, routeRank } from './pick'
 import { busSummary, circleTouches, formatRadius, haversine, parseRadius, poiSummary, summarize, within } from './radius'
 import { searchPlaces, searchRoutes, searchStops } from './search'
@@ -89,19 +89,19 @@ describe('반경 보기 (P18 5단계)', () => {
   })
 })
 
-describe('URL 상태 (P18): r · route · ph', () => {
+describe('URL 상태 (P18): r · route · poi', () => {
   it('왕복', () => {
-    const q = '?r=127.02760,37.49790,250&route=100100025&ph=cafe,clinic/치과'
+    const q = '?r=127.02760,37.49790,250&route=100100025&poi=cafe,medical:dental'
     const s = parseUrl(q)
     expect(s.radius).toEqual({ lon: 127.0276, lat: 37.4979, m: 250 })
     expect(s.route).toBe('100100025')
-    expect(s.poiHidden).toEqual(['cafe', 'clinic/치과'])
+    expect(s.poi).toEqual({ medical: ['dental'], cafe: [] })
     expect(parseUrl(`?${toSearch(s)}`)).toEqual(s)
     expect(mergeSearch('?debug=1', toSearch(s))).toContain('route=100100025')
   })
-  it('잘못된 route·ph는 무시', () => {
-    const s = parseUrl('?route=abc&ph=Cafe,,clinic/a/b')
-    expect([s.route, s.poiHidden]).toEqual([null, []])
+  it('잘못된 route·poi는 무시', () => {
+    const s = parseUrl('?route=abc&poi=Cafe,,clinic:a,medical:x')
+    expect([s.route, s.poi]).toEqual([null, {}])
   })
   it('sel: 생활 인프라 종류', () => {
     for (const v of ['school:B000011449', 'station:0222', 'bus:22012', 'poi:MA010120220800065946'])
@@ -156,14 +156,14 @@ describe('검색 판별 (P18)', () => {
 
 describe('지도 레이어 (P18)', () => {
   const E = { type: 'FeatureCollection', features: [] } as never
-  const ids = infraLayers({ schools: E, stations: E, bus: E, pois: E }, '#5d34a9').map((l) => l.id)
-  it('불러온 것만 레이어로, 클러스터는 학교·편의시설', () => {
-    expect(ids).toEqual(['pois-cluster', 'pois-icon', 'pois-selected', 'schools-cluster', 'schools-icon', 'schools-selected',
+  const ids = infraLayers({ schools: E, stations: E, bus: E, pois: { cafe: E } }, '#5d34a9').map((l) => l.id)
+  it('불러온 것만 레이어로, 클러스터는 학교·편의시설(분류마다)', () => {
+    expect(ids).toEqual(['poi-cafe-cluster', 'poi-cafe', 'poi-cafe-selected', 'schools-cluster', 'schools-icon', 'schools-selected',
       'bus-icon', 'bus-route', 'bus-selected', 'stations-icon', 'stations-selected'])
-    expect(infraLayers({ schools: null, stations: E, bus: null, pois: null }, '#000').map((l) => l.id)).toEqual(['stations-icon', 'stations-selected'])
+    expect(infraLayers({ schools: null, stations: E, bus: null, pois: {} }, '#000').map((l) => l.id)).toEqual(['stations-icon', 'stations-selected'])
   })
   it('정류장은 줌 15 이상, 노선 정류장 필터', () => {
-    const bus = infraLayers({ schools: null, stations: null, bus: E, pois: null }, '#000')
+    const bus = infraLayers({ schools: null, stations: null, bus: E, pois: {} }, '#000')
     expect(bus.find((l) => l.id === 'bus-icon')!.minzoom).toBe(15)
     expect(routeFilter(['22012'])).toEqual(['all', ['!', ['has', 'point_count']], ['in', ['get', 'ars_no'], ['literal', ['22012']]]])
   })
@@ -173,16 +173,11 @@ describe('지도 레이어 (P18)', () => {
     expect(plan['schools-icon.icon-opacity']).toEqual(['case', ['==', ['get', 'impact_buffer_m'], null], 0.25, 1])
     expect(plan['schools-cluster.circle-opacity']).toBe(0.95)
   })
-  it('편의시설 숨김: 분류 · 하위 분류', () => {
-    expect(poiVisible({ category: 'clinic', sub_category: '치과' }, ['clinic/치과'])).toBe(false)
-    expect(poiVisible({ category: 'clinic', sub_category: '의원' }, ['clinic/치과'])).toBe(true)
-    expect(poiVisible({ category: 'cafe' }, ['cafe'])).toBe(false)
-  })
   it('manifest: 생활 인프라 4종 + 노선, 편의시설 6분류와 하위 분류', () => {
     const m = JSON.parse(manifestRaw).layers
     for (const k of ['schools', 'stations', 'bus_stops', 'bus_routes', 'pois']) expect(m[k]?.count).toBeGreaterThan(0)
-    expect(m.pois.categories.map((c: PoiCategory) => c.key)).toEqual(['supermarket', 'convenience', 'clinic', 'pharmacy', 'cafe', 'academy'])
-    expect(m.pois.categories.find((c: PoiCategory) => c.key === 'clinic').sub_categories).toEqual(['병원', '의원', '치과', '한방'])
+    expect(m.pois.categories.map((c: PoiCategory) => c.key)).toEqual(['supermarket', 'convenience', 'medical', 'pharmacy', 'cafe', 'academy'])
+    expect(m.pois.categories.find((c: PoiCategory) => c.key === 'medical').sub_categories).toEqual(['병원', '의원', '치과', '한방'])
     expect(m.pois.categories.reduce((a: number, c: PoiCategory) => a + c.count, 0)).toBe(m.pois.count)
   })
 })

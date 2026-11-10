@@ -5,6 +5,7 @@
 # 건수(gangnam)는 numOfRows=1 조회의 totalCount — 확인용 기록이며 빌드는 실제 수집 결과로 다시 센다.
 # 아이콘은 lucide 이름. 색은 늘리지 않고 아이콘 모양으로만 구분한다 (docs/map/PLAN.md 지도 레이어 모양).
 # 나중에 바꿀 때는 excluded의 항목을 categories로 옮기고 fetch_pois를 다시 실행한다.
+# P19-1: 병원·의원 분류 key를 clinic → medical로 바꾸고(지도 레이어 poi-medical, URL poi=medical:dental), 하위 분류 slug(sub_keys)를 더했다.
 status: confirmed
 confirmed_by: "영현 (2026-11-11, P18 결정 D1)"
 source: "소상공인시장진흥공단 상가(상권)정보 (공공데이터포털 15012005, 이용허락범위 제한 없음)"
@@ -21,10 +22,11 @@ categories:
     icon: store
     codes:
       - {code: G20405, name: "편의점", gangnam: 818}
-  - key: clinic
+  - key: medical
     label: "병원·의원"
     icon: hospital
     sub_categories: ["병원", "의원", "치과", "한방"]
+    sub_keys: {"병원": hospital, "의원": clinic, "치과": dental, "한방": oriental}   # URL·레이어 필터용 (P19-1)
     codes:
       - {code: Q10101, name: "종합병원", gangnam: 8, sub: "병원"}
       - {code: Q10102, name: "일반병원", gangnam: 34, sub: "병원"}
@@ -57,6 +59,7 @@ categories:
     label: "학원"
     icon: book-open
     sub_categories: ["교과", "외국어", "예체능·기타"]
+    sub_keys: {"교과": subject, "외국어": language, "예체능·기타": arts}
     codes:
       - {code: P10501, name: "입시·교과학원", gangnam: 2030, sub: "교과"}
       - {code: P10615, name: "외국어학원", gangnam: 245, sub: "외국어"}

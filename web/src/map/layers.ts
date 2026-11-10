@@ -12,6 +12,7 @@ import type { FeatureCollection, Geometry } from 'geojson'
 import type { LayerSpecification } from 'maplibre-gl'
 import type { PanelLayerId } from '../state/url'
 import { REF_OPACITY } from './reference'
+import { POI_KEYS, poiClusterLayer, poiIconLayer, poiSelectedLayer } from '../infra/poiSelect'
 
 export type LayerKind = 'project' | 'impact' | 'parcel' | 'regulation'
 export type PropediaProps = {
@@ -257,13 +258,14 @@ export const PANEL_LAYERS: Record<PanelLayerId, { layers: string[]; paint: Paint
       { layer: 'bus-route', prop: 'icon-opacity', base: 1, noOverlap: true },
     ],
   },
+  // P19-1 편의시설: 분류마다 레이어 3개. 켜고 끄기는 분류별(MapView applyState), 투명도·겹침 보기는 여기서 한꺼번에
   pois: {
-    layers: ['pois-cluster', 'pois-icon', 'pois-selected'],
-    paint: [
-      { layer: 'pois-icon', prop: 'icon-opacity', base: 1 },
-      { layer: 'pois-cluster', prop: 'circle-opacity', base: 0.95, noOverlap: true },
-      { layer: 'pois-cluster', prop: 'circle-stroke-opacity', base: 1, noOverlap: true },
-    ],
+    layers: POI_KEYS.flatMap((k) => [poiClusterLayer(k), poiIconLayer(k), poiSelectedLayer(k)]),
+    paint: POI_KEYS.flatMap((k) => [
+      { layer: poiIconLayer(k), prop: 'icon-opacity', base: 1 },
+      { layer: poiClusterLayer(k), prop: 'circle-opacity', base: 0.95, noOverlap: true },
+      { layer: poiClusterLayer(k), prop: 'circle-stroke-opacity', base: 1, noOverlap: true },
+    ]),
   },
 }
 

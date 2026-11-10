@@ -12,7 +12,8 @@ import { useMapStore } from '../state/useMapStore'
 import { PANEL_LAYER_IDS, type PanelLayerId } from '../state/url'
 import { Tooltip } from '../ui/Floating'
 import { LayerSwatch, type SwatchKind } from './LayerSwatch'
-import { ChipSwatch, InfraZoomHint, infraSwatchIcon, PoiCategoryRows } from './InfraRows'
+import { ChipSwatch, InfraZoomHint, infraSwatchIcon, PoiCategoryRows, TriCheckbox } from './InfraRows'
+import { POI_KEYS, clickAll, triAll } from '../infra/poiSelect'
 import type { InfraLayer } from '../infra/data'
 
 const isPanelId = (s: string): s is PanelLayerId => (PANEL_LAYER_IDS as readonly string[]).includes(s)
@@ -87,6 +88,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
   const state = useMapStore((s) => (panelId ? s.layers[panelId] : null))
   const setVisible = useMapStore((s) => s.setLayerVisible)
   const setOpacity = useMapStore((s) => s.setLayerOpacity)
+  const poiTri = useMapStore((s) => (l.id === 'pois' ? triAll(s.poi) : null))
   const zoom = useMapStore((s) => s.zoom)
   const [open, setOpen] = useState(false)
   const enabled = l.status === 'ready' && panelId !== null
@@ -103,18 +105,26 @@ function LayerRow({ l }: { l: ManifestLayer }) {
       className={`py-1 ${enabled ? '' : 'opacity-70'}`}
     >
       <div className="flex items-center gap-2">
-        <input
-          id={inputId}
-          type="checkbox"
-          data-testid={`layer-toggle-${l.id}`}
-          checked={!!state?.visible}
-          disabled={!enabled}
-          onChange={(e) => panelId && setVisible(panelId, e.target.checked)}
-          className="h-4 w-4 shrink-0 accent-brand-indigo"
-        />
+        {poiTri !== null ? (
+          // 편의시설 (P19-1): 6분류 모두 = 체크, 일부 = 일부 선택, 없음 = 빈칸. 일부·빈칸 → 모두 켜기, 체크 → 모두 끄기
+          <TriCheckbox id={inputId} tri={poiTri} disabled={!enabled} testId={`layer-toggle-${l.id}`} className="h-4 w-4"
+            onToggle={() => useMapStore.getState().setPoi(clickAll(useMapStore.getState().poi))} />
+        ) : (
+          <input
+            id={inputId}
+            type="checkbox"
+            data-testid={`layer-toggle-${l.id}`}
+            checked={!!state?.visible}
+            disabled={!enabled}
+            onChange={(e) => panelId && setVisible(panelId, e.target.checked)}
+            className="h-4 w-4 shrink-0 accent-brand-indigo"
+          />
+        )}
         <label htmlFor={inputId} className="flex min-w-0 flex-1 items-center gap-2">
           <span className="flex shrink-0">
-            {l.group === 'infra' && l.status === 'ready' && infraSwatchIcon(l.id) ? (
+            {l.id === 'pois' && l.status === 'ready' ? (
+              <PoiLegend opacity={state ? Math.max(0.15, state.opacity / 100) : 1} />
+            ) : l.group === 'infra' && l.status === 'ready' && infraSwatchIcon(l.id) ? (
               <span className="flex w-7 justify-center" style={{ opacity: state ? Math.max(0.15, state.opacity / 100) : 1 }}>
                 <ChipSwatch icon={infraSwatchIcon(l.id)!} />
               </span>
@@ -199,6 +209,17 @@ function LayerRow({ l }: { l: ManifestLayer }) {
         </ul>
       )}
     </li>
+  )
+}
+
+/** 편의시설 범례 (P19-1): 켠 분류 아이콘만. 모두 꺼져 있으면 대표 아이콘 하나 */
+function PoiLegend({ opacity }: { opacity: number }) {
+  const sel = useMapStore((s) => s.poi)
+  const on = POI_KEYS.filter((k) => k in sel)
+  return (
+    <span className="flex min-w-7 justify-center -space-x-1.5" style={{ opacity }} data-testid="poi-legend" data-on={on.join(',')}>
+      {(on.length ? on : ['convenience']).map((k) => <ChipSwatch key={k} icon={k} small={on.length > 1} />)}
+    </span>
   )
 }
 

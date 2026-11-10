@@ -34,12 +34,16 @@ def test_store_fixture_has_no_key_and_parses():
 
 def test_poi_categories_applied_excluded_and_outside_dropped():
     codes, cats = fp.load_categories()
-    assert list(cats) == ["supermarket", "convenience", "clinic", "pharmacy", "cafe", "academy"]
-    assert cats["clinic"]["sub_categories"] == ["병원", "의원", "치과", "한방"]
+    assert list(cats) == ["supermarket", "convenience", "medical", "pharmacy", "cafe", "academy"]
+    assert cats["medical"]["sub_categories"] == ["병원", "의원", "치과", "한방"]
+    assert cats["medical"]["sub_keys"] == {"병원": "hospital", "의원": "clinic", "치과": "dental", "한방": "oriental"}
+    assert cats["academy"]["sub_keys"] == {"교과": "subject", "외국어": "language", "예체능·기타": "arts"}
+    for c in cats.values():                                    # 하위 분류마다 slug 하나
+        assert sorted(c["sub_keys"]) == sorted(c["sub_categories"])
     feats, rep = fp.poi_features(fp.store_items(json.loads(FIX.read_text(encoding="utf-8"))), codes, NO_ZONES, "202609")
     by = {f["properties"]["category_code"]: f["properties"] for f in feats}
     assert set(by) == {"I21201", "Q10210", "G20405", "Q10211"}           # 요가/필라테스(P10603)는 표에 없음
-    assert by["Q10210"]["category"] == "clinic" and by["Q10210"]["sub_category"] == "치과"
+    assert by["Q10210"]["category"] == "medical" and by["Q10210"]["sub_category"] == "치과"
     assert by["Q10211"]["sub_category"] == "한방"
     assert "sub_category" not in by["I21201"]
     assert by["G20405"]["name"].endswith(" 견본점")                        # 상호명 + 지점명

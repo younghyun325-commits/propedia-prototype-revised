@@ -370,6 +370,7 @@ def load_categories(path: Path = CATEGORIES) -> tuple[dict, dict]:
     for c in y["categories"]:
         cats[c["key"]] = {"key": c["key"], "label": c["label"], "icon": c["icon"], "note": c.get("note"),
                           "sub_categories": c.get("sub_categories") or [],
+                          "sub_keys": c.get("sub_keys") or {},
                           "codes": {cd["code"]: cd["name"] for cd in c["codes"]}}   # 업종 소분류 이름은 manifest에서
         for cd in c["codes"]:
             codes[cd["code"]] = {"category": c["key"], "label": c["label"], "sub": cd.get("sub"), "name": cd["name"]}

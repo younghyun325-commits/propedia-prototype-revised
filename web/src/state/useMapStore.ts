@@ -3,6 +3,7 @@ import type { EvidenceItem } from '../api/feature'
 import type { ParcelAt } from '../api/parcel'
 import type { BasemapId } from '../map/basemaps'
 import type { Radius } from '../infra/radius'
+import { poiAll, poiAny, poiNone, type PoiSel } from '../infra/poiSelect'
 import {
   defaultUrlState, isParcelLookup, parseUrl, type Camera, type LayerStates, type LeftTab, type PanelLayerId, type Selected,
 } from './url'
@@ -41,7 +42,7 @@ export type MapState = {
   selected: Selected
   leftTab: LeftTab
   camera: Camera
-  poiHidden: string[]
+  poi: PoiSel
   route: string | null
   radius: Radius | null
   // ---- 화면 안 상태
@@ -82,7 +83,8 @@ export type MapState = {
   openEvidence: (items: EvidenceItem[], index: number) => void
   setEvidenceIndex: (index: number) => void
   closeEvidence: () => void
-  togglePoiHidden: (key: string) => void
+  /** 편의시설 선택 (P19-1): layers.pois.visible도 함께 맞춘다 */
+  setPoi: (sel: PoiSel) => void
   setRoute: (id: string | null) => void
   setRadius: (r: Radius | null) => void
   setRadiusTool: (v: boolean) => void
@@ -97,6 +99,10 @@ function initialUrlState() {
 }
 
 let nonce = 0
+
+function withPoi(layers: LayerStates, poi: PoiSel): { layers: LayerStates; poi: PoiSel } {
+  return { poi, layers: { ...layers, pois: { ...layers.pois, visible: poiAny(poi) } } }
+}
 
 export const useMapStore = create<MapState>()((set) => {
   const u = initialUrlState()
@@ -134,12 +140,18 @@ export const useMapStore = create<MapState>()((set) => {
     setMapMoving: (mapMoving) => set(mapMoving ? { mapMoving, hovered: null } : { mapMoving }),
     setBasemap: (basemap) => set({ basemap }),
     toggleTilt3d: () => set((s) => ({ tilt3d: !s.tilt3d })),
-    setLayerVisible: (id, v) => set((s) => ({ layers: { ...s.layers, [id]: { ...s.layers[id], visible: v } } })),
+    // 편의시설 행·그룹 켜기는 '6분류 모두 켜기·끄기'와 같다 (P19-1)
+    setLayerVisible: (id, v) =>
+      set((s) =>
+        id === 'pois'
+          ? withPoi(s.layers, v ? poiAll() : poiNone())
+          : { layers: { ...s.layers, [id]: { ...s.layers[id], visible: v } } },
+      ),
     setLayersVisible: (ids, v) =>
       set((s) => {
         const layers = { ...s.layers }
-        for (const id of ids) layers[id] = { ...layers[id], visible: v }
-        return { layers }
+        for (const id of ids) if (id !== 'pois') layers[id] = { ...layers[id], visible: v }
+        return ids.includes('pois') ? withPoi(layers, v ? poiAll() : poiNone()) : { layers }
       }),
     setLayerOpacity: (id, pct) =>
       set((s) => ({
@@ -159,8 +171,7 @@ export const useMapStore = create<MapState>()((set) => {
     setEvidenceIndex: (index) =>
       set((s) => (s.evidence ? { evidence: { ...s.evidence, index: Math.max(0, Math.min(s.evidence.items.length - 1, index)) } } : {})),
     closeEvidence: () => set({ evidence: null }),
-    togglePoiHidden: (key) =>
-      set((s) => ({ poiHidden: s.poiHidden.includes(key) ? s.poiHidden.filter((k) => k !== key) : [...s.poiHidden, key].sort() })),
+    setPoi: (sel) => set((s) => withPoi(s.layers, sel)),
     // 노선을 고르면 정류장 레이어를 켠다 (강조할 정류장이 보이게)
     setRoute: (route) =>
       set((s) => (route ? { route, layers: { ...s.layers, bus_stops: { ...s.layers.bus_stops, visible: true } } } : { route: null })),

@@ -1,6 +1,8 @@
 /**
  * 반경 보기 결과 (P18 5단계): 원 안 개수를 분류별 표로. 숫자만 (점수·순위·많음/적음 표현 없음).
  * 계산은 브라우저에 불러온 GeoJSON으로 (infra/radius.ts). 꺼져 있던 정류장·편의시설은 원을 그릴 때 불러온다.
+ * P19-1: 편의시설은 모든 분류 개수를 보여 주되 지도에서 꺼진 분류·하위 분류 줄은 흐리게 + '지도에서 꺼짐'.
+ *   분류·하위 분류 이름을 누르면 '이것만 보기'와 같다.
  */
 import { useMemo } from 'react'
 import { X } from 'lucide-react'
@@ -12,12 +14,47 @@ import type { PropediaProps } from '../map/layers'
 import { useMapStore } from '../state/useMapStore'
 import { GlassPanel } from '../ui/GlassPanel'
 import { RADII, summarize, type PoiRow } from './radius'
+import { poiNode, solo, type PoiSel } from './poiSelect'
 import type { useInfra } from './useInfra'
 
 type Infra = ReturnType<typeof useInfra>
 
 const joinParts = (xs: [string, number][]) => xs.map(([k, n]) => `${k || UI.poi.routeType('')} ${n}`).join(' · ')
-const poiText = (r: PoiRow) => UI.radius.poiLine(r.label, r.count, r.subs.length ? joinParts(r.subs) : '')
+
+function PoiLine({ r, sel }: { r: PoiRow; sel: PoiSel }) {
+  const setPoi = useMapStore((s) => s.setPoi)
+  const catOn = r.key in sel
+  const slugOf = (label: string) => poiNode(r.key)?.subs.find((s) => s.label === label)?.slug
+  const off = <span className="ml-1 text-[10px]" data-testid="radius-poi-off">{UI.infra.offOnMap}</span>
+  return (
+    <li data-cat={r.key} data-on={catOn ? '1' : '0'} className={catOn ? '' : 'opacity-50'}>
+      <button type="button" className="underline-offset-2 hover:underline" data-testid="radius-poi-cat"
+        aria-label={UI.infra.onlyLabel(r.label)} onClick={() => setPoi(solo(r.key))}>
+        {r.label}
+      </button>{' '}
+      {r.count.toLocaleString('ko-KR')}
+      {!catOn && off}
+      {r.subs.length > 0 && (
+        <ul className="ml-3">
+          {r.subs.map(([label, n]) => {
+            const slug = slugOf(label)
+            const on = catOn && !!slug && sel[r.key].includes(slug)
+            return (
+              <li key={label} data-sub={slug} data-on={on ? '1' : '0'} className={on || !catOn ? '' : 'opacity-50'}>
+                <button type="button" className="underline-offset-2 hover:underline" data-testid="radius-poi-sub"
+                  aria-label={UI.infra.onlyLabel(label)} onClick={() => slug && setPoi(solo(r.key, slug))}>
+                  {label}
+                </button>{' '}
+                {n.toLocaleString('ko-KR')}
+                {catOn && !on && off}
+              </li>
+            )
+          })}
+        </ul>
+      )}
+    </li>
+  )
+}
 
 export function RadiusPanel({ insets, infra, apartments, projects }: {
   insets: Insets
@@ -27,6 +64,7 @@ export function RadiusPanel({ insets, infra, apartments, projects }: {
 }) {
   const radius = useMapStore((s) => s.radius)
   const setRadius = useMapStore((s) => s.setRadius)
+  const poiSel = useMapStore((s) => s.poi)
   const res = useMemo(() => {
     if (!radius) return null
     const polys = (projects?.features ?? []).flatMap((f) =>
@@ -97,7 +135,7 @@ export function RadiusPanel({ insets, infra, apartments, projects }: {
             <td className="tabular-nums" data-testid="radius-row-pois">
               {res.pois ? (
                 <ul className="space-y-0.5">
-                  {res.pois.map((r) => <li key={r.key} data-cat={r.key}>{poiText(r)}</li>)}
+                  {res.pois.map((r) => <PoiLine key={r.key} r={r} sel={poiSel} />)}
                 </ul>
               ) : (
                 UI.radius.loading

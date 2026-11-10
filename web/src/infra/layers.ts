@@ -5,13 +5,18 @@
  * - 버스정류장: 작은 칩, 줌 15 이상. 이름은 줌 17 이상. 중앙차로만 테두리가 굵은 칩
  * - 노선 선택 모드: 그 노선의 강남구 정류장만 크게 + 굵은 테두리(줌 제한 없음), 나머지 정류장은 흐리게. 선은 그리지 않는다
  * - 선택: 브랜드 색 고리
+ * - 편의시설(P19-1): 분류마다 소스·레이어 따로 (poi-{key}, poi-{key}-cluster, poi-{key}-selected).
+ *   하위 분류는 setFilter로만 거른다 (infra/poiSelect.ts). 클러스터 숫자는 켠 하위 분류 건수만
  */
 import type { FeatureCollection, Point } from 'geojson'
 import type { LayerSpecification } from 'maplibre-gl'
 import type { BusStopProps, PoiProps, SchoolProps, StationProps } from './data'
+import {
+  POI_KEYS, clusterFilter, clusterRadiusExpr, iconFilter, poiClusterLayer, poiIconLayer, poiSelectedLayer, poiSourceId,
+} from './poiSelect'
 
 export const INFRA_SOURCES = {
-  schools: 'infra-schools', stations: 'infra-stations', bus_stops: 'infra-bus', pois: 'infra-pois',
+  schools: 'infra-schools', stations: 'infra-stations', bus_stops: 'infra-bus',
 } as const
 export const RADIUS_SOURCE = 'infra-radius'
 export const CLUSTER_MAX_ZOOM = 14
@@ -21,21 +26,24 @@ export const BUS_MIN_ZOOM = 15
 export const BUS_NAME_MIN_ZOOM = 17
 /** 노선 선택 모드에서 다른 정류장의 투명도 배율 */
 export const ROUTE_DIM = 0.3
-export const CLUSTER_LAYERS = ['schools-cluster', 'pois-cluster'] as const
+export const CLUSTER_LAYERS = ['schools-cluster', ...POI_KEYS.map(poiClusterLayer)]
 /** 클릭 판정 대상 아이콘 레이어 → 종류 */
 export const ICON_LAYERS: Record<string, string> = {
-  'schools-icon': 'school', 'stations-icon': 'station', 'bus-icon': 'bus_stop', 'bus-route': 'bus_stop', 'pois-icon': 'poi',
+  'schools-icon': 'school', 'stations-icon': 'station', 'bus-icon': 'bus_stop', 'bus-route': 'bus_stop',
+  ...Object.fromEntries(POI_KEYS.map((k) => [poiIconLayer(k), 'poi'])),
 }
 /** 선택 강조 레이어 → 선택 종류 */
 export const INFRA_SELECTED: Record<string, string> = {
-  'schools-selected': 'school', 'stations-selected': 'station', 'bus-selected': 'bus', 'pois-selected': 'poi',
+  'schools-selected': 'school', 'stations-selected': 'station', 'bus-selected': 'bus',
+  ...Object.fromEntries(POI_KEYS.map((k) => [poiSelectedLayer(k), 'poi'])),
 }
 
 export type InfraData = {
   schools: FeatureCollection<Point, SchoolProps> | null
   stations: FeatureCollection<Point, StationProps> | null
   bus: FeatureCollection<Point, BusStopProps> | null
-  pois: FeatureCollection<Point, PoiProps> | null
+  /** 불러온 편의시설 분류만 (분류 key → 점) */
+  pois: Partial<Record<string, FeatureCollection<Point, PoiProps>>>
 }
 
 const HAS_COUNT = ['has', 'point_count']
@@ -64,16 +72,23 @@ export function routeFilter(ars: string[]): unknown[] {
   return ['all', ['!', HAS_COUNT], ['in', ['get', 'ars_no'], ['literal', ars]]]
 }
 
+/** 편의시설 분류 하나의 레이어 (처음 만들 때 켠 하위 분류 필터를 넣는다. 이후는 setFilter) */
+export function poiLayers(key: string, on: string[], hl: string): LayerSpecification[] {
+  const src = poiSourceId(key)
+  const c = cluster(poiClusterLayer(key), src)
+  return [
+    { ...c, filter: clusterFilter(key, on) as never,
+      paint: { ...(c as { paint: object }).paint, 'circle-radius': clusterRadiusExpr(key, on) as never } } as LayerSpecification,
+    icon(poiIconLayer(key), src, `chip-${key}`, { filter: iconFilter(key, on) } as never),
+    ring(poiSelectedLayer(key), src, hl, 15),
+  ]
+}
+
 /** 불러온 데이터만 레이어로 (아래에서 위: 편의시설 → 학교 → 정류장 → 역 → 반경 원은 따로) */
-export function infraLayers(d: InfraData, hl: string): LayerSpecification[] {
+export function infraLayers(d: InfraData, hl: string, poiOn: Record<string, string[]> = {}): LayerSpecification[] {
   const S = INFRA_SOURCES
   const out: LayerSpecification[] = []
-  if (d.pois)
-    out.push(
-      cluster('pois-cluster', S.pois),
-      icon('pois-icon', S.pois, ['concat', 'chip-', ['get', 'category']], { minzoom: 0 } as never),
-      ring('pois-selected', S.pois, hl, 15),
-    )
+  for (const k of POI_KEYS) if (d.pois[k]) out.push(...poiLayers(k, poiOn[k] ?? [], hl))
   if (d.schools)
     out.push(cluster('schools-cluster', S.schools), icon('schools-icon', S.schools, 'chip-school'), ring('schools-selected', S.schools, hl, 15))
   if (d.bus)
@@ -95,7 +110,3 @@ export function radiusLayers(): LayerSpecification[] {
   ]
 }
 
-/** 숨긴 분류·하위 분류를 뺀 편의시설 (클러스터는 소스 데이터로 계산되므로 필터가 아니라 데이터에서 뺀다) */
-export function poiCollection(features: FeatureCollection<Point, PoiProps>['features'], visible: (p: PoiProps) => boolean) {
-  return { type: 'FeatureCollection', features: features.filter((f) => visible(f.properties)) } as FeatureCollection<Point, PoiProps>
-}

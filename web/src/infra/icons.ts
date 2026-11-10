@@ -14,13 +14,13 @@ type IconC = ComponentType<{ size?: number; color?: string; strokeWidth?: number
 /** 칩 id → 아이콘 (편의시설 분류 key는 seed/poi_categories.yaml과 같다) */
 export const ICON_OF: Record<string, IconC> = {
   school: School, station: TrainFront, bus: Bus,
-  supermarket: ShoppingCart, convenience: Store, clinic: Hospital, pharmacy: Pill, cafe: Coffee, academy: BookOpen,
+  supermarket: ShoppingCart, convenience: Store, medical: Hospital, pharmacy: Pill, cafe: Coffee, academy: BookOpen,
 }
 
 export type Chip = { id: string; icon: string; size: number; border: number }
 /** 학교·역·편의시설 26px, 버스정류장은 작게 18px. 중앙차로 정류장은 테두리만 굵게, 노선 선택 정류장은 크게 + 굵은 테두리 */
 export const CHIPS: Chip[] = [
-  ...['school', 'station', 'supermarket', 'convenience', 'clinic', 'pharmacy', 'cafe', 'academy'].map((k) => ({
+  ...['school', 'station', 'supermarket', 'convenience', 'medical', 'pharmacy', 'cafe', 'academy'].map((k) => ({
     id: `chip-${k}`, icon: k, size: 26, border: 1.5,
   })),
   { id: 'chip-bus', icon: 'bus', size: 18, border: 1.25 },

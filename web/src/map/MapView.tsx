@@ -54,6 +54,10 @@ import { iconHit, type IconAt } from '../infra/pick'
 import type { InfraProps } from '../infra/data'
 import { RouteChip } from '../infra/RouteChip'
 import { RadiusPanel } from '../infra/RadiusPanel'
+import {
+  POI_KEYS, clusterCount, clusterFilter, clusterProperties, clusterRadiusExpr, iconFilter, poiClusterLayer, poiIconLayer,
+  poiSelectedLayer, poiShown, poiSourceId, type PoiSel,
+} from '../infra/poiSelect'
 
 maplibregl.setWorkerUrl(workerUrl)
 
@@ -86,7 +90,9 @@ const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] }
 type RefData = Partial<Record<RefGeoId, FeatureCollection<Polygon | MultiPolygon, Record<string, unknown>>>>
 
 /** 스타일에 넣을 때와 지도에 바로 걸 때 같은 값을 쓰는 상태 묶음 */
-type Snapshot = { layers: LayerStates; overlap: boolean; selected: Selected; searchPnu: string | null; routeArs?: string[] }
+type Snapshot = {
+  layers: LayerStates; overlap: boolean; selected: Selected; searchPnu: string | null; routeArs?: string[]; poi?: PoiSel
+}
 
 /** 클릭 필지 강조 도형: 결과가 있고 지금 선택이 그 필지일 때만 */
 function clickParcelData(parcel: ParcelLookup, selected: Selected): FeatureCollection {
@@ -129,7 +135,12 @@ function withState(specs: LayerSpecification[], snap: Snapshot): LayerSpecificat
   return specs.map((l) => {
     const owner = LAYER_OWNER[l.id]
     const out = { ...l } as LayerSpecification & { layout?: Record<string, unknown>; paint?: Record<string, unknown>; filter?: unknown }
-    if (owner) out.layout = { ...(out.layout ?? {}), visibility: snap.layers[owner].visible ? 'visible' : 'none' }
+    if (owner) {
+      // 편의시설은 분류마다 켜짐이 다르다 (P19-1)
+      const pk = owner === 'pois' ? l.id.split('-')[1] : null
+      const on = snap.layers[owner].visible && (!pk || !!snap.poi?.[pk])
+      out.layout = { ...(out.layout ?? {}), visibility: on ? 'visible' : 'none' }
+    }
     if (paints[l.id]) out.paint = { ...(out.paint ?? {}), ...paints[l.id] }
     if (l.id.endsWith('-selected')) out.filter = selectedFilterFor(l.id, snap.selected)
     if (l.id === 'propedia-parcel-search') out.filter = idFilter('pnu', snap.searchPnu)
@@ -149,7 +160,7 @@ function buildStyle(
   ref: RefData = {},
   clickData: FeatureCollection = EMPTY_FC,
   apartments: ApartmentFC | null = null,
-  infra: InfraData = { schools: null, stations: null, bus: null, pois: null },
+  infra: InfraData = { schools: null, stations: null, bus: null, pois: {} },
   radiusData: FeatureCollection = EMPTY_FC,
 ): StyleSpecification {
   const sources: StyleSpecification['sources'] = {}
@@ -219,11 +230,17 @@ function buildStyle(
   layers.push(...radiusLayers())
   const IS = INFRA_SOURCES
   const clustered = { cluster: true, clusterMaxZoom: CLUSTER_MAX_ZOOM, clusterRadius: 44 }
-  if (infra.pois) sources[IS.pois] = { type: 'geojson', data: infra.pois, promoteId: 'id', ...clustered }
+  // 편의시설 (P19-1): 분류마다 소스 하나, 하위 분류별 건수를 클러스터 속성으로 (하위 분류 필터 후 숫자)
+  for (const k of POI_KEYS) {
+    const fc = infra.pois[k]
+    if (!fc) continue
+    const cp = clusterProperties(k)
+    sources[poiSourceId(k)] = { type: 'geojson', data: fc, promoteId: 'id', ...clustered, ...(cp ? { clusterProperties: cp } : {}) }
+  }
   if (infra.schools) sources[IS.schools] = { type: 'geojson', data: infra.schools, promoteId: 'id', ...clustered }
   if (infra.bus) sources[IS.bus_stops] = { type: 'geojson', data: infra.bus, promoteId: 'id' }
   if (infra.stations) sources[IS.stations] = { type: 'geojson', data: infra.stations, promoteId: 'id' }
-  layers.push(...withState(infraLayers(infra, hl.selected), snap))
+  layers.push(...withState(infraLayers(infra, hl.selected, snap.poi ?? {}), snap))
   // 빈 곳 클릭으로 조회한 필지 강조 (브랜드 색 외곽선, P15)
   sources[CLICK_SOURCE] = { type: 'geojson', data: clickData }
   layers.push({ id: 'click-parcel-line', type: 'line', source: CLICK_SOURCE,
@@ -289,10 +306,7 @@ export default function MapView({ insets }: { insets: Insets }) {
   const routeArs = useMemo(() => (route ? (infra.routes.get(route)?.gangnam_stop_ids ?? []) : []), [route, infra.routes])
   const routeArsRef = useRef(routeArs)
   routeArsRef.current = routeArs
-  const poiFC = useMemo(() => ({ type: 'FeatureCollection', features: infra.mapPois }) as NonNullable<InfraData['pois']>, [infra.mapPois])
-  const poiRef = useRef(poiFC)
-  poiRef.current = poiFC
-  const hasPois = poiFC.features.length > 0
+  const poiSel = useMapStore((s) => s.poi)
   const radiusFC = useMemo(
     () => (radius ? ({ type: 'FeatureCollection', features: [circlePolygon(radius)] } as FeatureCollection) : EMPTY_FC),
     [radius],
@@ -357,9 +371,10 @@ export default function MapView({ insets }: { insets: Insets }) {
     const s = useMapStore.getState()
     return buildStyle(basemap, gu, dongs, propedia, colors, hl, {
       layers: s.layers, overlap: s.overlap, selected: s.selected, searchPnu: s.searchHit?.pnu ?? null, routeArs: routeArsRef.current,
+      poi: s.poi,
     }, refData, clickParcelData(s.parcel, s.selected), apartments,
-    { schools: infra.schools, stations: infra.stations, bus: infra.bus, pois: hasPois ? poiRef.current : null }, radiusRef.current)
-  }, [basemap, gu, dongs, propedia, colors, hl, refData, apartments, infra.schools, infra.stations, infra.bus, hasPois])
+    { schools: infra.schools, stations: infra.stations, bus: infra.bus, pois: infra.poiByCat }, radiusRef.current)
+  }, [basemap, gu, dongs, propedia, colors, hl, refData, apartments, infra.schools, infra.stations, infra.bus, infra.poiByCat])
 
   // 사업·규제 구역 라벨 (사람 확인 전이면 '확인 전')
   const areaLabels = useMemo(
@@ -411,11 +426,11 @@ export default function MapView({ insets }: { insets: Insets }) {
     }
     if (layerStates.stations.visible) add(infra.stations?.features, STATION_NAME_MIN_ZOOM, 'station')
     if (layerStates.schools.visible) add(infra.schools?.features, NAME_MIN_ZOOM, 'school')
-    if (layerStates.pois.visible) add(infra.mapPois, NAME_MIN_ZOOM, 'poi')
+    if (layerStates.pois.visible) add(infra.poiFeatures.filter((f) => poiShown(poiSel, f.properties)), NAME_MIN_ZOOM, 'poi')
     if (layerStates.bus_stops.visible) add(infra.bus?.features, BUS_NAME_MIN_ZOOM, 'bus')
     return out
-  }, [infra.stations, infra.schools, infra.mapPois, infra.bus, layerStates.stations.visible, layerStates.schools.visible,
-    layerStates.pois.visible, layerStates.bus_stops.visible])
+  }, [infra.stations, infra.schools, infra.poiFeatures, poiSel, infra.bus, layerStates.stations.visible,
+    layerStates.schools.visible, layerStates.pois.visible, layerStates.bus_stops.visible])
 
   const [loaded, setLoaded] = useState(false)
   const getMap = () => mapRef.current?.getMap()
@@ -451,15 +466,21 @@ export default function MapView({ insets }: { insets: Insets }) {
       map.setPaintProperty('bus-icon', 'icon-opacity', Math.round((s.layers.bus_stops.opacity / 100) * ROUTE_DIM * 1000) / 1000)
     const rs = map.getSource(RADIUS_SOURCE) as maplibregl.GeoJSONSource | undefined
     rs?.setData(radiusRef.current as never)
+    // 편의시설 (P19-1): 분류는 visibility, 하위 분류는 setFilter·setPaintProperty만 (소스·레이어를 다시 만들지 않음)
+    for (const k of POI_KEYS) {
+      if (!map.getLayer(poiIconLayer(k))) continue
+      const on = s.poi[k]
+      const vis = s.layers.pois.visible && on ? 'visible' : 'none'
+      for (const l of [poiClusterLayer(k), poiIconLayer(k), poiSelectedLayer(k)]) map.setLayoutProperty(l, 'visibility', vis)
+      if (!on) continue
+      map.setFilter(poiIconLayer(k), iconFilter(k, on) as never)
+      map.setFilter(poiClusterLayer(k), clusterFilter(k, on) as never)
+      map.setPaintProperty(poiClusterLayer(k), 'circle-radius', clusterRadiusExpr(k, on) as never)
+    }
   }, [])
   useEffect(() => {
     if (loaded) applyState()
-  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState, route, routeArs, radiusFC])
-  // 편의시설 분류를 켜고 끌 때는 소스 데이터만 바꾼다 (클러스터가 다시 계산된다)
-  useEffect(() => {
-    const src = getMap()?.getSource(INFRA_SOURCES.pois) as maplibregl.GeoJSONSource | undefined
-    src?.setData(poiFC as never)
-  }, [poiFC])
+  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState, route, routeArs, radiusFC, poiSel])
 
   // 새로고침: URL sel=parcel:{pnu}면 같은 필지를 다시 조회해 강조한다 (한 번)
   const restored = useRef(false)
@@ -571,9 +592,11 @@ export default function MapView({ insets }: { insets: Insets }) {
       if (seen.has(key)) continue
       seen.add(key)
       const [lon, lat] = (f.geometry as Point).coordinates
-      out.push({ key, source: f.source, clusterId: Number(f.properties.cluster_id), lon, lat, n: Number(f.properties.point_count) })
+      const pk = f.source.startsWith('infra-poi-') ? f.source.slice('infra-poi-'.length) : null
+      const n = pk ? clusterCount(f.properties, pk, useMapStore.getState().poi[pk] ?? []) : Number(f.properties.point_count)
+      if (n > 0) out.push({ key, source: f.source, clusterId: Number(f.properties.cluster_id), lon, lat, n })
     }
-    const k = out.map((c) => `${c.key}@${c.lon.toFixed(5)},${c.lat.toFixed(5)}`).sort().join('|')
+    const k = out.map((c) => `${c.key}@${c.lon.toFixed(5)},${c.lat.toFixed(5)}#${c.n}`).sort().join('|')
     if (k !== clusterKey.current) {
       clusterKey.current = k
       setClusters(out)
@@ -632,6 +655,16 @@ export default function MapView({ insets }: { insets: Insets }) {
   useEffect(() => {
     if (loaded) relayout()
   }, [loaded, relayout])
+  // 하위 분류 필터가 바뀌면 그려진 뒤 클러스터 숫자를 다시 센다 (P19-1)
+  useEffect(() => {
+    const map = getMap()
+    if (!loaded || !map) return
+    const run = () => updateClusters()
+    map.once('idle', run)
+    return () => {
+      map.off('idle', run)
+    }
+  }, [loaded, poiSel, updateClusters])
 
   // ---- 호버·클릭
   const hoverText = useCallback(

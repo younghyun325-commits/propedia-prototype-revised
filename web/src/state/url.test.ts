@@ -6,7 +6,7 @@ describe('URL ↔ 상태 (P14)', () => {
     const s = parseUrl('')
     expect(DEFAULT_VISIBLE).toEqual(['projects', 'impact250', 'impact500', 'parcels', 'schools', 'stations'])
     expect([s.layers.bus_stops.visible, s.layers.pois.visible]).toEqual([false, false])
-    expect([s.poiHidden, s.route, s.radius]).toEqual([[], null, null])
+    expect([s.poi, s.route, s.radius]).toEqual([{}, null, null])
     expect(s.layers.regulations.visible).toBe(false)
     expect(s.layers.projects).toEqual({ visible: true, opacity: 100 })
     expect([s.basemap, s.leftTab, s.overlap, s.selected, s.camera]).toEqual(['gray', 'layers', false, null, null])
