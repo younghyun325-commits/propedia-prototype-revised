@@ -4,7 +4,59 @@
 - 작업은 `feat/map-console`에서만 한다. `main` 병합은 P20에서 사람이 한다. (로컬 `.git/hooks/pre-commit`·`pre-push`가 main 커밋·push를 막음, 커밋되지 않는 로컬 훅)
 - `origin/main`에는 2026-11-10까지 P13~P15가 실수로 먼저 올라가 있다(`c79cac0`). 되돌리지 않기로 결정. 운영 배포 영향은 HUMAN_TODO 45에서 확인.
 
-현재 단계: P18 생활 인프라 완료 (2026-11-11). 다음은 docs/map/PLAN.md P19 하단 타임라인·고시 피드
+현재 단계: P19 하단 타임라인·고시 피드 완료 (2026-11-11). 다음은 docs/map/PLAN.md P20 다듬기·테스트·배포
+
+## P19 하단 타임라인·고시 피드 (+ 편의시설 선택 수정) — 완료 (2026-11-11)
+
+### 0. 정리 (커밋 d5c3853 `P19-0`)
+- 학교 이용허락범위 '제한 없음'(2026-11-11 영현 확인) → `pipeline/fetch_pois.py` license·license_note, 다시 실행 sha256 같음. PLAN 카탈로그·출처, HUMAN_TODO 49 닫음
+- `vercel.json` `excludeFiles` = `{web/**,public/pages/**}` (로컬 원문 보기 모달 이미지 확인). HUMAN_TODO 48에 'Preview 원문 보기 이미지 200·함수 크기 기록'
+- 정류장 300m 검증: '{역}역'으로 시작하고 바로 뒤가 끝·공백·'.'·'·'·'('·숫자일 때만 짝지음(부분 문자열 안 씀) → 150곳 중 21곳 초과. HUMAN_TODO 50 새 목록. 좌표는 그대로
+
+### 1. 편의시설 분류별·하위 분류별 선택 (커밋 d6c7aea `P19-1`, P18 보완)
+- 원인: 켜기 키가 `layers.pois.visible` 하나 + 숨김 목록(`poiHidden`, 기본 빈 배열)이라 켜는 순간 6분류가 모두 보였고, 소스·레이어도 하나(`infra-pois`)라 하위 분류를 바꿀 때 걸러서 `setData`로 클러스터를 다시 계산했다
+- 고친 구조: 분류마다 소스 `infra-poi-{분류}`·레이어 `poi-{분류}`(·`-cluster`·`-selected`). 하위 분류는 `clusterProperties`(n_{하위}) + `setFilter`만 — 낱점은 `sub_category`, 클러스터는 '켠 하위 분류 합 > 0', 개수 마커도 그 합. 분류 key `clinic` → `medical`
+- 패널 3단 체크박스(실제 input, indeterminate, aria-checked=mixed), '이것만 보기'(버튼·Alt+클릭), 건수는 manifest. URL `?poi=supermarket,medical:dental+oriental,academy:language`(layers의 pois·ph 없앰)
+- 반경 보기 꺼진 분류 흐리게 + '지도에서 꺼짐', 이름 클릭 = 이것만 보기. 범례는 켠 분류만
+- 성능: 6분류 켠 채 하위 분류 20회 — setData·setStyle 0, setFilter만, 프레임 p95 16.8ms. 스크린샷 `map_06f_poi_before`·`06g_poi_convenience_only`·`06h_poi_dental`
+
+### 2~3. '그날 기준' 판정·API (`core/map.py`, `api/index.py`)
+- [x] `state_at(con, as_of)`: 문서 발행 여부, 사업 표시(첫 근거 문서 발행일 이후) + `progress(today=as_of)` 단계·기한·상태 배지, 규제 효력(`timeutil.effective` → 효력 중·효력 전·종료), 상단 칩. 날짜 계산은 `core/timeutil.py` 그대로(짧은 라벨 `EFFECTIVE_SHORT_LABELS`만 추가)
+- [x] `/map/projects`·`/map/notices`(+ `regulations` 효력 상태)·`/map/feature`(숨긴 사업은 이름·안내만, 규제 `published`·`status`, 근거 문서는 발행된 것만)·`/timeline`·`/feed`가 모두 `state_at`을 씀
+- [x] `/api/v1/timeline?from=&to=` 계열 5개(발행 10·공람 2·효력 4·단계 2·자료 기준일 13), `/api/v1/feed?limit=&as_of=`, `/apartments/{id}/trades?as_of=`(계약일 ≤ 기준일, 그 달은 원자료로 다시 셈 — 빌드와 같은 규칙). 잘못된 날짜 400 + 한국어
+- 날짜별 기대값 (pytest `tests/test_timeline.py`):
+
+| 기준일 | 한양7차 | 대청마을 | 규제·칩 |
+|---|---|---|---|
+| 2026-03-31 | 숨김 | 숨김 | D10 효력 전 · 칩 D6·D7 |
+| 2026-04-01 | 숨김 | 숨김 | D10 효력 중 |
+| 2026-05-01 | 숨김 (첫 근거 D1 2026-10-06) | 공람 중 · D-day | D5·D10 효력 중 |
+| 2026-05-02 | 숨김 | 공람 마감 · 마감(2026.05.01) | |
+| 2026-10-08 | 공람 중 · D-29 | 공람 마감 · 마감(2026.05.01) | 칩 D6·D7·D8 |
+| 2026-11-10 | 공람 마감 · 마감(2026.11.06) | 공람 마감 · 마감(2026.05.01) | |
+| 2027-01-01 | 공람 마감 | 공람 마감 | D6 종료 → 칩에서 빠짐 (D7·D8) |
+
+### 4~7. 화면 (`web/src/`)
+- [x] store `asOf`(null = 오늘) ↔ URL `?t=YYYY-MM-DD`(잘못된 날짜 무시). 조회 훅이 asOf를 쿼리 키·`as_of`에 넣고 받는 동안 이전 값 유지. `state/dates.ts`(오늘 KST·날짜 더하기)
+- [x] 지도: 숨긴 사업은 사업·영향권·필지 레이어 `setFilter`(`['!', ['in', …]]`), 효력 중이 아닌 규제는 투명도 식 25% + 라벨 '· 효력 전/종료'. 스타일·소스 다시 만들지 않음
+- [x] 상단 바 '기준일 2026-05-01 · 지난 시점 보기'(미래 '다른 날짜 보기')·'오늘로'·아래 가장자리 브랜드 색 띠
+- [x] 하단 타임라인(지연 청크): 접힘 44px(기준일·◀ ▶·펼치기, T) / 펼침 200px(계열 5줄 + 단지 선택 때 거래량, 휠 확대·끌어서 이동·전체 보기·기본 범위, 오늘 선·스크러버, 호버·클릭, 재생 1·2·4배, ←/→·Shift·Home, aria-live). 같은 줄 겹침은 위아래로 비킴
+- [x] 고시 피드 탭: 종류 배지·제목·발행일·관련 사업·규제·기한·출처 줄·'최근 30일', 누르면 지도 이동 + 인스펙터 (이동 요청 `{type: 'feature', id}` — 지도에 불러온 도형 범위)
+- [x] 인스펙터: 숨긴 사업 안내, 미발행 규제 안내, 규제 기간 막대 '기준일' 선, 필지 클릭 조회 '오늘 기준 자료'. 실거래 차트 기준일 세로선·뒤 구간 비움
+- [x] 바뀌지 않는 레이어(생활 인프라·공식 참고·아파트) 행에 '자료 기준 YYYY-MM, 날짜와 함께 바뀌지 않음'. 문구는 `web/src/copy/ui.ts`(금지어 검사 대상, '예정' 없음 — 미래 날짜도 '공람 마감일 …')
+
+### 고친 것
+- 8000번 API가 `--reload`인데 새 경로가 404: 예전 worker의 multiprocessing 자식(24664)이 소켓을 물고 남아 요청을 받고 있었음 → 그 프로세스를 끄고 같은 명령으로 다시 띄움
+- 날짜 필터를 스타일에 넣을 때 필터 없는 레이어에 `filter: undefined`가 들어가 setStyle 검사 오류(편의시설을 켜면 레이어가 안 생김) → 있을 때만 넣음
+- P16 테스트 `test_as_of_dates`의 2026-05-01 한양7차 기한 기대값 → P19 규칙대로 '숨김'으로 바꿈. `test_no_network` 허용 목록에 표준 라이브러리 `statistics`
+
+### 확인
+- pytest -q: **306 passed** (새 `tests/test_timeline.py` 49개)
+- npm --prefix web run test: **151 passed** (새 `web/src/timeline/timeline.test.ts`) · build: 초기 JS `index` **98.04 kB gzip**, 타임라인 지연 청크 5.28 kB gzip(+ d3-scale 14.33 kB, 실거래 차트와 공유)
+- python -m evals.run_eval: M1~M24 직전과 같음 (M10만 7→6ms), 오류 0
+- ui_check_map: 개발 서버(3000) **152/152**, 빌드본(8000) **152/152**, 콘솔 오류 0. P19 점검 14개(원문 모달 이미지 포함) + P19-1 9개 · `--perf`: 편의시설 하위 분류 20회 setFilter만, p95 16.8ms
+- 스크린샷: `map_06f_poi_before`·`06g_poi_convenience_only`·`06h_poi_dental`·`07a_timeline`·`07b_2026-05-01`·`07c_feed`·`07d_trades_asof`
+
 
 ## P18 생활 인프라 — 완료 (2026-11-11)
 결정(영현): D1 분류표 확정(슈퍼마켓·편의점·병원·의원·약국·카페·학원, 하위 분류) · D2 정류장 좌표는 원자료 WGS84 그대로, 검증은 '역 이름이 들어간 정류장 ↔ 역 300m' · D3 노선 연결은 서울 정류장 마스터에 있는 정류장만 · D4 가상정류장·선착장 제외 · D5 역 합치기(괄호 뺀 이름 + 300m, 위치 = 호선 가장 많은 행) · D6 라이선스 직접 확인
