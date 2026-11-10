@@ -6,6 +6,138 @@
 
 현재 단계: P19 하단 타임라인·고시 피드 완료 (2026-11-11). 다음은 docs/map/PLAN.md P20 다듬기·테스트·배포
 
+## P20-A 다듬기·테스트·문서·Preview 준비 — 완료 (2026-11-11) · main 병합·운영 배포는 사람이
+
+범위: docs/map/PLAN.md P20 중 배포를 뺀 것. 브랜치 `feat/map-console`만. 시작 때 P19 커밋 4개 빨리감기 push(e13fbe7..3c13087).
+
+### 0. 사전 점검
+| 항목 | 결과 |
+|---|---|
+| `JUSO_CONFM_KEY`·`_ALT` | **없음** → check_keys·`run_eval --live` 재실행으로 HUMAN_TODO 39(양재대로55길 14 PNU)를 확인하지 못함 (M18은 브이월드 검색 경로로 20/20) |
+| 공동주택 기본 정보(getAphusBassInfoV5) | `fetch_apt_basis --check-only` 단지 1개: **미등록**(SERVICE_KEY_IS_NOT_REGISTERED_ERROR) → 건너뜀, HUMAN_TODO 28 열림. 점검이 meta를 같은 값으로 다시 써 market.db 바이트가 바뀌어 `git checkout`으로 되돌림 |
+| 서울플랜+ 새 판 | `data_raw/11.공간정보/서울플랜_사업현황_202609/` **없음** → 건너뜀 (HUMAN_TODO 41) |
+| market.db | meta `fetched_on=2026-11-11` (7일 이내) → 갱신 안 함 |
+| 커밋 작성자 `origin/main..feat/map-console` | 15커밋 모두 `younghyun325@g.skku.edu` (저장소 주인 noreply 아님) → 이번 마지막 커밋은 `--author` 저장소 주인 noreply |
+
+### 1. 지도 경계가 없는 규제 선택
+- API `/map/notices` regulations에 `scope_type`·`scope_ref`·`has_geometry` (D5 BJD 압구정동, D6·D7·D8 SIDO, 도형은 D10만).
+- 화면 `web/src/map/scope.ts`: 도형 없는 규제를 고르면 BJD → 법정동 경계(`bjd.geojson`), SIDO·강남구 SGG → 구 경계를 선택 색 점선(`scope-highlight-line`)으로 강조하고 그 범위로 이동. 지도 위 라벨 '법정동 단위 표시 · 경계 확인 전' / '서울 전역 적용 · 지도 경계 없음', 인스펙터에도 같은 문구 + '지도에서 보기'. 선택을 풀면 강조·라벨이 사라짐.
+- 피드·상단 칩·URL(`sel=regulation:D5`, `&t=2026-05-01`) 모두 같은 동작, D10은 기존 경계 그대로. 스크린샷 `map_08a_d5_bjd.png`, `map_08b_d6_gangnam.png`.
+
+### 2. 성능
+레이어 줌 범위 (지금 값):
+
+| 레이어 | minzoom | maxzoom | 비고 |
+|---|---|---|---|
+| 배경 WMTS (소스) | 6 | 18 | 그 위는 확대 표시 |
+| 참고 WMS 용도지역·지구단위계획 | 14 | 19 | 서버 프록시 |
+| 참고 WMS 지적도 | 17 | 19 | 0.6m/px 조건 |
+| 포함 판정 필지 (`propedia-parcel-hit/line/line-likely`) | 14 | – | |
+| 버스정류장 아이콘 | 15 | – | 이름 17 |
+| 학교 클러스터 | – | 15 | `CLUSTER_MAX_ZOOM + 1` |
+| 사업·영향권·규제·아파트·법정동·참고 GeoJSON·역·편의시설 아이콘 | – | – | 제한 없음 (라벨만: 규제 14, 아파트·참고 15, 역 이름 13, 학교·편의시설 이름 16) |
+
+- 제안(승인 전, 적용 안 함): 성능 94라 바꿀 필요는 크지 않음. 다만 `manifest.json` 아파트 항목의 `fill_min_zoom: 14`가 화면에는 적용돼 있지 않음 → ① 그 값을 지우거나 ② `apartments-fill/line`에 minzoom을 거는 것 중 택일.
+- 좌표 소수 6자리: `tests/test_geojson_precision.py` (18개 파일, 좌표 1만 개 이상 읽음) 통과.
+- 압축: 8000번 응답에 압축 없음(content-length만) → **로컬에만** `GZipMiddleware(minimum_size=1000)` (`fastapi.middleware.gzip`, `VERCEL != "1"`). 확인: `pois_academy.geojson` `content-encoding: gzip`. Vercel CDN 압축은 Preview 확인 목록.
+- 청크 (`npm --prefix web run build`, gzip -9):
+
+| 청크 | 원본 | gzip | 로드 |
+|---|---:|---:|---|
+| index | 316.4KB | 98.0KB | 초기 |
+| useMapStore | 24.5KB | 9.8KB | 초기 |
+| MapView (MapLibre 포함) | 1140.9KB | 308.5KB | 지연 (셸 다음) |
+| d3-scale | 38.4KB | 13.8KB | 지연 |
+| Inspector | 44.3KB | 11.5KB | 지연 |
+| Timeline | 13.1KB | 5.1KB | 지연 |
+| AptChart | 18.1KB | 4.7KB | 지연 |
+| CommandPalette | 9.6KB | 3.8KB | 지연 |
+| EvidenceModal | 8.9KB | 3.2KB | 지연 |
+| ShortcutsModal (P20) | 2.5KB | 1.2KB | 지연 |
+| 그 밖 8개 | 각 5KB 미만 | | 지연 |
+| **초기 JS 합계** | | **107.8KB** | 예산 400KB |
+
+- Lighthouse 12.8.2 데스크톱 (`http://127.0.0.1:8000/map/`, Playwright Chromium): **성능 94 · 접근성 100 · 권장사항 100** (FCP 0.9s, LCP 1.4s, TBT 40ms, CLS 0.003, SI 1.0s). 80 이상이라 추가 수정 없음.
+
+### 3. 접근성·설정
+- 상단 바 톱니 설정 메뉴: '투명도 줄이기'(switch, localStorage `propedia.map.reduceTransparency.v1`, try/catch — `state/prefs.ts`), '단축키 보기', '주소로 조회(기존 화면)' `/index.html`, '문서 DB' `/docs.html`. P11 임시 토글은 뺌.
+- `?` 키 단축키 도움말(`ui/ShortcutsModal.tsx`): Ctrl+K·L·I·T·Esc·?·←/→·Shift+←/→·Home 9줄, 포커스 가두기, Esc는 도움말만 닫음(선택 유지), 닫으면 연 요소로 포커스 복귀.
+- `prefers-reduced-motion`: 지도 fitBounds·easeTo 0ms, flyTo → jumpTo (`ui/motion.ts`), 패널 전환은 기존 glass.css 규칙.
+- 키보드 점검표 (ui_check_map P20):
+
+| 확인 | 결과 |
+|---|---|
+| Tab 순서: 지도 컨트롤(3D·반경) → 작업 탭 → 검색 → 고시 칩 → 설정 → 좌측 탭 → 겹침 보기 | 통과 |
+| 포커스 링: Tab으로 지나간 14칸 모두 외곽선 | 통과 |
+| 단축키 도움말: 포커스 가두기(Tab 6회 모두 모달 안)·Esc·설정 버튼으로 복귀 | 통과 |
+| 원문 모달: 가두기·Esc·연 버튼 복귀 (P16 점검) | 통과 |
+| DEMO_MAP 순서: Ctrl+K 검색 → 사업 카드 Enter → 인스펙터 탭 ←/→ → T 타임라인 ←/→·Shift+←/→·Home → Esc | 키로 모두 가능 (마우스가 필요한 곳: 지도 빈 곳 클릭 조회, 반경 보기 지점 고르기) |
+
+- axe-core 4.10.3 (`tests/axe_map.py`, `build/axe/`에 설치, 의존성 추가 없음), 9개 상태 — 첫 화면·사업 인스펙터·원문 모달·D5 범위 표시·흐려진 규제 라벨(기준일 2026-03-01)·단축키 도움말·투명도 줄이기·1180px·390px: **serious·critical 0건, 그 밖 0건**. 처음 돌렸을 때 고친 것: 하단 시트 tablist 안의 높이 버튼(critical aria-required-children) → tablist 밖 group으로, 지도 영역 `role=region`, 안내 줄 `aside`, 로딩 자리 `aria-hidden`.
+
+### 4. 반응형 (`ui/useViewport.ts`, html `data-viewport`)
+- 1280px 이상 그대로 / 1024~1279px: 좌측 패널 기본 접힘 → 아이콘 줄(`panel/IconRail.tsx`, 누르면 그 탭으로 펼침, 패널의 접기 버튼), 인스펙터는 고른 것이 있을 때만 지도 위에 겹쳐 뜨고 닫기 버튼 강조, 타임라인 그대로.
+- 1024px 미만: 보기 전용. 상단 바는 작업 탭·고시 칩을 빼고 검색 아이콘만, 안내 '큰 화면에서 모든 기능을 쓸 수 있습니다'. 좌측 패널·인스펙터·타임라인은 하단 시트(`ui/BottomSheet.tsx`, 접힘·절반·전체, 손잡이·높이 버튼) 탭. 반경 보기·스크러버·커서 표시줄 숨김. 대상을 고르면 시트가 '정보' 절반으로.
+- 스크린샷 `map_08c_1440.png`, `map_08d_1180.png`, `map_08e_390.png`. 3폭 모두 가로 스크롤 없음.
+
+### 5. 첫 화면·기존 화면
+- `vercel.json` `redirects: [{"source": "/", "destination": "/map/", "permanent": false}]` (Vercel 문서: permanent false = 307), `headers` `/(.*)` → `X-Robots-Tag: noindex`. 지도 `web/index.html` `<meta name="robots" content="noindex">`.
+- `api/index.py`: `/` → `/map/` 307을 Vercel·로컬 모두 등록 (예전 Vercel 전용 `/` → `/index.html`은 바뀜). 기존 `/index.html`·`/lookup.html`·`/docs.html` 200 (`tests/test_api.py`).
+- `tests/ui_check.py`는 이미 `/index.html`로 시작하고 있어 바꿀 것이 없었음 (기대값 그대로).
+- 8000번 reload 때 옛 worker가 계속 응답해 `/`가 200으로 남은 적 있음 → 서버를 끄고 남은 python 프로세스가 없는지 확인한 뒤 다시 띄움.
+
+### 6. 보안·키 점검 (`python -m pipeline.check_secrets`, 값은 출력 안 함)
+| 변수 이름 | public/map 건수 | git 파일 건수 | 판정 |
+|---|---:|---:|---|
+| VITE_VWORLD_KEY | 1 | 0 | 통과 (브라우저 배경지도, 정상) |
+| VWORLD_API_KEY | 1 | 0 | 통과 — **값이 VITE_VWORLD_KEY와 같음** |
+| VWORLD_API_KEY_DEV | 1 | 0 | 통과 — **값이 VITE_VWORLD_KEY와 같음** |
+| DATA_GO_KR_SERVICE_KEY | 0 | 0 | 통과 |
+| JUSO_CONFM_KEY·_ALT | 값 없음 | | |
+| DATA_GO_KR_*_URL, VWORLD_DOMAIN, VWORLD_DEV_DOMAIN | 0 | 1~13 | 공개 주소 (참고) |
+
+- 브이월드 키 3개가 같은 값이라 서버용 키도 번들에 드러남 → 브라우저 전용 서비스 URL 제한 키 분리 (HUMAN_TODO 51, 운영 배포 전).
+- `/api/v1/health` `keys`: `{"vworld": "있음", "juso": "없음"}`만. WMS 프록시 허용 목록 테스트 16 통과.
+- README: Vercel 환경변수 표(이름·용도·환경·필수), `DATA_GO_KR_SERVICE_KEY`는 로컬 빌드용이라 Vercel에 넣지 않음.
+
+### 7. 문서
+README(지도 화면·로컬 실행 2터미널·지도 빌드 순서·market.db 7일 규칙·환경변수 표·배포 절차·Instant Rollback·데이터 라이선스 표), `DEMO_MAP.md` 8장면 대본(누를 곳·기대 화면·말할 것·안 될 때, 목표 4:55, 넘치면 4·6 예비), `tests/demo_map_run.py`, HUMAN_TODO 정리(닫힘 15 / 운영 배포 전 9 / 배포 후 26, 새 51·52), PLAN.md P20 체크(배포 제외), agents.md §21.
+
+### 8. 회귀
+| 점검 | 결과 |
+|---|---|
+| `pytest -q` | 312 통과 |
+| `npm --prefix web run test` | 13파일 156 통과 |
+| `npm --prefix web run build` | 성공 (MapView 청크 500KB 경고는 기존과 같음) |
+| `python -m evals.run_eval` | M1~M24 모두 통과, 오류 0 |
+| `python -m evals.run_eval --live` | M18 100% (20/20, p95 279ms) · M21 100% (5/5, p95 233ms) |
+| `tests/ui_check.py` (기존 화면, `/index.html`) | 50/50 |
+| `tests/ui_check_map.py --shot` (3000) | 188/188 (P20 항목 포함: 범위 표시·설정·도움말·Tab·움직임 줄이기·반응형 3폭·`/` 307) |
+| `tests/ui_check_map.py --built` (8000) | 188/188 |
+| `tests/axe_map.py` | serious·critical 0 (9개 상태) |
+| `tests/demo_map_run.py` | 8장면 통과, 화면 동작 18.1초, 페이지 오류 0 |
+
+장면별 화면 동작 시간: 1 2.3초 · 2 0.6초 · 3 2.4초 · 4 2.5초 · 5 2.9초 · 6 1.5초 · 7 2.7초 · 8 3.2초 (말하는 시간 제외).
+
+### Preview 확인 목록 (push 뒤 사람이, HUMAN_TODO 52)
+| 주소 | 기대 결과 |
+|---|---|
+| `curl -sI <Preview>/` | 307, `location: /map/` |
+| `<Preview>/map/` | 지도·배경 타일 (Preview 주소가 `VITE_VWORLD_KEY` 서비스 URL에 없으면 타일 차단 — HUMAN_TODO 34) |
+| `curl -sI <Preview>/map/` | `x-robots-tag: noindex` |
+| `curl -sI -H "Accept-Encoding: gzip, br" <Preview>/data/layers/pois_academy.geojson` | `content-encoding: br` 또는 `gzip` (CDN 압축) |
+| `<Preview>/index.html`, `/lookup.html?addr=A1`, `/docs.html?doc=D1` | 기존 화면 정상 |
+| `<Preview>/map/?sel=regulation:D5` | 압구정동 점선 강조 + '법정동 단위 표시 · 경계 확인 전' |
+| `<Preview>/map/?sel=regulation:D6` | 강남구 전체 + '서울 전역 적용 · 지도 경계 없음' |
+| `<Preview>/map/?t=2026-05-01&sel=project:2` | 한양7차 숨김, 대청마을 '공람 중' D-day |
+| `<Preview>/api/v1/health` | 200, keys는 있음/없음만 |
+| `<Preview>/api/v1/apartments/apt:11680-218` | 200 (은마, market.db) |
+| `<Preview>/api/v1/map/wms/lt_c_uq111/14/13974/6348.png` 두 번 | 두 번째 `x-vercel-cache: HIT` |
+| 폭 390px (휴대폰) | 하단 시트·안내 줄, 가로 스크롤 없음 |
+| 톱니 → 투명도 줄이기 → 새로고침 | 유지 |
+
+남은 문제: 줌 범위 제안(아파트 `fill_min_zoom`) 결정 필요, 브라우저 키 분리(51), Preview 확인(52), 도로명주소 키(39), 기본 정보 API(28).
+
 ## P19 하단 타임라인·고시 피드 (+ 편의시설 선택 수정) — 완료 (2026-11-11)
 
 ### 0. 정리 (커밋 d5c3853 `P19-0`)

@@ -644,12 +644,12 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 
 성능·접근성·반응형을 마무리하고 배포합니다.
 
-- [ ] 성능: 인스펙터 차트 지연 로딩, GeoJSON 좌표 6자리·gzip, 레이어별 줌 범위 제한
-- [ ] 접근성: 키보드 탐색·포커스 링, 대비 검사, ‘투명도 줄이기’ 설정(P11 상단 바 임시 토글을 설정 메뉴로 옮김), `prefers-reduced-motion`
-- [ ] 반응형: 1280px 이상 기본, 1024\~1279px는 인스펙터를 지도 위에 겹침, 1024px 미만은 하단 시트(보기 전용)
-- [ ] 회귀: `pytest -q`, `python -m evals.run_eval`(M1\~M23), `tests/ui_check.py`(기존 50항목), `tests/ui_check_map.py`
-- [ ] 문서: README(지도 빌드 순서·환경변수), `DEMO_MAP.md` 5분 대본(강남구 전체 → 대청마을 사업 → 영향권 안 단지 → 실거래 → 타임라인 → 원문 근거), HUMAN\_TODO
-- [ ] 배포: Preview 확인 → main 병합 → Production, `/`를 `/map/`으로(결정 후), 브이월드 서비스 URL에 배포 주소 확인
+- [x] 성능: 인스펙터 차트 지연 로딩, GeoJSON 좌표 6자리·gzip, 레이어별 줌 범위 제한 — P20-A: 초기 JS gzip 107.8KB, Lighthouse 데스크톱 성능 94, 좌표 6자리 pytest, 로컬 GZip(Vercel은 CDN), 줌 범위 표는 PROGRESS P20-A
+- [x] 접근성: 키보드 탐색·포커스 링, 대비 검사, ‘투명도 줄이기’ 설정(P11 상단 바 임시 토글을 설정 메뉴로 옮김), `prefers-reduced-motion` — P20-A: 톱니 설정 메뉴, `?` 단축키 도움말, axe serious·critical 0 (`tests/axe_map.py`), Lighthouse 접근성 100
+- [x] 반응형: 1280px 이상 기본, 1024\~1279px는 인스펙터를 지도 위에 겹침, 1024px 미만은 하단 시트(보기 전용) — P20-A: 좌측 아이콘 줄, 하단 시트 3단, 스크린샷 map_08c~e
+- [x] 회귀: `pytest -q`, `python -m evals.run_eval`(M1\~M23), `tests/ui_check.py`(기존 50항목), `tests/ui_check_map.py` — P20-A 결과는 PROGRESS
+- [x] 문서: README(지도 빌드 순서·환경변수), `DEMO_MAP.md` 5분 대본(강남구 전체 → 대청마을 사업 → 영향권 안 단지 → 실거래 → 타임라인 → 원문 근거), HUMAN\_TODO
+- [ ] 배포: Preview 확인 → main 병합 → Production, `/`를 `/map/`으로(결정 후), 브이월드 서비스 URL에 배포 주소 확인 — P20-A에서 `/`→`/map/` 307·noindex 설정까지, Preview 확인·main·Production은 사람이 (HUMAN_TODO 51·52)
 
 ```text
 @docs/map/PLAN.md 의 P20 '다듬기·배포'를 진행해 줘. Plan 모드로 계획부터.

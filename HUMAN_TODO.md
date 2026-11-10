@@ -1,4 +1,29 @@
 # 사람 확인 목록
+
+## 정리 (P20-A, 2026-11-11)
+
+번호는 아래 전체 표의 번호입니다. 상태가 바뀌면 전체 표를 고치고 이 정리도 함께 고칩니다.
+
+### 닫힌 것 (15)
+4 Vercel 배포 · 6 도로명주소 키 재발급 · 7 한양7차 중심 좌표 · 11 D2·D4 쪽 이미지 이용 조건 · 12 규제 고시 공고문 · 14 공공데이터포털 키 · 15 D6 종료일 · 18 브이월드 활용 API · 19 Vercel 실시간 키 · 26 Vercel 브이월드 키 교체 · 27 로고 원본 · 29 브이월드 개발 키 · 30 공간정보 SHP · 36 압구정동 528 반영 · 49 학교 이용허락범위
+
+### 남은 것 — 운영 배포(main) 전에 필요 (9)
+| # | 할 일 (짧게) |
+|---|---|
+| 52 | **P20-A Preview 확인 목록** (PROGRESS.md P20-A 표: `/`→`/map/` 307, noindex 헤더, CDN 압축, D5·D6 선택, 390px 시트 등) |
+| 51 | **브라우저용 브이월드 키 분리**: 지금 `.env`의 `VITE_VWORLD_KEY`·`VWORLD_API_KEY`·`VWORLD_API_KEY_DEV`가 같은 값 → 서버 키도 번들에 드러남 |
+| 34 | Vercel `VITE_VWORLD_KEY` 등록(Preview·Production) — 서비스 URL 제한 키로 |
+| 32 | Preview `/map/`·`/api/v1/health` 200 (로그인한 브라우저로) |
+| 48 | Preview `/api/v1/apartments/apt:11680-218` 200, 함수 크기, 원문 이미지 200 |
+| 43 | 참고 WMS 프록시 타일 `x-vercel-cache: HIT` |
+| 45 | 운영 주소 기존 화면(/index.html·lookup·docs) 정상 — main 배포 뒤 `/`가 `/map/`으로 바뀜 |
+| 5 | 시연 리허설 (DEMO_MAP.md 5분, `tests/demo_map_run.py`로 화면 동작 먼저 확인) |
+| 42 | 참고 레이어 2종 공공누리 4유형(비상업) — Hobby 비상업 시연 범위인지 확인 |
+
+### 남은 것 — 배포 후에 해도 됨 (26)
+1 정답셋 확정 · 2 재건축 단계 템플릿 문구 · 3 D1 게시물 URL · 8 일원동 생활권 · 9 D2 공고일 · 10 D4 공고일 · 13 투기과열지구 공고문 · 16 D5~D8 게시처 URL · 17 압구정동 527 건축물대장 · 20 대청마을 후보 16필지 확인 · 21 대청마을 승인 고시 여부 · 22 land.yaml 대조 · 23 live_addresses.yaml 확인 · 24 D11~D13 원문(선택) · 25 D9·D10 게시물 URL · 28 공동주택 기본 정보 API 활용신청(2026-11-11 다시 확인: 미등록) · 31 `.env` 도로명주소 키(아직 비어 있음) · 33 정사각 로고 · 35 도면 정합 경계 확인 · 37 D5 경계 확보 · 38 원본 PC 재빌드 확인 · 39 양재대로55길 14 PNU(도로명주소 키 없음으로 미확인) · 40 참고 레이어 코드 이름표 · 41 서울플랜+ 새 판(폴더 없음, 2026-11-11 건너뜀) · 44 git 이력 지오코더 정리(저장소 공개 전) · 46 실거래 대조 · 47 위치 못 찾은 단지 12개 · 50 버스정류장 좌표
+
+## 전체 표
 | # | 할 일 | 왜 | 언제까지 | 상태 |
 |---|---|---|---|---|
 | 1 | 정답셋 3개 확인 후 draft:false, confirmed_by 기입 | 평가 수치를 믿을 수 있게 | 시연 후 (동혁 2026-10-26: 시연에 쓰지 않으므로 미룸) | 보류 |
@@ -28,7 +53,7 @@
 | 25 | D9·D10 구보 게시물 URL 확인 | 출처 링크 (`source_url` 비어 있음) | 시연 전 (선택) | 열림 |
 | 26 | Vercel 환경변수 `VWORLD_API_KEY` 값을 로컬 `pretotype/.env`의 값과 똑같이 바꾸고(Production 환경) Redeploy | 배포본에서 브이월드가 `INVALID_KEY`(등록되지 않은 인증키)를 돌려줌 — 로컬 키로는 정상. 브이월드에서 키를 수정하며 새 키가 나왔을 수 있음 | 지금 (G1·G3 배포본 확인 전) | **닫힘** — 동혁 교체(2026-10-26), 재배포 후 배포본 G1 10/10·G3 5/5·ui_check 58/58 |
 | 27 | 로고 원본 파일(SVG·AI·고해상도 PNG) 전달 | 화면 머리글 로고 | 다음 화면 작업 전 | **닫힘** — 동혁이 `logo/`에 PNG 2개(컬러 투명·흰색) 둠(2026-11-09). 화면용 사본 `public/assets/logo.png`·`logo-white.png`·`favicon.png` 만들어 머리글·파비콘에 적용. SVG·AI는 받지 않음 |
-| 28 | 공공데이터포털 활용신청: 아파트 매매 실거래가 상세, 공동주택 단지 목록·기본 정보, 상가(상권)정보 (기존 `DATA_GO_KR_SERVICE_KEY`에 서비스 추가) | 실거래가·단지 정보·상권 정보 연동 | 연동 작업 전 | **다시 열림 (P17, 2026-11-11)** — 기본 정보(AptBasisInfoServiceV5)는 키 미등록(SERVICE_KEY_IS_NOT_REGISTERED_ERROR). 15058453 활용신청 후 `python -m pipeline.fetch_apt_basis` 실행 (실거래 상세·단지 목록은 동작). (이전) 닫힘 — 동혁이 일반 인증키·엔드포인트 전달(2026-11-09). `.env`에 `DATA_GO_KR_SERVICE_KEY`(공용 키)와 `DATA_GO_KR_APT_TRADE_URL`(XML)·`DATA_GO_KR_APT_LIST_URL`(JSON)·`DATA_GO_KR_SDSC_URL`(JSON+XML) 기록. 호출 점검은 아직 안 함 |
+| 28 | 공공데이터포털 활용신청: 아파트 매매 실거래가 상세, 공동주택 단지 목록·기본 정보, 상가(상권)정보 (기존 `DATA_GO_KR_SERVICE_KEY`에 서비스 추가) | 실거래가·단지 정보·상권 정보 연동 | 연동 작업 전 | **다시 열림 (P17, 2026-11-11)** — P20-A(2026-11-11) `fetch_apt_basis --check-only`로 다시 확인: 여전히 미등록, 건너뜀. — 기본 정보(AptBasisInfoServiceV5)는 키 미등록(SERVICE_KEY_IS_NOT_REGISTERED_ERROR). 15058453 활용신청 후 `python -m pipeline.fetch_apt_basis` 실행 (실거래 상세·단지 목록은 동작). (이전) 닫힘 — 동혁이 일반 인증키·엔드포인트 전달(2026-11-09). `.env`에 `DATA_GO_KR_SERVICE_KEY`(공용 키)와 `DATA_GO_KR_APT_TRADE_URL`(XML)·`DATA_GO_KR_APT_LIST_URL`(JSON)·`DATA_GO_KR_SDSC_URL`(JSON+XML) 기록. 호출 점검은 아직 안 함 |
 | 29 | 브이월드: 개발용 서비스 URL(localhost) 등록 가능 여부 확인, 브라우저용 키 분리 발급 | 로컬 개발·브라우저 지도용 키를 운영 키와 분리 | 연동 작업 전 | **닫힘** — 동혁이 개발 키 전달(2026-11-09, 서비스 URL `localhost:3000`). `.env`에 `VWORLD_API_KEY_DEV`·`VWORLD_DEV_DOMAIN`으로 기록. 운영 키 `VWORLD_API_KEY`는 그대로 따로 둠 |
 | 30 | 서울 열린데이터광장에서 서울플랜+ SHP·의제처리구역 SHP를 내려받아 `../data/11.공간정보/`에 두기 (파일 수정 금지) | 공간 데이터 연동 원본 | 연동 작업 전 | **닫힘** — 동혁이 `../data/`가 아니라 이 폴더의 `data_raw/11.공간정보/`에 둠(2026-11-09): `서울플랜_사업현황/UPIS_C_UQ120.*`, `의제처리구역/UPIS_C_UQ181.*` (agents.md §3-6) |
 | 31 | 이 폴더 `.env`에 `JUSO_CONFM_KEY`·`JUSO_CONFM_KEY_ALT`·`VWORLD_API_KEY`(운영) 값 넣기 | 이 작업 폴더에 `.env`가 없어 2026-11-09 새로 만들었고, 전달받지 않은 키는 비워 둠. 빌드 스크립트(resolve_addresses·fetch_land·check_keys)는 값이 있어야 동작 | 빌드 재실행 전 | 열림 |
@@ -39,9 +64,9 @@
 | 36 | 압구정동 528 포함 여부 검토: D1 본문(1~17쪽)에는 '527번지 일대'만 있고 528이 없지만, 18쪽 정비구역 결정도 경계는 528 전체(겹침 99.7%)를 감쌈. 지금 A2(528)는 정답·응답 모두 '주변 66m'. 근거·표는 PROGRESS.md P13 '6-4', 검수 초안 `seed/review_drafts/D1_parcel_528.json`. 판정·정답셋·DB는 바꾸지 않음 | 지도 경계와 필지 판정이 어긋남 | 시연 전 | **닫힘** — 반영 완료(likely), 2026-11-10 영현 결정: `seed/map_reading_parcels.csv` → `project_parcels` map_reading·verified 0, 검수 `parcel_group 1:map_reading`. 사람 확인은 35에서 |
 | 37 | D5 압구정 아파트지구 토지거래허가구역 경계 확보 방법 검토: 지형도면(4쪽) 정합이 모호해 미채택(면적 +12%). 서울시 토지거래허가구역 공간데이터(열린데이터광장·토지이음 등) 제공 여부·이용 조건 확인. 의제처리구역 '압구정아파트지구'(837,266㎡)는 다른 구역이라 쓰지 않음 | 규제 레이어에 D5가 없음 (법정동 단위로만 표시) | P15 전 | 열림 |
 | 38 | 원본 PC(`../data` 있음)에서 `python -m pipeline.run_all` 뒤 `python -m pipeline.patch_coords`를 돌려 "갱신: land_cache 0행, projects 0행"(이미 같은 값)인지, `python -m pipeline.patch_parcels`가 "추가 0 · 수정 0 · 삭제 0 / 검수 행 변경 0"인지 확인 (P13.5) | 이 PC에는 원본 PDF·`build/text`가 없어 run_all 대신 patch_coords로 DB 좌표만 갱신함 | 다음 원본 PC 작업 때 | 열림 |
-| 39 | 이 PC `.env`의 `JUSO_CONFM_KEY`가 비어 있음 — check_keys에서 juso E0001. 실시간 조회는 브이월드 검색으로 대체돼 M18 20/20 통과(2026-11-10). 저장 응답(tests/fixtures)은 덮어쓰지 않고 되돌림. M18 '서울특별시 강남구 양재대로55길 14'는 PNU 정답과 다름(상태·토지 정보는 ok) — 정답(live_addresses.yaml) 또는 검색 결과 확인 | 도로명주소 검색 원래 경로를 쓰려면 키 필요 | 다음 키 작업 때 | 열림 |
+| 39 | 이 PC `.env`의 `JUSO_CONFM_KEY`가 비어 있음 — check_keys에서 juso E0001. 실시간 조회는 브이월드 검색으로 대체돼 M18 20/20 통과(2026-11-10). 저장 응답(tests/fixtures)은 덮어쓰지 않고 되돌림. M18 '서울특별시 강남구 양재대로55길 14'는 PNU 정답과 다름(상태·토지 정보는 ok) — 정답(live_addresses.yaml) 또는 검색 결과 확인 | 도로명주소 검색 원래 경로를 쓰려면 키 필요 | 다음 키 작업 때 | 열림 — P20-A(2026-11-11) 다시 확인: `JUSO_CONFM_KEY`·`_ALT` 여전히 없음 → check_keys 재실행 안 함, M18은 브이월드 검색 경로로 20/20 |
 | 40 | 공식 참고 레이어 종류 코드 이름표 확인: 서울플랜+ `SCLAS_CL`(BZ101·BZ105·BZ202 등 14종)·의제처리구역 `ATRB_SE`(UQ1240·UQ1206 등 15종) | SHP·.shp.xml·데이터셋 페이지(OA-22712, data.go.kr 15082965)에 코드 이름이 없음 → 지금은 코드와 대표 구역명만 보임(PROGRESS P15 표). 지도에는 종류별 색을 쓰지 않으므로 표시에는 영향 없음 | P16 전 | 열림 |
-| 41 | 서울플랜+ SHP 새 판 확인: 열린데이터광장 OA-22712에 `532_UQ120` (2026.09.10 수정)이 올라와 있음. 지금 `data_raw/11.공간정보/서울플랜_사업현황/`은 2026.02 판(CREATE_DAT 최대 2026-01-31) | 받아 같은 폴더에 바꿔 두면 `python -m pipeline.import_reference`가 다시 만든다 (원본은 사람이 교체, 좌표계 검증 IoU가 다르면 멈춤). **P20 직전에 교체하고 import_reference와 IoU 비교를 다시 돌림** | 시연 전(선택) → P20 직전 | 열림 |
+| 41 | 서울플랜+ SHP 새 판 확인: 열린데이터광장 OA-22712에 `532_UQ120` (2026.09.10 수정)이 올라와 있음. 지금 `data_raw/11.공간정보/서울플랜_사업현황/`은 2026.02 판(CREATE_DAT 최대 2026-01-31) | 받아 같은 폴더에 바꿔 두면 `python -m pipeline.import_reference`가 다시 만든다 (원본은 사람이 교체, 좌표계 검증 IoU가 다르면 멈춤). **P20 직전에 교체하고 import_reference와 IoU 비교를 다시 돌림** | 시연 전(선택) → P20 직전 | 열림 — P20-A(2026-11-11): `data_raw/11.공간정보/서울플랜_사업현황_202609/` 없음 → 건너뜀 |
 | 42 | 의제처리구역도 공공누리 4유형(출처표시·상업적 이용금지·변경금지) [확인 2026-11-10, data.go.kr/data/15082965] — PLAN.md의 '출처표시 조건이라 대체 가능' 전제가 틀렸음. 유료화 전 대체 데이터·이용 문의 대상에 추가 | 서울플랜+·의제처리구역 둘 다 비상업 시연에만 사용 | 유료화 전 | 열림 |
 | 43 | 참고 WMS(용도지역·지구단위계획·지적도)는 `/api/v1/map/wms/...` 서버 프록시로 받음 (브이월드 WMS에 CORS 헤더가 없음 [확인]). Vercel에서는 타일마다 함수 호출 — 서버 키 `VWORLD_API_KEY`·`VWORLD_DOMAIN` 필요, Preview에서 타일 200 확인 | 연속지적도 WMS는 0.6m/px보다 거친 요청에 빈 그림을 줘서 지적도는 줌 17부터 표시(지시는 16). **P16 0단계**: 허용 목록(레이어 3종·강남구 경계 + 2km·크기 256/512·image/png·지적도 0.6m/px 이하) 밖은 400, 성공 타일만 `Cache-Control: public, max-age=86400, s-maxage=604800`(오류는 no-store). **Vercel에서는 CDN에 없는 타일마다 Python 함수가 한 번씩 실행됨** — 확인 방법: Preview에서 같은 타일 주소를 두 번 요청(`curl -sI <Preview>/api/v1/map/wms/lt_c_uq111/14/13974/6348.png` 두 번)해 두 번째 응답 헤더가 `x-vercel-cache: HIT`인지 보기. MISS가 계속되면 함수 호출 수·과금 확인 | P15 Preview | 열림 |
 | 44 | 저장소를 공개하거나 외부에 넘기기 전, P10(d57a54b) 이후 이력의 지오코더 응답 정리 필요 | P15 0단계에서 현재 파일·DB는 정리했지만 git 이력에는 이전 커밋의 지오코더 결과(좌표)가 남아 있음 — 이력 재작성(filter-repo 등)은 사람이 결정 | 저장소 공개·이전 전 | 열림 |
@@ -51,6 +76,8 @@
 | 48 | `db/market.db`(14.5MB) **커밋함**(3c8fc3a, 2026-11-11). Preview에서 `/api/v1/apartments/apt:11680-218`(은마) 200 확인 필요. 함수 크기도 함께 보려면 Preview 환경변수 `VERCEL_ANALYZE_BUILD_OUTPUT=1`로 배포해 빌드 로그의 함수 크기(한도 500MB)를 확인. **P18-0**: Preview 배포 때 환경변수 VERCEL_ANALYZE_BUILD_OUTPUT=1로 함수 크기 확인. web/ 제외(`vercel.json` `functions["api/index.py"].excludeFiles = "web/**"`) 후 크기 기록. 크기가 크면 `public/pages/**`·`public/map/**`도 빼는 안(런타임이 파일로 읽지 않음) 검토 **P19-0**: `excludeFiles`에 `public/pages/**` 추가(`"{web/**,public/pages/**}"`) — Preview에서 원문 보기 이미지(`/pages/D1/p001.jpg` 등) 200, 함수 크기 기록 | 배포본 실거래 API | 다음 Preview | 열림 |
 | 49 | 학교 원천 이용허락범위 확인: 공공데이터포털 `전국초중등학교위치표준데이터`(15021148) — **확인 완료(제한 없음, 2026-11-11, 영현)**. manifest·PLAN.md 반영(P19-0) | 생활 인프라 학교 레이어 라이선스 (P18 D6) | 배포 전 | 닫힘 |
 | 50 | 버스정류장 좌표 검증(D2, P19-0 규칙): 이름이 '{역}역'으로 시작하고 바로 뒤가 끝·공백·'.'·'·'·'('·숫자인 강남구 정류장만 그 역과 짝지음(부분 문자열 일치 안 씀). 150곳 중 21곳이 역 좌표에서 300m 초과 — 신논현 6(304~448m)·삼성 4(376~405m)·양재 3(312~449m)·청담 3(307~398m)·논현 2(453·564m)·강남 1(강남역5번출구 376m)·신사 1(376m)·학여울 1(307m). 목록 `build/pois_report.json` bus.station_check. 좌표는 원자료 그대로 둠 — 지도에서 논현 564m·453m, 신논현 448m 등 몇 곳 대조 | 정류장 위치 확인 | 시연 전 | 열림 |
+| 51 | 브라우저용 브이월드 키 분리 발급 (P20-A 키 점검) | `python -m pipeline.check_secrets` 결과: 로컬 `.env`의 `VITE_VWORLD_KEY` = `VWORLD_API_KEY` = `VWORLD_API_KEY_DEV` (같은 값). `VITE_VWORLD_KEY`는 빌드 때 번들에 들어가므로(정상) 지금은 서버용 키도 함께 드러남. 서비스 URL 제한을 건 브라우저 전용 키를 따로 받아 `VITE_VWORLD_KEY`에만 쓰기 (README 환경변수 표) | 운영 배포 전 | 열림 |
+| 52 | P20-A Preview 확인 목록 (PROGRESS.md 'P20-A' 표) | `feat/map-console` push 뒤 Preview에서 사람이 확인: `/` → `/map/` 307, `X-Robots-Tag: noindex`, CDN 압축(`content-encoding`), D5·D6 선택, 390px 하단 시트, `/index.html`·`/docs.html` 200 등 | 운영 배포 전 | 열림 |
 
 ## 실거래 대조표 (HUMAN_TODO 46)
 

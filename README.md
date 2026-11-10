@@ -2,9 +2,49 @@
 
 강남구 **땅 주소**(도로명 또는 지번) 하나를 넣으면 먼저 **그 땅의 토지 정보**(지목·면적·용도지역·지역지구·공시지가, 브이월드 실시간)를 보여주고, 그 땅에 해당하는 공공 문서(고시·공고·계획)를 **4개 층**(필지·법정동·자치구·서울 전역)으로 모아 한 응답으로 돌려줍니다. 필지가 정비사업(모아타운·재건축) 구역에 걸리면 **현재 단계·기한**을 기준일·원문 쪽과 함께 보여줍니다. 대상은 토지 소유자입니다.
 
-- 작업 지시서: [agents.md](agents.md) · 진행 기록: [PROGRESS.md](PROGRESS.md) · 사람 확인 목록: [HUMAN_TODO.md](HUMAN_TODO.md) · 시연 대본: [DEMO.md](DEMO.md)
+- 작업 지시서: [agents.md](agents.md) · 지도 계획: [docs/map/PLAN.md](docs/map/PLAN.md) · 진행 기록: [PROGRESS.md](PROGRESS.md) · 사람 확인 목록: [HUMAN_TODO.md](HUMAN_TODO.md)
+- 시연 대본: 지도 화면 [DEMO_MAP.md](DEMO_MAP.md) (5분, P20) · 기존 화면 [DEMO.md](DEMO.md)
 - GitHub(비공개): https://github.com/greekyogurt02/propedia-pretotype
 - 배포 주소: https://propedia-pretotype.vercel.app (Vercel Hobby, GitHub `main` push 시 자동 배포)
+
+## 지도 화면 (`/map/`, P11~P20)
+
+첫 화면(`/`)은 **`/map/`으로 넘어갑니다**(307 임시 리디렉트 — Vercel은 `vercel.json` `redirects`, 로컬 FastAPI도 같은 동작).
+기존 화면은 그대로 둡니다: `/index.html`(시작·주소 조회), `/lookup.html`, `/docs.html`(문서 DB). 지도 상단 바 톱니(설정) 메뉴에 '주소로 조회(기존 화면)'·'문서 DB' 링크가 있습니다.
+
+- 강남구 지도 위에 Propedia 레이어(사업 구역·영향권 250m/500m·포함 판정 필지·규제 구역), 공식 참고 레이어(서울시 도시계획사업 현황·의제처리구역·용도지역/지구단위계획/지적도 WMS), 아파트 실거래 단지, 생활 인프라(학교·역·버스·편의시설 6분류).
+- 좌측 패널(레이어·사업 목록·고시 피드·데이터 상태), 우측 인스펙터(사업·규제·필지·단지·시설), 하단 타임라인('그날 기준' 보기, URL `t`), 상단 서울 전역·구 단위 고시 칩, `Ctrl+K` 검색, 반경 보기.
+- 지도 경계가 없는 규제(P20): D5(압구정 아파트지구, 경계 확인 전)는 압구정동 법정동 경계를 점선으로 강조하고 '법정동 단위 표시 · 경계 확인 전', 서울 전역 고시(D6·D7·D8)는 강남구 전체 + 구 경계 강조와 '서울 전역 적용 · 지도 경계 없음'을 표시합니다.
+- 접근성(P20): 설정 메뉴 '투명도 줄이기'(이 브라우저에 저장), `?` 단축키 도움말, `prefers-reduced-motion`이면 지도 이동 애니메이션 없음, axe serious·critical 0건(`tests/axe_map.py`).
+- 반응형(P20): 1280px 이상 기본 배치 / 1024~1279px 좌측 패널 접힘(아이콘 줄)·인스펙터 겹침 / 1024px 미만 보기 전용(하단 시트 3단, 반경 보기·스크러버 끌기 숨김).
+- 화면 문구는 `web/src/copy/ui.ts` 한 곳에 있고 금지어 검사(`tests/test_wording.py`, '예정'·'시세'·평가어 포함) 대상입니다. 색은 `web/src/styles/tokens.css` 토큰만, 글래스는 `GlassPanel`만 씁니다.
+
+### 로컬 실행 (터미널 2개)
+
+```bash
+# 터미널 1 — API (8000번). 새 경로가 404면 남은 uvicorn worker 프로세스부터 확인
+.venv/Scripts/python.exe -m uvicorn api.index:app --port 8000 --reload
+# 터미널 2 — 지도 화면 개발 서버 (3000번 고정: 브이월드 개발 키 서비스 URL이 localhost:3000)
+npm --prefix web run dev            # http://localhost:3000/map/  (/api는 8000으로 프록시)
+```
+
+빌드본 확인: `npm --prefix web run build` → `public/map/` → `http://127.0.0.1:8000/map/` (점검 스크립트는 `?debug=1`).
+
+### 지도 데이터 빌드 순서
+
+아래 '빌드 순서'(고시 DB) 다음에 지도 레이어를 만듭니다. 모두 빌드 때만 네트워크를 쓰고, 화면·API는 만들어진 파일·DB만 읽습니다.
+
+| 순서 | 명령 | 네트워크 | 결과 |
+|---|---|---|---|
+| 1 | `python -m pipeline.build_map_base` | 사용 (브이월드 2D) | `public/data/base/gangnam.geojson`·`bjd.geojson` |
+| 2 | `python -m pipeline.fetch_parcels` → `align_drawings` → `boundaries` | 사용 | `seed/parcels.geojson`, `seed/boundaries/` (도면 정합 경계) |
+| 3 | `python -m pipeline.import_reference` | – | `public/data/layers/ref_*.geojson` (서울플랜+·의제처리구역 SHP) |
+| 4 | 실거래 (아래 'market.db 갱신 규칙') | 사용 (공공데이터포털) | `db/market.db`, `seed/apartments.geojson` |
+| 5 | `python -m pipeline.fetch_pois` | 사용 (상가 API, 캐시 있으면 0회) | `public/data/layers/` 학교·역·정류장·노선·편의시설 |
+| 6 | `python -m pipeline.build_map_layers` | – | `public/data/layers/propedia_*.geojson`, `manifest.json` (좌표 소수 6자리) |
+| 7 | `npm --prefix web run build` | – | `public/map/` (Vercel은 `vercel.json` `buildCommand`가 다시 빌드) |
+| 8 | `python -m evals.run_eval` (`--live`) | (`--live`만) | M1~M24 (`--live`면 M18·M21까지) |
+| 9 | `python -m pipeline.check_secrets` | – | 빌드 산출물·커밋 파일의 키 노출 건수(변수 이름별, 값은 출력 안 함) |
 
 ## 반영 범위
 
@@ -76,16 +116,22 @@ pip install -r requirements.txt -r requirements-build.txt
 | 14 | `python -m evals.run_eval --live` | **사용** | M18 실시간 조회(시연 목록 밖 강남구 도로명주소 20건)까지 |
 | 15 | `python -m pipeline.fetch_pois` | **사용** (상가 API 67회, 캐시 있으면 0회) | P18 생활 인프라: `data_raw/12.생활인프라/` CSV(학교·역·버스 3종, 커밋 안 함) + 상가(상권)정보 API(.env `DATA_GO_KR_SERVICE_KEY`, 원 응답 `build/pois_raw/`) → `public/data/layers/` 학교·역·정류장·노선·편의시설 6분류. `--offline`은 캐시만. 분류표 `seed/poi_categories.yaml` |
 
-### 환경변수 (P10)
+### 환경변수
 
-| 이름 | 쓰는 곳 | 비고 |
-|---|---|---|
-| `VWORLD_API_KEY` | `core/live/vworld.py`(실시간), `check_keys`·`fetch_land`·`daecheong_map` | 브이월드 인증키. 활용 API에 국가중점·지오코더·이미지·2D 데이터 필요. 서비스 URL = 배포 주소 |
-| `JUSO_CONFM_KEY` (`_ALT`) | `core/live/juso.py`(실시간), `resolve_addresses` | 도로명주소 검색 API. 실패하면 브이월드 검색으로 대체 |
-| `DATA_GO_KR_SERVICE_KEY` | `fetch_buildings` (빌드 때만) | 건축HUB 건축물대장 |
-| `PROPEDIA_LIVE` | `core/live` | `0`이면 실시간 조회를 끈다 (pytest·오프라인 평가가 자동 설정) |
+로컬은 `.env`(커밋 금지), Vercel은 프로젝트 Settings → Environment Variables에서 읽습니다. 키 값은 출력·로그·커밋하지 않습니다(`python -m pipeline.check_secrets`로 건수만 점검).
 
-로컬은 `.env`, Vercel은 프로젝트 환경변수(`VWORLD_API_KEY`, `JUSO_CONFM_KEY`)에서 읽습니다. 키 값은 출력·커밋하지 않습니다.
+| 이름 | 용도 | Vercel 환경 | 필수 여부 |
+|---|---|---|---|
+| `VITE_VWORLD_KEY` | 브라우저 배경지도(WMTS 타일). **빌드 때 번들(`public/map/assets/*.js`)에 그대로 들어가는 것이 정상**이므로, 브이월드에서 **서비스 URL 제한을 건 키**(배포 주소만 허용)여야 합니다 | Production · Preview (빌드 때 필요) | 지도 배경에 필수 (없으면 경계·레이어만 보임) |
+| `VWORLD_API_KEY` | 서버 실시간 조회: 토지 정보·필지 클릭 조회·지오코더·참고 WMS 프록시 (`core/live/vworld.py`) | Production · Preview | 필수 (없으면 시연 주소만 빌드 캐시로 동작) |
+| `VWORLD_DOMAIN` | 브이월드 요청의 `domain` (인증키에 등록한 서비스 URL). 없으면 운영 주소 | Production · Preview | 선택 |
+| `JUSO_CONFM_KEY` | 도로명주소 검색 (`core/live/juso.py`). 없거나 실패하면 브이월드 검색으로 대체 | Production · Preview | 선택 |
+| `DATA_GO_KR_SERVICE_KEY` (+ `DATA_GO_KR_*_URL`) | 실거래·단지 목록·상가·건축물대장 **로컬 빌드용** (`fetch_trades`·`fetch_pois`·`fetch_buildings`·`fetch_apt_basis`) | **넣지 않음** (런타임에서 쓰지 않음) | 빌드 때만 |
+| `VWORLD_API_KEY_DEV`, `VWORLD_DEV_DOMAIN` | 로컬 개발 서버(localhost:3000)용 브이월드 키·서비스 URL | 넣지 않음 | 로컬 선택 |
+| `PROPEDIA_LIVE` | `0`이면 실시간 조회를 끈다 (pytest·오프라인 평가가 자동 설정) | 넣지 않음 | – |
+
+- 같은 키를 서버와 브라우저에 함께 쓰면 서버용 키도 번들에 드러납니다. 브라우저용(`VITE_VWORLD_KEY`)은 서비스 URL 제한 키로 따로 발급하는 것을 권장합니다(HUMAN_TODO 29).
+- `/api/v1/health`는 키마다 '있음/없음'만 알려 줍니다.
 
 ### 실시간 조회 구조
 
@@ -109,6 +155,16 @@ PNU → 토지 정보: 빌드 캐시(land_cache) → 메모리 캐시(1시간) �
 
 ## 배포 (Vercel)
 
+### 지도 화면 배포 절차 (P20)
+
+1. **Preview**: `feat/map-console` 브랜치를 push하면 Vercel이 Preview 배포를 만듭니다. Preview 주소에서 확인 목록(PROGRESS.md P20-A)을 봅니다.
+   - 브랜치의 마지막 커밋 작성자는 저장소 주인 noreply(`232514334+greekyogurt02@users.noreply.github.com`)여야 Hobby 플랜에서 배포가 막히지 않습니다(아래 1번 참고). `git config`는 바꾸지 않고 `--author`로 커밋합니다.
+2. **Production**: 사람이 `main`을 `feat/map-console`로 **빨리감기 push** 합니다 (`git push origin feat/map-console:main`, 병합 커밋 없이). `main` push가 운영 배포를 만듭니다.
+3. **되돌리기**: Vercel 대시보드 → Deployments → 직전 운영 배포 → **Instant Rollback** (다시 빌드하지 않고 바로 바뀝니다). 코드는 그다음 `git revert`로 맞춥니다.
+4. 검색엔진 노출 막기: 모든 응답에 `X-Robots-Tag: noindex`(`vercel.json` `headers`), 지도 화면 `index.html`에 `<meta name="robots" content="noindex">`.
+
+### 처음 설정 (2026-10, 완료)
+
 1. GitHub 비공개 저장소에 push (`gh repo create propedia-pretotype --private --source . --push`, 완료).
    - 이후 `git push`가 "Repository not found"로 실패하면 Windows 자격 증명 관리자에 다른 GitHub 계정이 저장된 것입니다. 전역 설정을 바꾸지 않고 `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push`로 올립니다.
    - push했는데 Vercel이 배포하지 않고 GitHub 커밋 상태에 "Git author … must have access to the project on Vercel"가 뜨면, 커밋 이메일이 저장소 주인(greekyogurt02)이 아닌 다른 GitHub 계정에 연결된 것입니다(Hobby 플랜은 프로젝트 주인이 작성한 커밋만 배포). `git -c user.email=232514334+greekyogurt02@users.noreply.github.com commit …`으로 커밋하거나 Vercel 화면에서 Redeploy합니다.
@@ -126,7 +182,24 @@ PNU → 토지 정보: 빌드 캐시(land_cache) → 메모리 캐시(1시간) �
 - 커밋 전 확인: 개인 정보 성격 필드(buyerGbn·slerGbn·estateAgentSggNm) 0건, 키 문자열 0건, `PRAGMA freelist_count = 0`(VACUUM 상태).
 - 배포본에 market.db가 없으면 실거래 API만 503이고 다른 기능은 그대로입니다.
 
-화면 캡처: [docs/screens/](docs/screens/) (`python tests/ui_check.py`가 다시 만듭니다)
+- 마지막 실거래 수집일(`market.db` meta `fetched_on`)이 **7일 이내면 갱신하지 않습니다**. 넘었으면 위 순서대로 갱신하고 크기·M22·M23을 확인한 뒤 커밋 여부를 정합니다.
+
+화면 캡처: [docs/screens/](docs/screens/) (`python tests/ui_check.py`, `tests/ui_check_map.py --shot`, `tests/demo_map_run.py`가 다시 만듭니다)
+
+## 데이터·라이선스
+
+| 데이터 | 원천 | 이용 조건 | 화면 표시 |
+|---|---|---|---|
+| 고시·공고 원문 (D1~D10) | 강남구·서울시·국토교통부 공개 문서 | 공공저작물(고시·공고는 저작권 보호 대상 아님) | 출처 줄(문서·쪽·기준일), 원문 쪽 이미지 |
+| 배경지도·2D 데이터·토지 정보·WMS | 브이월드(국토교통부) | 공공누리 1유형(출처표시) | 오른쪽 아래 출처 |
+| 서울시 도시계획사업 현황 (서울플랜+, 참고 레이어) | 서울 열린데이터광장 OA-22712 | **공공누리 4유형 (출처표시·상업적 이용금지·변경금지)** | '참고·비상업' 배지 + 출처, 좌표계 변환·선택만 |
+| 의제처리구역 (참고 레이어) | 공공데이터포털 15082965 | **공공누리 4유형 (출처표시·상업적 이용금지·변경금지)** | '참고·비상업' 배지 + 출처 |
+| 아파트 매매 실거래가 | 국토교통부 (공공데이터포털 15126468) | 이용허락범위 제한 없음 | 단지 인스펙터 출처, 개인 정보 성격 필드는 저장 안 함 |
+| 학교 위치 | 전국초중등학교위치표준데이터 (15021148) | 이용허락범위 제한 없음 | 인스펙터 출처 |
+| 지하철역·버스정류장·노선 | 서울 열린데이터광장 OA-21232·21231·21230·21233 | 공공누리 1유형(출처표시) | 인스펙터 출처 |
+| 편의시설 6분류 | 소상공인시장진흥공단 상가(상권)정보 (15012005) | 이용허락범위 제한 없음 | 인스펙터 출처 |
+
+참고 레이어 2종은 비상업 조건이므로, 서비스를 상업적으로 쓰기 전에 빼거나 이용 허락을 따로 받아야 합니다.
 
 ## 알려진 한계
 
