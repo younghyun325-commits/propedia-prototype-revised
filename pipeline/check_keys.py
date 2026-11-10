@@ -3,10 +3,12 @@
 - .env에 VWORLD_API_KEY가 없으면 멈춘다 (H1).
 - 브이월드 토지 3종(압구정동 527, 일원동 619), 지오코더(일원동 619), 이미지(일원동 619 중심), juso(테헤란로 427)를 부른다.
 - 화면에는 상태 코드·결과 개수만 찍는다. 키 값은 출력하지 않는다.
-- 받은 응답은 키가 들어 있지 않은지 확인한 뒤 tests/fixtures/{vworld,juso}/ 에 저장한다 (테스트용 저장 응답).
+- 받은 응답은 키가 들어 있지 않은지 확인한 뒤 build/check_keys/{vworld,juso}/ 에 저장한다 (기본, 커밋 안 함).
+- 테스트 저장 응답(tests/fixtures/{vworld,juso}/)은 --update-fixtures를 줄 때만 갱신한다 (같은 키 검사를 거침).
 
-사용: python -m pipeline.check_keys
+사용: python -m pipeline.check_keys [--update-fixtures]
 """
+import argparse
 import json
 import os
 import sys
@@ -18,7 +20,8 @@ from core.address import make_pnu
 from core.live.vworld import domain as vworld_domain
 from pipeline.common import BUILD, ROOT, fail, log, setup_stdout
 
-FIX = ROOT / "tests" / "fixtures"
+FIX = ROOT / "tests" / "fixtures"     # --update-fixtures일 때만 쓴다
+OUT = BUILD / "check_keys"            # 기본 출력 위치
 DOMAIN = vworld_domain()          # VWORLD_DOMAIN, 없으면 운영 주소 (core/live/vworld.py)
 NED = "https://api.vworld.kr/ned/data"
 PNU_527 = "1168011000105270000"
@@ -53,8 +56,13 @@ def count_ned(j: dict) -> tuple[str, int]:
     return "?", 0
 
 
-def main() -> None:
+def main(argv=None) -> None:
     setup_stdout()
+    ap = argparse.ArgumentParser(description="브이월드·도로명주소 키와 응답 점검")
+    ap.add_argument("--update-fixtures", action="store_true",
+                    help="tests/fixtures/ 의 테스트 저장 응답을 갱신 (기본은 build/check_keys/)")
+    args = ap.parse_args(argv)
+    dest = FIX if args.update_fixtures else OUT
     load_dotenv(ROOT / ".env")
     vkey = (os.environ.get("VWORLD_API_KEY") or "").strip()
     jkey = (os.environ.get("JUSO_CONFM_KEY") or "").strip()
@@ -74,7 +82,7 @@ def main() -> None:
                     try:
                         j = r.json()
                         code, n = count_ned(j)
-                        save(FIX / "vworld" / f"{op}_{pnu}.json", j, secrets)
+                        save(dest / "vworld" / f"{op}_{pnu}.json", j, secrets)
                     except ValueError:
                         code, n = "응답이 JSON 아님", 0
                         save(raw / f"{op}_{pnu}.txt", r.text[:4000], secrets)
@@ -89,7 +97,7 @@ def main() -> None:
                 "address": ADDR_619, "format": "json", "key": vkey, "domain": DOMAIN})
             j = r.json()
             resp = j.get("response", {})
-            save(FIX / "vworld" / f"getcoord_{PNU_619}.json", j, secrets)
+            save(dest / "vworld" / f"getcoord_{PNU_619}.json", j, secrets)
             rows.append(("getcoord", ADDR_619, r.status_code, resp.get("status"), 1 if resp.get("result") else 0))
         except (httpx.HTTPError, ValueError) as e:
             rows.append(("getcoord", ADDR_619, "실패", type(e).__name__, 0))
@@ -97,7 +105,8 @@ def main() -> None:
         # 이미지 API (일원동 619 중심 지적도)
         lon, lat = None, None
         try:
-            pt = json.loads((FIX / "vworld" / f"getcoord_{PNU_619}.json").read_text(encoding="utf-8"))
+            got = dest / "vworld" / f"getcoord_{PNU_619}.json"
+            pt = json.loads((got if got.exists() else FIX / "vworld" / got.name).read_text(encoding="utf-8"))
             p = pt["response"]["result"]["point"]
             lon, lat = float(p["x"]), float(p["y"])
         except (OSError, KeyError, TypeError, ValueError):
@@ -125,7 +134,7 @@ def main() -> None:
                 "confmKey": jkey, "currentPage": 1, "countPerPage": 5, "keyword": JUSO_Q, "resultType": "json"})
             j = r.json()
             com = j.get("results", {}).get("common", {})
-            save(FIX / "juso" / "teheran_427.json", j, secrets)
+            save(dest / "juso" / "teheran_427.json", j, secrets)
             rows.append(("juso", JUSO_Q, r.status_code, com.get("errorCode"), int(com.get("totalCount") or 0)))
         except (httpx.HTTPError, ValueError) as e:
             rows.append(("juso", JUSO_Q, "실패", type(e).__name__, 0))
@@ -165,11 +174,12 @@ def main() -> None:
         for folder, name, url, params in extra:
             try:
                 r = c.get(url, params=params)
-                save(FIX / folder / name, r.json(), secrets)
+                save(dest / folder / name, r.json(), secrets)
                 rows.append((f"저장 {folder}", name, r.status_code, "", ""))
             except (httpx.HTTPError, ValueError) as e:
                 rows.append((f"저장 {folder}", name, "실패", type(e).__name__, 0))
 
+    log(f"응답 저장 위치: {dest.relative_to(ROOT)}")
     log("API | 대상 | HTTP | 결과 코드 | 건수(바이트)")
     for r in rows:
         log(" | ".join(str(x) for x in r))

@@ -71,7 +71,7 @@ body {
   border-left: 3px solid var(--color-layer-project);
 }
 .map-area-label--regulation {
-  border-left: 3px solid #b07a00;
+  border-left: 3px solid var(--color-layer-regulation-line);
 }
 
 /* 배경지도·3D 칩에서 켜진 것 */
@@ -83,4 +83,37 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-brand-indigo);
   outline-offset: 2px;
+}
+
+/* P14 좌측 탭: 선택된 탭 아래 브랜드색 2px 막대 (작업 탭과 같은 규칙) */
+.left-tab {
+  position: relative;
+}
+.left-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--color-brand-indigo);
+}
+
+/* P14 지도 툴팁: 이동 중(html.map-moving)에는 숨김 */
+html.map-moving .map-tooltip {
+  display: none;
+}
+
+/* P14 명령 팔레트 뒤 어둡게 */
+.palette-backdrop {
+  background: color-mix(in srgb, var(--color-ink) 18%, transparent);
+}
+
+/* P14 검색 임시 핀 (필지 경계가 없을 때) */
+.map-search-pin {
+  display: block;
+  color: var(--color-brand-indigo);
+  filter: drop-shadow(0 1px 2px rgb(31 35 40 / 0.35));
+  pointer-events: none;
 }

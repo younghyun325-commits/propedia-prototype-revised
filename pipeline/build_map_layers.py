@@ -8,6 +8,8 @@
   propedia_parcels.geojson      포함 판정 필지 (project_parcels)
   propedia_regulations.geojson  규제 구역 (D10, D5는 경계를 채택했을 때만)
   manifest.json                 레이어별 원천·기준일·건수·라이선스. 실행 시각은 넣지 않는다 (멱등).
+- P14 겹침 보기: 필지·규제 도형마다 within_impact {project_id, buffer_m} — 중심점이 들어가는 가장 작은 영향권
+  (EPSG:5186, 같으면 project_id 작은 쪽, 밖이면 둘 다 null). MapLibre 식용으로 impact_buffer_m(같은 값)도 넣는다.
 - 좌표 소수 6자리, sort_keys. 같은 입력이면 같은 바이트.
 - 서울플랜+(UQ120) 도형은 여기서 쓰지 않는다.
 
@@ -15,9 +17,10 @@
 """
 import json
 
-from shapely.geometry import shape
+from shapely.geometry import Point, shape
 
 from core.db import connect_ro
+from core.map import INCLUSION, INCLUSION_LABEL
 from core.progress import progress
 from pipeline.boundaries import read_boundary
 from pipeline.common import PUBLIC, SEED, fail, log, setup_stdout, sha256
@@ -28,11 +31,16 @@ PROJECT_DOCS = {"apgujeong-6-1-hanyang7": "D1", "ilwon-daecheong-north-moatown":
 REGULATION_DOCS = ["D10", "D5"]
 BUFFERS = (250, 500)
 IMPACT_NOTE = "표시 기준이며 영향의 크기를 뜻하지 않음"
-INCLUSION = {"representative_only": "possible", "map_reading": "likely", "manual_review": "included",
-             "jibun_table": "included"}
-INCLUSION_LABEL = {"included": "포함", "possible": "포함될 수 있음", "likely": "포함된 것으로 보임 (확인 필요)"}
 SOURCE_MAP = "고시 도면 × 브이월드 연속지적도(LP_PA_CBND_BUBUN) 대조 — Propedia 판독, 사람 확인 전"
 LICENSE_VWORLD = "브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시"
+
+
+def within_impact(pt5186, zones: list) -> dict:
+    """중심점(EPSG:5186)이 들어가는 가장 작은 영향권. zones = [(buffer_m, project_id, 면)]"""
+    for m, pid, g in sorted(zones, key=lambda z: (z[0], z[1])):
+        if g.contains(pt5186):
+            return {"project_id": pid, "buffer_m": m}
+    return {"project_id": None, "buffer_m": None}
 
 
 def main() -> None:
@@ -41,7 +49,7 @@ def main() -> None:
     as_of = con.execute("SELECT value FROM meta WHERE key='as_of'").fetchone()[0]
 
     # 사업 구역 + 영향권
-    projects, impact, notes = [], [], []
+    projects, impact, notes, zones = [], [], [], []
     for p in con.execute("SELECT * FROM projects ORDER BY id"):
         doc = PROJECT_DOCS.get(p["project_key"])
         b = read_boundary(doc) if doc else None
@@ -61,6 +69,7 @@ def main() -> None:
         projects.append({"type": "Feature", "id": props["id"], "properties": props, "geometry": b["geometry"]})
         for m in BUFFERS:
             ring = g5186.buffer(m, quad_segs=16)
+            zones.append((m, p["id"], ring))
             impact.append({"type": "Feature", "id": f"impact:{p['id']}:{m}", "properties": {
                 "id": f"impact:{p['id']}:{m}", "kind": "impact", "project_id": p["id"], "name": p["name"],
                 "buffer_m": m, "note": IMPACT_NOTE, "basis": "map_reading", "verified": 0, "doc_ids": [doc],
@@ -87,6 +96,8 @@ def main() -> None:
                  "source_page": f"{r['doc_id']} p{r['pdf_page']}" if r["doc_id"] and r["pdf_page"] else None,
                  "as_of": fp["as_of"], "area_m2_geom": fp["area_m2"],
                  "centroid_lon": fp["centroid_lon"], "centroid_lat": fp["centroid_lat"]}
+        wi = within_impact(to_5186(Point(fp["centroid_lon"], fp["centroid_lat"])), zones)
+        props |= {"within_impact": wi, "impact_buffer_m": wi["buffer_m"]}
         parcels.append({"type": "Feature", "id": props["id"], "properties": props, "geometry": f["geometry"]})
     if missing:
         fail(f"seed/parcels.geojson에 없는 사업 필지 {missing} (pipeline.fetch_parcels 먼저)")
@@ -108,6 +119,8 @@ def main() -> None:
                  "basis": "map_reading", "verified": 0, "doc_ids": [doc], "source_page": bp["source_page"].replace(" p0", " p"),
                  "as_of": rule["published_at"], "area_m2_doc": bp["area_m2_doc"], "area_m2_geom": round(g5186.area, 1),
                  "align_score": bp["align_score"]}
+        wi = within_impact(g5186.centroid, zones)
+        props |= {"within_impact": wi, "impact_buffer_m": wi["buffer_m"]}
         regs.append({"type": "Feature", "id": props["id"], "properties": props, "geometry": b["geometry"]})
     con.close()
 

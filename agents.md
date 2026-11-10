@@ -282,7 +282,7 @@ P1에서 `pipeline/resolve_addresses.py`(도로명주소 API)와 `pipeline/geoco
 | B5 | 녹지 필지 | `강남구 율현동 122` (지목 전, 자연녹지, 도로명 없음) | 브이월드 2D 데이터에서 지목 전·답·임야 필지 | 토지 정보, 법정동 층 "확인된 고시 없음" |
 
 - P10(feedback2.md §6): 칩은 B1~B3 "대표 시연" → B4~B5 "토지·고시 사례" → A1~A10 "아파트 재건축 사례" 순. 금지어(§9-6) '추천' 때문에 지시서의 "추천 시연" 대신 "대표 시연"을 쓴다.
-- P10부터 좌표는 브이월드 지오코더(토지 정보 `land.location`)를 쓴다. A2(66m)·A4(293m)는 한양7차 '주변', B3는 모아타운 '주변'(275m)이다.
+- P10부터 좌표는 브이월드 지오코더(토지 정보 `land.location`)를 쓴다. A2는 한양7차 사업 구역 필지(포함된 것으로 보임, D1 p18 결정도 대조, 사람 확인 전), A4만 한양7차 '주변'(293m), B3는 모아타운 '주변'(275m)이다.
 
 - 도로명주소 API가 두 키 모두 실패하면(§19-3) 도로명주소 없이 **지번 입력만** 지원한다. 지번 → PNU는 `seed/bjd_codes.csv`로 만들 수 있으므로 작업은 계속된다. HUMAN_TODO에 기록.
 - 좌표를 못 얻은 주소는 `lat/lon`을 비워 두고 500m 판정을 하지 않는다(응답에 "좌표 없음으로 주변 사업 판정 생략" 표시). HUMAN_TODO에 기록.
@@ -1542,6 +1542,7 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-11-10 | Claude Code (P14 0단계) | 528 반영에 맞춰 문서 정리: §4 A2를 '주변 66m' → 한양7차 사업 구역 필지(likely, D1 p18 결정도 대조, 사람 확인 전)로, A4만 '주변 293m'. docs/map/PLAN.md 사업 필지 18 → 19(대표 지번 2 + 지도 대조 후보 17), README 지도 대조 설명에 528 추가. `pipeline/check_keys.py` 기본 출력을 `build/check_keys/`로 바꾸고 `--update-fixtures`일 때만 `tests/fixtures/`를 씀 |
 | 2026-11-10 | Claude Code (P13.5) | 528번지 likely 반영, 키 확인: 영현 결정으로 압구정동 528(A2)을 한양7차 사업 필지 `map_reading`·`verified=0`(=`likely`, 판정표 3번 강도)으로 넣음 — D1 p018 결정도 경계 겹침 99.7%, 본문은 527번지 일대만. 원천 `seed/map_reading_parcels.csv`(대청마을 외 지도 대조 필지), `build_projects.extra_parcel_values`·`extra_group_reviews`(묶음 검수 `parcel_group 1:map_reading`은 `review_queue.py` 맨 끝), `../data` 없는 PC용 `pipeline/patch_parcels.py`(멱등). A2 기대값 nearby → likely, 지도 필지 18 → 19. `fetch_land --dry-run` 추가: 브이월드 운영 키로 28필지 다시 받아 값 차이 0건 `[확인]`. M18 20/20(juso 키 비어 브이월드 검색 경로) |
 | 2026-11-10 | Claude Code (P13) | 지도 레이어 빌드 (docs/map/PLAN.md P13): `pipeline/fetch_parcels.py`(→ `seed/parcels.geojson`), `drawing_align.py`·`align_drawings.py`·`boundaries.py`(도면 정합 → `seed/boundaries/`), `build_map_layers.py`(→ `public/data/layers/`), `patch_coords.py`, `geo.py`. **좌표는 지오코더 결과 대신 필지 경계 중심점**(`fetch_land.py`, 저장 금지 조건) — 시연 판정 변화 없음. P10 대청마을 배율 0.79m/px는 틀린 봉우리였고 실제 0.678 `[확인]`. D10은 'A3 1/1000'이 맞지 않아 면적 기준 시작값(동혁 승인). D5 경계 미채택. 지표 M19·M20, `evals/goldset/boundaries.yaml`. §3-6 UQ120 좌표계 EPSG:5174 `[확인]` |
 | 2026-11-09 | Claude Code (P12) | 지도 셸 (docs/map/PLAN.md P12): `core/live/vworld.py` domain을 `VWORLD_DOMAIN` 환경변수로(없으면 운영 주소), `.env`에 `VITE_VWORLD_KEY`·`VWORLD_DOMAIN` 추가(값은 기록하지 않음), `pipeline/build_map_base.py` → `public/data/base/gangnam.geojson`·`bjd.geojson`(브이월드 2D 데이터, 법정동 14개 = seed). 브이월드 WMTS에 `gray` 레이어가 없어 회색 배경은 `white` `[확인]`. MapLibre v6 worker는 `?url` + `setWorkerUrl` |

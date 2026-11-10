@@ -1,0 +1,128 @@
+/**
+ * 지도 상태 ↔ URL (docs/map/PLAN.md P14). 순수 함수 — Vitest로 검사한다.
+ * 예: ?layers=projects,impact250,impact500,parcels&op=projects:80&base=gray&ov=1&sel=project:1&tab=layers&c=127.05,37.50&z=13
+ * - 잘못된 값은 무시하고 기본값을 쓴다.
+ * - 기본값과 같은 항목은 URL에 쓰지 않는다 (layers는 기본과 다를 때만, 카메라는 이동한 뒤에만).
+ */
+import { BASEMAP_ORDER, DEFAULT_BASEMAP, type BasemapId } from '../map/basemaps'
+
+export const PANEL_LAYER_IDS = ['projects', 'impact250', 'impact500', 'parcels', 'regulations'] as const
+export type PanelLayerId = (typeof PANEL_LAYER_IDS)[number]
+export const DEFAULT_VISIBLE: PanelLayerId[] = ['projects', 'impact250', 'impact500', 'parcels']
+
+export type LayerState = { visible: boolean; opacity: number } // opacity 0~100 (%)
+export type LayerStates = Record<PanelLayerId, LayerState>
+
+export const LEFT_TABS = ['layers', 'projects', 'feed', 'status'] as const
+export type LeftTab = (typeof LEFT_TABS)[number]
+
+export const SELECT_KINDS = ['project', 'parcel', 'regulation'] as const
+export type SelectKind = (typeof SELECT_KINDS)[number]
+/** id는 도형 id에서 kind를 뺀 나머지 (예: project:1 → '1', parcel:1:1168011000105280000 → '1:1168011000105280000') */
+export type Selected = { kind: SelectKind; id: string } | null
+export type Camera = { lon: number; lat: number; zoom: number } | null
+
+export type UrlState = {
+  layers: LayerStates
+  basemap: BasemapId
+  overlap: boolean
+  selected: Selected
+  leftTab: LeftTab
+  camera: Camera
+}
+
+/** 강남구 주변만 받는다 (지도 이동 범위보다 넓게) */
+const LON = [126.9, 127.25] as const
+const LAT = [37.4, 37.6] as const
+const ZOOM = [11, 19] as const
+
+export function defaultLayers(): LayerStates {
+  return Object.fromEntries(
+    PANEL_LAYER_IDS.map((id) => [id, { visible: DEFAULT_VISIBLE.includes(id), opacity: 100 }]),
+  ) as LayerStates
+}
+
+export function defaultUrlState(): UrlState {
+  return { layers: defaultLayers(), basemap: DEFAULT_BASEMAP, overlap: false, selected: null, leftTab: 'layers', camera: null }
+}
+
+export function featureId(s: NonNullable<Selected>): string {
+  return `${s.kind}:${s.id}`
+}
+
+export function parseSelected(v: string | null | undefined): Selected {
+  if (!v) return null
+  const i = v.indexOf(':')
+  if (i < 1) return null
+  const kind = v.slice(0, i) as SelectKind
+  const id = v.slice(i + 1)
+  if (!SELECT_KINDS.includes(kind) || !/^[A-Za-z0-9:._-]{1,64}$/.test(id)) return null
+  return { kind, id }
+}
+
+const isPanelId = (s: string): s is PanelLayerId => (PANEL_LAYER_IDS as readonly string[]).includes(s)
+const inRange = (v: number, [lo, hi]: readonly [number, number]) => Number.isFinite(v) && v >= lo && v <= hi
+
+export function parseUrl(search: string): UrlState {
+  const q = new URLSearchParams(search)
+  const s = defaultUrlState()
+
+  const lv = q.get('layers')
+  if (lv !== null) {
+    const ids = lv.split(',').map((x) => x.trim()).filter(Boolean)
+    const valid = ids.filter(isPanelId)
+    // 비어 있으면 '모두 끔', 모르는 이름만 있으면 기본값
+    if (ids.length === 0 || valid.length > 0)
+      for (const id of PANEL_LAYER_IDS) s.layers[id].visible = valid.includes(id)
+  }
+  for (const part of (q.get('op') ?? '').split(',')) {
+    const [id, v] = part.split(':')
+    const n = Number(v)
+    if (id && isPanelId(id) && v !== undefined && v !== '' && Number.isInteger(n) && n >= 0 && n <= 100)
+      s.layers[id].opacity = n
+  }
+  const base = q.get('base')
+  if (base && (BASEMAP_ORDER as string[]).includes(base)) s.basemap = base as BasemapId
+  const ov = q.get('ov')
+  if (ov === '1') s.overlap = true
+  s.selected = parseSelected(q.get('sel'))
+  const tab = q.get('tab')
+  if (tab && (LEFT_TABS as readonly string[]).includes(tab)) s.leftTab = tab as LeftTab
+  const c = (q.get('c') ?? '').split(',').map(Number)
+  const z = Number(q.get('z'))
+  if (c.length === 2 && inRange(c[0], LON) && inRange(c[1], LAT) && q.get('z') !== null && inRange(z, ZOOM))
+    s.camera = { lon: c[0], lat: c[1], zoom: z }
+  return s
+}
+
+/** 우리 키만 쓴 쿼리 문자열 (앞의 ? 없음). 기본값과 같은 항목은 뺀다. */
+export function toSearch(s: UrlState): string {
+  const d = defaultUrlState()
+  const q = new URLSearchParams()
+  const visible = PANEL_LAYER_IDS.filter((id) => s.layers[id]?.visible)
+  if (visible.join(',') !== DEFAULT_VISIBLE.join(',')) q.set('layers', visible.join(','))
+  const op = PANEL_LAYER_IDS.filter((id) => s.layers[id] && s.layers[id].opacity !== 100).map(
+    (id) => `${id}:${Math.round(s.layers[id].opacity)}`,
+  )
+  if (op.length) q.set('op', op.join(','))
+  if (s.basemap !== d.basemap) q.set('base', s.basemap)
+  if (s.overlap) q.set('ov', '1')
+  if (s.selected) q.set('sel', featureId(s.selected))
+  if (s.leftTab !== d.leftTab) q.set('tab', s.leftTab)
+  if (s.camera) {
+    q.set('c', `${s.camera.lon.toFixed(5)},${s.camera.lat.toFixed(5)}`)
+    q.set('z', s.camera.zoom.toFixed(2))
+  }
+  return q.toString()
+}
+
+export const URL_KEYS = ['layers', 'op', 'base', 'ov', 'sel', 'tab', 'c', 'z'] as const
+
+/** 지금 주소의 다른 파라미터(debug 등)는 두고 우리 키만 바꾼 search 문자열 */
+export function mergeSearch(current: string, ours: string): string {
+  const q = new URLSearchParams(current)
+  for (const k of URL_KEYS) q.delete(k)
+  for (const [k, v] of new URLSearchParams(ours)) q.set(k, v)
+  const s = q.toString().replaceAll('%2C', ',').replaceAll('%3A', ':')
+  return s ? `?${s}` : ''
+}

@@ -1,15 +1,21 @@
 import { lazy, Suspense, useMemo } from 'react'
-import { ChevronDown, ChevronUp, Contrast, Search } from 'lucide-react'
-import { BRAND } from '../copy/brand'
-import { useMapStore, type Workspace } from '../state/useMapStore'
+import { ChevronDown, ChevronUp } from 'lucide-react'
+import { UI } from '../copy/ui'
+import { LeftPanel } from '../panel/LeftPanel'
+import { useMapStore } from '../state/useMapStore'
+import { featureId } from '../state/url'
+import { useUrlSync } from '../state/useUrlSync'
 import { GlassPanel } from '../ui/GlassPanel'
 import { LiquidGlassFilter } from '../ui/LiquidGlassFilter'
 import { useLiquidGlass } from '../ui/useLiquidGlass'
+import { TopBar } from './TopBar'
 import { useShellEffects } from './useShellEffects'
 import type { Insets } from '../map/insets'
 
 // 지도(MapLibre)는 따로 묶어 셸 다음에 불러온다: 셸이 먼저 뜨고 초기 JS 예산(gzip 400KB)을 지킨다
 const MapView = lazy(() => import('../map/MapView'))
+// 명령 팔레트는 Ctrl+K로 처음 열 때 불러온다
+const CommandPalette = lazy(() => import('../search/CommandPalette'))
 
 const GAP = 12 // 패널과 화면 가장자리 사이
 const TOP_H = 56
@@ -18,14 +24,10 @@ const RIGHT_W = 400
 const TL_CLOSED = 44
 const TL_OPEN = 200
 
-const TABS: { id: Workspace; label: string }[] = [
-  { id: 'gangnam', label: '강남구 전체' },
-  { id: 'project', label: '선택한 사업' },
-]
-
 export default function App() {
   useLiquidGlass()
   useShellEffects()
+  useUrlSync()
   const s = useMapStore()
   const tlH = s.timelineOpen ? TL_OPEN : TL_CLOSED
   const sideTop = GAP + TOP_H + GAP
@@ -51,87 +53,32 @@ export default function App() {
       </Suspense>
 
       {/* 상단 바 56px */}
-      <GlassPanel
-        as="header"
-        data-testid="topbar"
-        className="absolute flex items-center gap-4 px-4"
-        style={{ top: GAP, left: GAP, right: GAP, height: TOP_H }}
-      >
-        <img
-          src={`${import.meta.env.BASE_URL}brand/logo-wordmark.png`}
-          alt={BRAND.logoAlt}
-          className="h-6 w-auto select-none"
-          draggable={false}
-        />
-        <nav className="flex gap-1" role="tablist" aria-label="작업 탭">
-          {TABS.map((t) => {
-            const on = s.workspace === t.id
-            return (
-              <button
-                key={t.id}
-                role="tab"
-                aria-selected={on}
-                onClick={() => s.setWorkspace(t.id)}
-                className={`work-tab glass glass-liquid rounded-full px-3 py-1 text-sm ${on ? 'font-semibold' : ''}`}
-                style={{ borderRadius: 999 }}
-              >
-                {t.label}
-              </button>
-            )
-          })}
-        </nav>
-        <label className="ml-2 flex h-9 max-w-md flex-1 items-center gap-2 rounded-full bg-white/60 px-3 text-sm text-ink-muted">
-          <Search size={16} aria-hidden="true" />
-          <input
-            disabled
-            placeholder="주소·지번·사업명 검색 (P14)"
-            className="w-full bg-transparent outline-none placeholder:text-ink-muted"
-            aria-label="검색"
-          />
-        </label>
-        <div className="ml-auto flex items-center gap-3 text-sm">
-          <button
-            onClick={s.toggleReduceTransparency}
-            aria-pressed={s.reduceTransparency}
-            title="투명도 줄이기"
-            className="flex items-center gap-1 text-ink-muted"
-          >
-            <Contrast size={16} aria-hidden="true" />
-            <span>투명도 줄이기</span>
-          </button>
-          <span data-testid="as-of" className="text-ink-muted">
-            기준일 —
-          </span>
-        </div>
-      </GlassPanel>
+      <TopBar style={{ top: GAP, left: GAP, right: GAP, height: TOP_H }} />
 
       {/* 좌측 패널 320px (L) */}
-      {s.leftOpen && (
-        <GlassPanel
-          as="aside"
-          data-testid="left-panel"
-          aria-label="레이어 패널"
-          className="absolute p-4 text-sm"
-          style={{ top: sideTop, bottom: sideBottom, left: GAP, width: LEFT_W }}
-        >
-          <h2 className="font-semibold">레이어</h2>
-          <p className="mt-2 text-ink-muted">레이어 패널 자리 (P14) · L 키로 접기</p>
-        </GlassPanel>
-      )}
+      {s.leftOpen && <LeftPanel style={{ top: sideTop, bottom: sideBottom, left: GAP, width: LEFT_W }} />}
 
-      {/* 우측 인스펙터 400px (I) */}
+      {/* 우측 인스펙터 400px (I). 내용은 P16 — 이번에는 선택 상태만 */}
       {s.rightOpen && (
         <GlassPanel
           as="aside"
           data-testid="right-panel"
-          aria-label="인스펙터"
+          aria-label={UI.inspector.title}
           className="absolute p-4 text-sm"
           style={{ top: sideTop, bottom: sideBottom, right: GAP, width: RIGHT_W }}
         >
-          <h2 className="font-semibold">인스펙터</h2>
-          <p className="mt-2 text-ink-muted">
-            {s.selection ? `선택: ${s.selection}` : '선택한 대상 없음'} · I 키로 접기 · Esc 선택 해제
-          </p>
+          <h2 className="font-semibold">{UI.inspector.title}</h2>
+          {s.selected ? (
+            <div className="mt-2 space-y-1" data-testid="inspector-selected">
+              <p>
+                {UI.inspector.selected}: <code className="font-mono text-xs">{featureId(s.selected)}</code>
+              </p>
+              <p className="text-ink-muted">{UI.inspector.placeholder}</p>
+            </div>
+          ) : (
+            <p className="mt-2 text-ink-muted">{UI.inspector.none}</p>
+          )}
+          <p className="mt-2 text-xs text-ink-muted">{UI.inspector.hint}</p>
         </GlassPanel>
       )}
 
@@ -154,6 +101,12 @@ export default function App() {
           <span className="font-normal text-ink-muted">(P19) · T 키로 펼치기</span>
         </button>
       </GlassPanel>
+
+      {s.paletteOpen && (
+        <Suspense fallback={null}>
+          <CommandPalette />
+        </Suspense>
+      )}
     </div>
   )
 }

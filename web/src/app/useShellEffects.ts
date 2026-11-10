@@ -22,14 +22,24 @@ export function useShellEffects(): void {
         ctrlKey: e.ctrlKey,
         metaKey: e.metaKey,
         altKey: e.altKey,
+        shiftKey: e.shiftKey,
         target: e.target as HTMLElement | null,
       })
       if (!action) return
       const s = useMapStore.getState()
+      if (action === 'palette') {
+        e.preventDefault() // 브라우저 주소창 검색 등 기본 동작을 막는다
+        s.setPaletteOpen(!s.paletteOpen)
+        return
+      }
+      if (s.paletteOpen) return // 팔레트가 열려 있으면 팔레트가 Esc를 처리한다
       if (action === 'left') s.toggleLeft()
       else if (action === 'right') s.toggleRight()
       else if (action === 'timeline') s.toggleTimeline()
-      else s.clearSelection()
+      else {
+        s.clearSelection()
+        s.setSearchHit(null)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)

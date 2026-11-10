@@ -1,0 +1,400 @@
+{
+ "generated_as_of": "2026-10-06",
+ "db_as_of": "2026-10-06",
+ "build_at": "2026-10-26T21:40:19+09:00",
+ "crs": "EPSG:4326",
+ "groups": [
+  {
+   "id": "basemap",
+   "name": "배경지도"
+  },
+  {
+   "id": "propedia",
+   "name": "Propedia 고시·사업"
+  },
+  {
+   "id": "reference",
+   "name": "공식 참고"
+  },
+  {
+   "id": "market",
+   "name": "시장"
+  },
+  {
+   "id": "infra",
+   "name": "생활 인프라"
+  },
+  {
+   "id": "base",
+   "name": "기본 경계"
+  }
+ ],
+ "layers": [
+  {
+   "id": "basemap-base",
+   "group": "basemap",
+   "name": "기본",
+   "kind": "raster",
+   "source": "브이월드 WMTS (국토교통부)",
+   "license": "공공누리 1유형 (출처표시)",
+   "as_of": null,
+   "count": null,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "basemap-gray",
+   "group": "basemap",
+   "name": "회색",
+   "kind": "raster",
+   "source": "브이월드 WMTS (국토교통부)",
+   "license": "공공누리 1유형 (출처표시)",
+   "as_of": null,
+   "count": null,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "basemap-satellite",
+   "group": "basemap",
+   "name": "위성",
+   "kind": "raster",
+   "source": "브이월드 WMTS (국토교통부)",
+   "license": "공공누리 1유형 (출처표시)",
+   "as_of": null,
+   "count": null,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "basemap-hybrid",
+   "group": "basemap",
+   "name": "하이브리드",
+   "kind": "raster",
+   "source": "브이월드 WMTS (국토교통부)",
+   "license": "공공누리 1유형 (출처표시)",
+   "as_of": null,
+   "count": null,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "projects",
+   "group": "propedia",
+   "name": "사업 구역",
+   "kind": "fill",
+   "source": "고시 도면 × 브이월드 연속지적도(LP_PA_CBND_BUBUN) 대조 — Propedia 판독, 사람 확인 전",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "as_of": "2026-10-06",
+   "count": 2,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": true,
+   "doc_ids": [
+    "D1",
+    "D9"
+   ],
+   "source_pages": [
+    "D1 p18",
+    "D9 p12"
+   ]
+  },
+  {
+   "id": "impact250",
+   "group": "propedia",
+   "name": "영향권 250m",
+   "kind": "fill",
+   "source": "사업 구역 경계에서 EPSG:5186 버퍼",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "as_of": "2026-10-06",
+   "count": 2,
+   "status": "ready",
+   "note": "영향권 250m·500m는 Propedia 표시 기준이며 영향의 크기를 뜻하지 않습니다",
+   "available_from": null,
+   "unverified": true,
+   "doc_ids": [
+    "D1",
+    "D9"
+   ],
+   "source_pages": [
+    "D1 p18",
+    "D9 p12"
+   ]
+  },
+  {
+   "id": "impact500",
+   "group": "propedia",
+   "name": "영향권 500m",
+   "kind": "fill",
+   "source": "사업 구역 경계에서 EPSG:5186 버퍼",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "as_of": "2026-10-06",
+   "count": 2,
+   "status": "ready",
+   "note": "영향권 250m·500m는 Propedia 표시 기준이며 영향의 크기를 뜻하지 않습니다",
+   "available_from": null,
+   "unverified": true,
+   "doc_ids": [
+    "D1",
+    "D9"
+   ],
+   "source_pages": [
+    "D1 p18",
+    "D9 p12"
+   ]
+  },
+  {
+   "id": "parcels",
+   "group": "propedia",
+   "name": "포함 판정 필지",
+   "kind": "line",
+   "source": "project_parcels + 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "as_of": "2025-01",
+   "count": 19,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": true,
+   "doc_ids": [
+    "D1",
+    "D9"
+   ],
+   "source_pages": [
+    "D1 p4",
+    "D1 p18",
+    "D9 p1",
+    "D9 p12"
+   ],
+   "count_by_judgment": {
+    "included": 0,
+    "possible": 2,
+    "likely": 17
+   },
+   "unverified_count": 19
+  },
+  {
+   "id": "regulations",
+   "group": "propedia",
+   "name": "규제 구역",
+   "kind": "fill",
+   "source": "고시 도면 × 브이월드 연속지적도(LP_PA_CBND_BUBUN) 대조 — Propedia 판독, 사람 확인 전",
+   "license": "Propedia 판독 경계 (원천 고시: 공공저작물) · 필지선 브이월드 2D 데이터 (국토교통부), 공공누리 1유형 출처표시",
+   "as_of": "2026-04-10",
+   "count": 1,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": true,
+   "doc_ids": [
+    "D10"
+   ],
+   "source_pages": [
+    "D10 p3"
+   ]
+  },
+  {
+   "id": "regulation-d5",
+   "group": "propedia",
+   "name": "압구정 아파트지구 토지거래허가구역 (D5)",
+   "kind": "fill",
+   "source": "서울특별시 공고 제2026-1141호 지형도면",
+   "license": null,
+   "as_of": null,
+   "count": 0,
+   "status": "not_adopted",
+   "note": "경계 확인 전, 법정동(압구정동) 단위로만 표시",
+   "available_from": null,
+   "unverified": false,
+   "doc_ids": [
+    "D5"
+   ],
+   "source_pages": []
+  },
+  {
+   "id": "ref-seoulplan",
+   "group": "reference",
+   "name": "서울시 도시계획사업 현황 (서울플랜+)",
+   "kind": "fill",
+   "source": "서울 열린데이터광장 OA-22712",
+   "license": "공공누리 4유형 (출처표시·비상업·변경금지)",
+   "as_of": null,
+   "count": null,
+   "status": "pending",
+   "note": "P15 준비 중",
+   "available_from": "P15",
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": [],
+   "badge": "참고·비상업"
+  },
+  {
+   "id": "ref-uije",
+   "group": "reference",
+   "name": "의제처리구역",
+   "kind": "fill",
+   "source": "서울특별시 의제처리구역 위치정보",
+   "license": "출처표시",
+   "as_of": null,
+   "count": null,
+   "status": "pending",
+   "note": "P15 준비 중",
+   "available_from": "P15",
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": [],
+   "badge": "참고"
+  },
+  {
+   "id": "ref-zoning",
+   "group": "reference",
+   "name": "용도지역·지구단위계획 (WMS)",
+   "kind": "raster",
+   "source": "브이월드 WMS",
+   "license": "공공누리 1유형 (출처표시)",
+   "as_of": null,
+   "count": null,
+   "status": "pending",
+   "note": "P15 준비 중",
+   "available_from": "P15",
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": [],
+   "badge": "참고"
+  },
+  {
+   "id": "ref-cadastral",
+   "group": "reference",
+   "name": "지적도 (WMS)",
+   "kind": "raster",
+   "source": "브이월드 WMS lp_pa_cbnd_bubun",
+   "license": "공공누리 1유형 (출처표시)",
+   "as_of": null,
+   "count": null,
+   "status": "pending",
+   "note": "P15 준비 중",
+   "available_from": "P15",
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": [],
+   "badge": "참고"
+  },
+  {
+   "id": "apartments",
+   "group": "market",
+   "name": "아파트 단지",
+   "kind": "fill",
+   "source": "국토교통부 공동주택 단지 목록·기본 정보",
+   "license": "이용허락범위 제한 없음",
+   "as_of": null,
+   "count": null,
+   "status": "pending",
+   "note": "P17 준비 중",
+   "available_from": "P17",
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "schools",
+   "group": "infra",
+   "name": "학교",
+   "kind": "symbol",
+   "source": "전국초중등학교위치표준데이터",
+   "license": "이용허락범위 제한 없음",
+   "as_of": null,
+   "count": null,
+   "status": "pending",
+   "note": "P18 준비 중",
+   "available_from": "P18",
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "subway",
+   "group": "infra",
+   "name": "지하철역",
+   "kind": "symbol",
+   "source": "서울시 역사마스터 정보",
+   "license": "출처표시",
+   "as_of": null,
+   "count": null,
+   "status": "pending",
+   "note": "P18 준비 중",
+   "available_from": "P18",
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "amenities",
+   "group": "infra",
+   "name": "편의시설",
+   "kind": "symbol",
+   "source": "소상공인시장진흥공단 상가(상권)정보",
+   "license": "이용허락범위 제한 없음",
+   "as_of": null,
+   "count": null,
+   "status": "pending",
+   "note": "P18 준비 중",
+   "available_from": "P18",
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "boundary-gangnam",
+   "group": "base",
+   "name": "강남구 경계",
+   "kind": "line",
+   "source": "브이월드 2D 데이터 (국토교통부)",
+   "license": "공공누리 1유형 (출처표시)",
+   "as_of": null,
+   "count": 1,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  },
+  {
+   "id": "boundary-bjd",
+   "group": "base",
+   "name": "법정동 경계",
+   "kind": "line",
+   "source": "브이월드 2D 데이터 (국토교통부)",
+   "license": "공공누리 1유형 (출처표시)",
+   "as_of": null,
+   "count": 14,
+   "status": "ready",
+   "note": null,
+   "available_from": null,
+   "unverified": false,
+   "doc_ids": [],
+   "source_pages": []
+  }
+ ],
+ "notes": [
+  "D5: 경계 확인 전, 법정동(압구정동) 단위로만 표시"
+ ],
+ "_note": "GET /api/v1/map/manifest 응답 예시 (P14). 형식(키) 검사용 — 건수는 테스트가 manifest.json·DB에서 읽어 비교한다"
+}

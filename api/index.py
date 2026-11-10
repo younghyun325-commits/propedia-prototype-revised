@@ -9,15 +9,19 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
+from datetime import date  # noqa: E402
+
 from fastapi import Body, FastAPI, HTTPException  # noqa: E402
 from fastapi.responses import RedirectResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from core import catalog  # noqa: E402
 from core import live as live_mod  # noqa: E402
+from core import map as map_mod  # noqa: E402
 from core.db import connect_ro, meta  # noqa: E402
 from core.lookup import lookup, parcel_summary  # noqa: E402
 from core.progress import progress  # noqa: E402
+from core.timeutil import today_kst  # noqa: E402
 
 app = FastAPI(title="Propedia 프리토타입 API", version="0.1")
 
@@ -32,7 +36,48 @@ def health():
     try:
         m = meta(con)
         return {"status": "ok", "build_at": m.get("build_at"), "as_of": m.get("as_of"),
-                "schema_version": m.get("schema_version"), "coverage_note": m.get("coverage_note")}
+                "schema_version": m.get("schema_version"), "coverage_note": m.get("coverage_note"),
+                **map_mod.key_status()}
+    finally:
+        con.close()
+
+
+def _as_of(as_of: str | None) -> date:
+    if not as_of:
+        return today_kst()
+    try:
+        return date.fromisoformat(as_of)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="기준일(as_of)은 YYYY-MM-DD 형식입니다") from None
+
+
+@app.get("/api/v1/map/manifest")
+def map_manifest():
+    con = _con()
+    try:
+        return map_mod.map_manifest(con)
+    except map_mod.MapDataUnavailable as e:
+        raise HTTPException(status_code=503, detail=str(e)) from None
+    finally:
+        con.close()
+
+
+@app.get("/api/v1/map/notices")
+def map_notices(as_of: str | None = None):
+    day = _as_of(as_of)
+    con = _con()
+    try:
+        return map_mod.map_notices(con, day)
+    finally:
+        con.close()
+
+
+@app.get("/api/v1/map/projects")
+def map_projects(as_of: str | None = None):
+    day = _as_of(as_of)
+    con = _con()
+    try:
+        return map_mod.map_projects(con, day)
     finally:
         con.close()
 

@@ -1,6 +1,52 @@
 # 진행 기록
-현재 단계: P13.5 528번지 likely 반영·키 확인 완료 (2026-11-10, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P14 좌측 레이어 패널·상단 바
+현재 단계: P14 좌측 레이어 패널·상단 바 완료 (2026-11-10, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P15 공식 참고 레이어·필지 클릭 조회
 
+
+## P14 좌측 레이어 패널·상단 바 — 완료 (2026-11-10)
+사용자가 레이어를 켜고 끄고, 겹쳐 보고, 사업을 찾아 고를 수 있게 했다. 인스펙터는 '선택 상태'까지만 만들었다 (내용은 P16).
+
+### 0. 정리
+- [x] 0-1 문서 (528 반영): `agents.md` §4 A2 '주변 66m' → 한양7차 사업 구역 필지(포함된 것으로 보임, D1 p18 결정도 대조, 사람 확인 전), A4만 '주변 293m' + §21 한 줄 / `docs/map/PLAN.md` 34·41·189·471·473행 사업 필지 18 → 19(대표 지번 2 + 지도 대조 후보 17: 대청마을 16, 한양7차 528 1). 473행 '28필지'는 그대로(528은 A2로 이미 들어 있었음) / `README.md` 지도 대조 설명에 한양7차 528번지 1필지. 다른 뜻의 18(필드 약 18개, 18px, D1 18~21쪽, P18, M18)과 PROGRESS의 과거 기록은 그대로
+- [x] 0-2 `pipeline/check_keys.py`: 기본 출력 `build/check_keys/{vworld,juso}/`, `--update-fixtures`일 때만 `tests/fixtures/` (두 경로 모두 같은 키 검사 `save()`). 실행 결과 토지 3종 × 2필지 200 OK, getcoord 200 OK, image 200 png, juso E0001(키 빈 값, HUMAN_TODO 39) → `git status --short tests/fixtures` **변경 없음**
+
+### 1. API (`core/map.py`, 표준 라이브러리·읽기 전용)
+- [x] `GET /api/v1/map/manifest`: `public/data/layers/manifest.json` + `public/data/base/` → 레이어 목록(id·group·name·kind·source·license·as_of·count·status·note·available_from + unverified·doc_ids·source_pages). 준비 중: 서울플랜+·의제처리구역·용도지역 WMS·지적도 WMS(P15), 아파트 단지(P17), 학교·지하철역·편의시설(P18). D5 `not_adopted`(note는 manifest notes 그대로). 필지 `count_by_judgment {included, possible, likely}`(DB `project_parcels` + 포함 판정 표). 영향권 250·500 건수는 GeoJSON `buffer_m`으로 셈. 파일이 없으면 503 + 한국어 안내. 응답 예시 `tests/fixtures/map_manifest.json`
+- [x] 포함 판정 표 `INCLUSION`·`INCLUSION_LABEL`을 `core/map.py` 한 곳으로 옮기고 `build_map_layers`가 import
+- [x] `GET /api/v1/map/notices?as_of=`: `lookup.load_items` 그대로(효력 판정 `timeutil.effective` 재사용) → 서울 전역·강남구 범위, tier=applies, 효력 중, **계획 문서 제외**(영현 결정). 2026-11-10 → D6·D7·D8, 2027-01-01 → D7·D8. 형식이 틀리면 400
+- [x] `GET /api/v1/map/projects?as_of=`: `progress()` 결과 그대로 (position_label·현재 단계·기한 d_day_label·sub_status), bbox(사업 구역 GeoJSON), 판정별 필지 수, 확인 전 여부, 호버 문구 `hover_line`(예: '한양7차아파트 재건축 · 2/13단계 · 정비계획(안) 주민공람 마감' — progress 값을 이어 붙이기만 함)
+- [x] `/api/v1/health` 확장: `keys {vworld, juso}` = '있음'/'없음'만, `key_notes`(도로명주소 키 없음 → 브이월드 검색으로 대체). 지금: 브이월드 있음 · 도로명주소 없음
+
+### 2. 레이어 빌드: within_impact
+- [x] `build_map_layers.py`: 필지(중심점)·규제(도형 중심점)마다 `within_impact {project_id, buffer_m}` = 들어가는 가장 작은 영향권(EPSG:5186, 같으면 project_id 작은 쪽), 밖이면 null. MapLibre 식용 `impact_buffer_m`
+- 결과: 필지 19개 모두 자기 사업의 250m 안(528 → {1, 250}), D10 → null(영향권에서 약 1.2km). 그래서 겹침 대상에 규제 구역을 넣음(영현 결정)
+- 2회 실행 sha256 같음: projects `0c2ba018…` · impact `9a724e04…` · parcels `f7eefbde…` → **`cd3f6ee7…`** · regulations `945247ce…` → **`d06cb2ba…`** · manifest `0f8bf69d…`(그대로)
+
+### 3~7. 화면 (`web/src`)
+- [x] 상태 `state/useMapStore.ts`(zustand 하나): layers{visible, opacity}·basemap·overlap·selected{kind,id}·hovered·leftTab·camera + 화면 안 상태(palette·viewRequest·searchHit). `state/url.ts`(순수 함수)·`useUrlSync`(history.replaceState, 300ms 디바운스, 카메라는 moveend 때만, debug 등 다른 파라미터 유지). 기본값과 같은 항목은 URL에서 뺌
+- [x] 좌측 패널(`panel/`, GlassPanel 320px, 스크롤은 패널 안): 탭 레이어 · 사업 목록 · 고시 피드('P19에서 채웁니다') · 데이터 상태
+  - 레이어 탭: role=tree/treeitem, 그룹 접기·그룹 전체 체크(indeterminate). 배경지도 라디오(지도 위 전환 버튼에서 옮김, 3D만 남김). 행 = 실제 checkbox·색 칩(SVG, 지도 스타일과 같은 면·선·빗금·점선)·이름·건수(manifest)·'확인 전'·정보 툴팁(포털: 원천·기준일·라이선스·근거 쪽)·투명도 슬라이더. 영향권 아래 고정 문구, 필지 아래 범례 두 줄('실선 = 포함·포함될 수 있음 (대표 지번)' — 대표 지번 2건은 '포함'이 아니라서 문구를 정확히 맞춤, '점선 = 포함된 것으로 보임 (지도 대조, 사람 확인 전)') + 판정별 건수. D5·준비 중 행 비활성
+  - 겹침 보기 스위치: `OVERLAP_TARGETS = ['parcels','regulations']`(설정 하나, P17·P18은 id만 추가), `opacityExpr` = `['case', ['==', ['get','impact_buffer_m'], null], 기준×0.25, 기준]` — setPaintProperty만, 다시 그리지 않음
+  - 사업 목록: 카드(이름·종류·단계 스테퍼·상태 배지·기한·필지 수·확인 전) → 구역으로 이동 + sel=project:{id}
+  - 데이터 상태: 레이어·원천·라이선스·기준일·건수·상태 표, DB 기준일·빌드 시각, 키 있음/없음, 운영 메모(D5 경계 확인 전, 도로명주소 키 없음)
+- [x] 지도 연결: 토글은 `setLayoutProperty('visibility')`, 투명도·겹침은 `setPaintProperty`, 선택·검색 강조는 `setFilter`. 배경을 바꿔 스타일을 새로 만들 때도 지금 상태를 넣음. 영향권 250·500을 같은 소스의 두 레이어로 나눔(`propedia-impact{250,500}-{fill,line}`). 필지 호버·클릭용 투명 면 `propedia-parcel-hit`, 선택 강조 `propedia-{project,regulation,parcel}-selected`(브랜드 indigo), 검색 강조 `propedia-parcel-search`(brand sky)
+- [x] 호버 툴팁: 가장 작은 도형 먼저(필지 → 규제 → 사업). 사업은 API `hover_line`, 필지 '압구정동 528 · 포함된 것으로 보임 · 사람 확인 전'. `.map-moving` 중 숨김. 클릭: 사업 → 규제 → 필지, 둘 이상 겹치면 선택 목록 → 선택하면 인스펙터 열고 'P16에서 내용 표시'
+- [x] 라벨 충돌: 라벨이 HTML 마커(스타일에 글꼴 없음·CDN 금지)라 MapLibre `text-variable-anchor`를 못 씀 → 같은 규칙을 `map/labels.ts` `placeLabels`로: 줌별 표시(규제 라벨 줌 14 이상) + 가운데·위·아래·오른쪽·왼쪽 후보를 radial offset 14px로 시도해 다른 라벨·법정동 이름과 겹치지 않는 첫 자리. 전 `map_02g_labels_before.png`(대청마을·D10 라벨 겹침) → 후 `map_02g_labels_after.png`(규제 구역을 켜도 겹침 없음)
+- [x] 상단 바(`app/TopBar.tsx`): 로고 · 작업 탭('선택한 사업'은 선택 없으면 비활성, 누르면 그 bbox / '강남구 전체'는 첫 화면) · 검색 버튼(Ctrl K) · 고시 칩 최대 3 + '+N'(팝오버: 종류·효력 기간·근거 쪽·원문 쪽 링크) · '오늘 YYYY.MM.DD(KST) · DB 기준 YYYY-MM-DD'
+- [x] 명령 팔레트(`search/CommandPalette.tsx`, lazy 별도 청크): Ctrl/Cmd+K(기본 동작 막음)·Esc, 300ms 디바운스, 사업(`searchProjects`: 이름 앞부분 → 이름 → 별칭 → 대표 지번) / 주소(기존 `/api/v1/lookup` 그대로, ambiguous 후보, 실패 문구 그대로). 기존 lookup은 '강남구'가 없으면 찾지 못해서, 구 이름 없이 동·번지로 시작하는 검색어만 앞에 '강남구'를 붙임(`addressQuery`, API는 그대로). 주소를 고르면 필지 경계가 있으면 강조·이동, 없으면 임시 핀(좌표는 화면 메모리에만). ↑↓ Enter, 최근 검색 5개 sessionStorage(try/catch)
+- [x] 키보드 L·I·T·Esc·Ctrl+K, 입력창 안에서는 L·I·T 꺼짐. 새 문구는 `web/src/copy/ui.ts`(test_wording 검사 대상). 토큰 추가 `--color-layer-regulation-line`·`--color-warn`(#8a5a00, 흰 바탕 6.2:1)
+
+### 완료 확인 (2026-11-10)
+- `pytest -q` **132 passed** (전 123 + `tests/test_map.py` 9: manifest 형식·판정별 건수·상태·503, notices 2026-11-10/2027-01-01/400, projects ↔ progress, within_impact 표(528 포함), health 키 값 없음)
+- `npm --prefix web run test` **48 passed** (전 21 → url 6, search 7, labels 6, layers 겹침·점선·강조 식 등)
+- `npm --prefix web run build`: 초기 JS `index` **92.22 KB gzip**(≤ 400KB), 명령 팔레트 3.02 KB 별도, 지도 `MapView` 310.64 KB lazy(전과 같음)
+- `python -m pipeline.build_map_layers` 2회 sha256 같음 (위 2)
+- `python -m evals.run_eval`: M1~M20 직전 결과와 같음 (M10 응답 시간만 8 → 6ms, M18은 `--live` 전용이라 전후 모두 없음)
+- `tests/ui_check_map.py --shot`(3000) **56/56**, `--built`(8000) **56/56**, 콘솔 오류 0 (빌드본은 기존대로 타일 차단 제외 규칙)
+- 스크린샷: `docs/screens/map_02_layers.png`, `map_02d_overlap.png`, `map_02e_search.png`, `map_02f_status.png`, `map_02g_labels_before.png`, `map_02g_labels_after.png`
+
+### 남은 것
+- 오른쪽 인스펙터 내용(P16), 고시 피드(P19), 빈 곳 클릭 필지 조회(P15)
+- `check_keys`는 기본 출력 위치(`build/check_keys/`)에도 지오코더 응답(getcoord)을 저장한다. build/는 커밋하지 않는 로컬 캐시지만 '지오코더 결과 저장 금지'와 맞춰 볼지 사람 확인 필요
 
 ## P13.5 528번지 likely 반영, 키 확인 — 완료 (2026-11-10)
 ### A. 브이월드 키

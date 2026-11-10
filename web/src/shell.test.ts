@@ -31,6 +31,12 @@ describe('keyAction', () => {
     expect(keyAction({ key: 't' })).toBe('timeline')
     expect(keyAction({ key: 'Escape' })).toBe('clear')
   })
+  it('Ctrl+K·Cmd+K는 입력 중에도 검색 열기', () => {
+    expect(keyAction({ key: 'k', ctrlKey: true })).toBe('palette')
+    expect(keyAction({ key: 'K', metaKey: true, target: { tagName: 'INPUT' } })).toBe('palette')
+    expect(keyAction({ key: 'k', ctrlKey: true, shiftKey: true })).toBeNull()
+    expect(keyAction({ key: 'k' })).toBeNull()
+  })
   it('입력 중·수정 키는 무시', () => {
     expect(keyAction({ key: 'l', target: { tagName: 'INPUT' } })).toBeNull()
     expect(keyAction({ key: 't', ctrlKey: true })).toBeNull()
@@ -39,17 +45,29 @@ describe('keyAction', () => {
 })
 
 describe('useMapStore', () => {
-  beforeEach(() => useMapStore.setState({ leftOpen: true, rightOpen: true, timelineOpen: false, selection: null }))
-  it('패널 토글과 선택 해제', () => {
+  beforeEach(() => useMapStore.setState({ leftOpen: true, rightOpen: true, timelineOpen: false, selected: null }))
+  it('패널 토글과 선택 해제 (고르면 인스펙터가 열림)', () => {
     const s = useMapStore.getState()
     s.toggleLeft()
     s.toggleRight()
     s.toggleTimeline()
-    s.select('project:1')
     let st = useMapStore.getState()
-    expect([st.leftOpen, st.rightOpen, st.timelineOpen, st.selection]).toEqual([false, false, true, 'project:1'])
+    expect([st.leftOpen, st.rightOpen, st.timelineOpen]).toEqual([false, false, true])
+    s.select({ kind: 'project', id: '1' })
+    st = useMapStore.getState()
+    expect([st.rightOpen, st.selected]).toEqual([true, { kind: 'project', id: '1' }])
     st.clearSelection()
     st = useMapStore.getState()
-    expect(st.selection).toBeNull()
+    expect(st.selected).toBeNull()
+  })
+  it('레이어 켜기·끄기·투명도 (0~100으로 자름)', () => {
+    const s = useMapStore.getState()
+    s.setLayerVisible('regulations', true)
+    s.setLayerOpacity('projects', 140)
+    s.setLayersVisible(['impact250', 'impact500'], false)
+    const st = useMapStore.getState()
+    expect(st.layers.regulations.visible).toBe(true)
+    expect(st.layers.projects.opacity).toBe(100)
+    expect([st.layers.impact250.visible, st.layers.impact500.visible]).toEqual([false, false])
   })
 })

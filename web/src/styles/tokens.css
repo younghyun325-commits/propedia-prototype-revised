@@ -12,6 +12,8 @@
   --color-layer-project: #5d34a9;    /* 사업 구역·영향권 */
   --color-layer-apartment: #e0567a;  /* 아파트 단지 */
   --color-layer-regulation: #eda100; /* 규제 구역 (빗금과 함께) */
+  --color-layer-regulation-line: #b07a00; /* 규제 구역 외곽선·라벨 띠 (흰 바탕 대비 확보) */
+  --color-warn: #8a5a00;             /* 확인 전 배지 글자 (흰 바탕 6.2:1) */
   --font-sans: "Pretendard Variable", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
