@@ -2,6 +2,6 @@
   "regions": ["icn1"],
   "buildCommand": "npm --prefix web ci && npm --prefix web run build",
   "functions": {
-    "api/index.py": { "excludeFiles": "web/**" }
+    "api/index.py": { "excludeFiles": "{web/**,public/pages/**}" }
   }
 }

@@ -68,7 +68,8 @@ INFRA = [
      "label_min_zoom": 17},
     {"id": "pois", "key": "pois", "name": "편의시설", "default_on": False},
 ]
-INFRA_KEYS = ("file", "size_bytes", "excluded", "as_of_note", "dataset_id", "url", "categories", "routes_file", "lazy")
+INFRA_KEYS = ("file", "size_bytes", "excluded", "as_of_note", "dataset_id", "url", "categories", "routes_file", "lazy",
+              "license_note")
 PENDING: list[dict] = []
 
 BASEMAPS = [("basemap-base", "기본"), ("basemap-gray", "회색"), ("basemap-satellite", "위성"),

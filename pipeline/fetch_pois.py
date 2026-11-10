@@ -66,7 +66,8 @@ SEOUL_LICENSE = "공공누리 1유형 : 출처표시 (상업적 이용 및 변�
 SOURCES = {
     "schools": {"source": "전국초중등학교위치표준데이터 (한국교육시설안전원)", "dataset_id": "data.go.kr 15021148",
                 "url": "https://www.data.go.kr/data/15021148/standard.do",
-                "license": "확인 필요 (데이터셋 페이지에 '이용허락범위 안내' 링크만 있음, 2026-11-11)",
+                "license": "이용허락범위 제한 없음",
+                "license_note": "2026-11-11 사람이 데이터셋 페이지에서 확인 (영현)",
                 "as_of": SCHOOL_AS_OF, "as_of_note": "파일의 데이터기준일자"},
     "stations": {"source": "서울시 역사마스터 정보 (서울특별시)", "dataset_id": "OA-21232",
                  "url": "https://data.seoul.go.kr/dataList/OA-21232/S/1/datasetView.do", "license": SEOUL_LICENSE,
@@ -334,8 +335,14 @@ def bus_build(stops: list[dict], routes: list[dict], route_stops: list[dict], in
     return feats, bus_routes, rep
 
 
+def station_stop_match(stop_name: str, station: str) -> bool:
+    """정류장 이름이 '{역}역'으로 시작하고 바로 뒤가 끝·공백·'.'·'·'·'('·숫자일 때만 그 역의 정류장으로 본다
+    (예: '강남역', '강남역 10번출구', '강남역.강남역사거리'). 부분 문자열 일치는 쓰지 않는다 (P19-0)."""
+    return re.match(rf"{re.escape(station)}역(?=$|[\s.·(]|\d)", stop_name) is not None
+
+
 def station_check(bus_feats: list[dict], station_feats: list[dict]) -> list[dict]:
-    """D2 좌표 검증: 이름에 '{역 이름}역'이 들어간 강남구 정류장 ↔ 그 역 좌표 거리 (긴 역 이름 먼저)."""
+    """D2 좌표 검증: 이름이 '{역 이름}역'으로 시작하는 강남구 정류장 ↔ 그 역 좌표 거리 (긴 역 이름 먼저)."""
     names = []
     for s in station_feats:
         for n in {s["properties"]["name"], *map(base_name, s["properties"]["aliases"])}:
@@ -345,7 +352,7 @@ def station_check(bus_feats: list[dict], station_feats: list[dict]) -> list[dict
     for f in bus_feats:
         p = f["properties"]
         for n, s in names:
-            if f"{n}역" in p["name"]:
+            if station_stop_match(p["name"], n):
                 d = haversine_m(p["lon"], p["lat"], s["properties"]["lon"], s["properties"]["lat"])
                 rows.append({"ars_no": p["ars_no"], "stop_name": p["name"], "station": s["properties"]["name"],
                              "distance_m": round(d), "within_300m": d <= STATION_CHECK_M})

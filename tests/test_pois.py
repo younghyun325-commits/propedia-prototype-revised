@@ -192,6 +192,16 @@ def test_bus_stop_coordinates_within_300m_of_station():
         assert 126 < b["lon"] < 128 and 37 < b["lat"] < 38                 # WGS84 그대로 (TM 아님)
 
 
+def test_station_stop_match_prefix_only():
+    """P19-0: '{역}역'으로 시작하고 바로 뒤가 끝·공백·'.'·'·'·'('·숫자일 때만 짝짓는다 (부분 문자열 일치 안 씀)"""
+    ok = ["강남역", "강남역 10번출구", "강남역10번출구", "강남역.강남역사거리", "강남역(중)"]
+    no = ["트레블로지강남역삼서울", "강남역삼동주민센터", "신강남역", "역삼역", "강남"]
+    assert all(fp.station_stop_match(n, "강남") for n in ok)
+    assert not any(fp.station_stop_match(n, "강남") for n in no)
+    rows = json.loads((ROOT / "build" / "pois_report.json").read_text(encoding="utf-8"))["bus"]["station_check"]         if (ROOT / "build" / "pois_report.json").exists() else []
+    assert all(fp.station_stop_match(r["stop_name"], r["station"]) for r in rows)
+
+
 # ---------- 공통 ----------
 def test_within_impact_on_layers():
     for name in ("schools.geojson", "stations.geojson", "bus_stops.geojson"):
@@ -213,7 +223,8 @@ def test_manifest_license_and_as_of_note():
         assert "파일 내 기준일 없음, 내려받은 날 기준" in m[k]["as_of_note"] and m[k]["as_of"] == "2026-11-11"
         assert m[k]["license"].startswith("공공누리 1유형")
     assert m["schools"]["as_of"] == "2026-10-01" and m["pois"]["as_of"] == "202609"
-    assert m["schools"]["license"].startswith("확인 필요")
+    assert m["schools"]["license"] == "이용허락범위 제한 없음"            # P19-0: 사람이 데이터셋 페이지에서 확인
+    assert m["schools"]["license_note"].startswith("2026-11-11 사람이 데이터셋 페이지에서 확인")
     assert m["pois"]["license"] == "이용허락범위 제한 없음"
     assert sum(c["count"] for c in m["pois"]["categories"]) == m["pois"]["count"]
     sup = next(c for c in m["pois"]["categories"] if c["key"] == "supermarket")

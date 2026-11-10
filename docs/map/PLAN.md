@@ -196,7 +196,7 @@ Nov 9, 2026 · @영현2
 | ② | 클릭한 필지의 토지 정보 | 2D 데이터 점 조회 → 기존 `core/live` 토지 3종 | 실시간 API | JSON | 토지 3종 있음 | P15 |
 | ③ | 아파트 단지(목록·세대수·사용승인일) | 국토부 공동주택 단지 목록 · [기본 정보(AptBasisInfoServiceV5)](https://www.data.go.kr/en/data/15058453/openapi.do) | 빌드(월 1회) | GeoJSON + DB | 없음 | P17 |
 | ③ | 아파트 매매 실거래가 | [국토부 아파트 매매 실거래가 상세 자료](https://www.data.go.kr/en/data/15126468/openapi.do): 지역코드 5자리(11680)·계약년월 6자리, 개발계정 10,000건, 이용허락 제한 없음 | 빌드(주 1회) | `db/market.db` | 없음 | P17 |
-| ③ | 학교(초·중·고) | [전국초중등학교위치표준데이터](https://www.data.go.kr/data/15021148/standard.do) (data.go.kr 15021148, CSV·CP949, 위도·경도, 기준일 2026-10-01) — 이용허락범위 **확인 필요**(페이지에 안내 링크만, HUMAN_TODO) | 빌드(파일) | `schools.geojson` 79곳 | 있음 | P18 |
+| ③ | 학교(초·중·고) | [전국초중등학교위치표준데이터](https://www.data.go.kr/data/15021148/standard.do) (data.go.kr 15021148, CSV·CP949, 위도·경도, 기준일 2026-10-01) — 이용허락범위 제한 없음 (2026-11-11 사람이 데이터셋 페이지에서 확인) | 빌드(파일) | `schools.geojson` 79곳 | 있음 | P18 |
 | ③ | 초등학교 통학구역(선택) | 한국교육시설안전원 학구도 SHP (매년 3월·9월 배포) | 빌드 | GeoJSON | 없음(이번 범위 밖) | — |
 | ③ | 편의시설 6분류(슈퍼마켓·편의점·병원·의원·약국·카페·학원) | [소상공인시장진흥공단 상가(상권)정보 API](https://www.data.go.kr/data/15012005/openapi.do) (data.go.kr 15012005) `storeListInDong` divId=signguCd·key=11680, 강남구 66,722건, 기준 stdrYm 202609 — 이용허락범위 제한 없음. 분류표 `seed/poi_categories.yaml`(대형마트 코드·금융(은행)은 원자료에 없음) | 빌드(API) | `pois_*.geojson` 6개 9,895곳 | 있음 | P18 |
 | ③ | 지하철역 | [서울시 역사마스터 정보](https://data.seoul.go.kr/dataList/OA-21232/S/1/datasetView.do) (OA-21232) — 공공누리 1유형 출처표시 (상업적 이용·변경 가능). 파일 내 기준일 없음 → 내려받은 날 2026-11-11 | 빌드(파일) | `stations.geojson` 31개 역 | 있음 | P18 |
@@ -725,7 +725,7 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 **생활 인프라 (P18)**
 
 - [소상공인시장진흥공단 상가(상권)정보 API](https://www.data.go.kr/data/15012005/openapi.do) — 이용허락범위 제한 없음
-- [전국초중등학교위치표준데이터](https://www.data.go.kr/data/15021148/standard.do) — 이용허락범위 확인 필요
+- [전국초중등학교위치표준데이터](https://www.data.go.kr/data/15021148/standard.do) — 이용허락범위 제한 없음 (2026-11-11 확인)
 - [서울시 역사마스터 정보 OA-21232](https://data.seoul.go.kr/dataList/OA-21232/S/1/datasetView.do) · [정류장마스터 OA-21231](https://data.seoul.go.kr/dataList/OA-21231/S/1/datasetView.do) · [노선마스터 OA-21230](https://data.seoul.go.kr/dataList/OA-21230/S/1/datasetView.do) · [노선 정류장마스터 OA-21233](https://data.seoul.go.kr/dataList/OA-21233/S/1/datasetView.do) — 공공누리 1유형 (2026-11-11 확인, 데이터 갱신일 2026.11.02)
 
 **Claude Code**
