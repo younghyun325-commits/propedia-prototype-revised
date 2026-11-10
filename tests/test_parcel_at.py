@@ -197,7 +197,9 @@ def test_import_reference_idempotent(tmp_path, monkeypatch):
     ir.main()
     assert digest() == one
     for name in ("ref_seoulplan.geojson", "ref_uije.geojson", "manifest.json"):     # 커밋된 결과와도 같다
-        assert one[name] == hashlib.sha256((map_mod.LAYERS_DIR / name).read_bytes()).hexdigest(), name
+        # git autocrlf로 작업 사본이 CRLF가 될 수 있어 줄끝만 맞춰 비교 (빌드 출력은 LF)
+        committed = (map_mod.LAYERS_DIR / name).read_bytes().replace(b"\r\n", b"\n")
+        assert one[name] == hashlib.sha256(committed).hexdigest(), name
 
 
 def test_reference_geojson_keeps_original_fields():
