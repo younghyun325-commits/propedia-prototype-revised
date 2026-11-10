@@ -48,7 +48,7 @@
 | 45 | 운영 주소(main 배포)에 P13~P15가 반영됐는지, 기존 화면(/, lookup, docs)이 정상인지, /map/이 공개 상태인지 확인. 문제가 있으면 Vercel 대시보드에서 이전 운영 배포로 되돌리기(Instant Rollback) 검토 | origin/main에 P13~P15(c79cac0)가 실수로 먼저 올라감. 되돌리지 않기로 결정(2026-11-11), 작업은 feat/map-console에서만 | 바로 | 열림 |
 | 46 | 실거래 대조: 은마(대치동 316)·청담자이(청담동 134-38)·압구정동 426(실거래 신고명 '신현대9차')의 최근 거래 10건을 국토교통부 실거래가 공개시스템 화면에서 직접 대조 (아래 '실거래 대조표'). 스크래핑하지 않음 | P17 실거래 파싱(금액·계약일·면적·층·해제) 확인 | 시연 전 | 열림 |
 | 47 | 위치를 못 찾은 실거래 단지 12개 확인: 신고 지번 PNU의 필지가 지금 연속지적도에 없음 (개포주공 2·3·4단지, 상아, 홍실, 아크로삼성, 시영, 대우, 현대사원, 개나리4, 씨티1차 101·102동 — 목록 `evals/report.md` '실거래 단지'). 재건축 뒤 지번이 바뀐 단지일 수 있으나 단정하지 않음 | M22 98.3%(685/697), 이 단지들의 거래 821건은 M23 분자에서 빠짐 | P20 전 (선택) | 열림 |
-| 48 | `db/market.db`(14.5MB) **커밋함**(3c8fc3a, 2026-11-11). Preview에서 `/api/v1/apartments/apt:11680-218`(은마) 200 확인 필요. 함수 크기도 함께 보려면 Preview 환경변수 `VERCEL_ANALYZE_BUILD_OUTPUT=1`로 배포해 빌드 로그의 함수 크기(한도 500MB)를 확인 | 배포본 실거래 API | 다음 Preview | 열림 |
+| 48 | `db/market.db`(14.5MB) **커밋함**(3c8fc3a, 2026-11-11). Preview에서 `/api/v1/apartments/apt:11680-218`(은마) 200 확인 필요. 함수 크기도 함께 보려면 Preview 환경변수 `VERCEL_ANALYZE_BUILD_OUTPUT=1`로 배포해 빌드 로그의 함수 크기(한도 500MB)를 확인. **P18-0**: Preview 배포 때 환경변수 VERCEL_ANALYZE_BUILD_OUTPUT=1로 함수 크기 확인. web/ 제외(`vercel.json` `functions["api/index.py"].excludeFiles = "web/**"`) 후 크기 기록. 크기가 크면 `public/pages/**`·`public/map/**`도 빼는 안(런타임이 파일로 읽지 않음) 검토 | 배포본 실거래 API | 다음 Preview | 열림 |
 
 ## 실거래 대조표 (HUMAN_TODO 46)
 
