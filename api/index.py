@@ -330,10 +330,17 @@ def eval_report():
         con.close()
 
 
-if os.environ.get("VERCEL") == "1":
-    @app.get("/", include_in_schema=False)
-    def root():
-        return RedirectResponse("/index.html")
-else:
+# 첫 화면 (P20): / → /map/ 임시 리디렉트(307). Vercel은 vercel.json redirects가 먼저 처리하고, 로컬도 같은 동작.
+# 기존 화면은 그대로: /index.html(주소 조회), /lookup.html, /docs.html
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse("/map/", status_code=307)
+
+
+if os.environ.get("VERCEL") != "1":
+    # 로컬만 gzip (P20): Vercel은 CDN이 압축한다. 1KB 미만 응답은 그대로
+    from fastapi.middleware.gzip import GZipMiddleware  # noqa: E402
+
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
     # API 라우트를 모두 등록한 뒤 마지막에 정적 화면을 붙인다 (순서가 바뀌면 API가 404)
     app.mount("/", StaticFiles(directory=str(ROOT / "public"), html=True), name="public")

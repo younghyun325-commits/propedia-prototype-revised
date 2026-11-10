@@ -3,5 +3,11 @@
   "buildCommand": "npm --prefix web ci && npm --prefix web run build",
   "functions": {
     "api/index.py": { "excludeFiles": "{web/**,public/pages/**}" }
-  }
+  },
+  "redirects": [
+    { "source": "/", "destination": "/map/", "permanent": false }
+  ],
+  "headers": [
+    { "source": "/(.*)", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
+  ]
 }

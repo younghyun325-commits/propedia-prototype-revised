@@ -109,3 +109,27 @@ def test_page_detail_evidences(client):
     p = client.get("/api/v1/documents/D1/pages/1").json()
     assert p["text"] and p["image_url"] == "/pages/D1/p001.jpg"
     assert p["evidences"]
+
+
+def test_root_redirects_to_map(client):
+    """P20: 첫 화면 / → /map/ 임시 리디렉트(307). 기존 화면 /index.html·/docs.html은 그대로"""
+    r = client.get("/", follow_redirects=False)
+    assert r.status_code == 307 and r.headers["location"] == "/map/"
+    for page in ("/index.html", "/lookup.html", "/docs.html"):
+        assert client.get(page).status_code == 200, page
+
+
+def test_local_gzip(client):
+    """P20: 로컬 FastAPI는 1KB 이상 응답을 gzip으로 (Vercel은 CDN이 압축)"""
+    r = client.get("/api/v1/map/manifest", headers={"Accept-Encoding": "gzip"})
+    assert r.status_code == 200 and r.headers.get("content-encoding") == "gzip"
+
+
+def test_vercel_json_redirect_and_noindex():
+    """P20: vercel.json — / → /map/ 307(permanent false), 모든 응답 X-Robots-Tag: noindex"""
+    import json
+    from pathlib import Path
+    cfg = json.loads((Path(__file__).resolve().parents[1] / "vercel.json").read_text(encoding="utf-8"))
+    assert {"source": "/", "destination": "/map/", "permanent": False} in cfg["redirects"]
+    hdr = next(h for h in cfg["headers"] if h["source"] == "/(.*)")
+    assert {"key": "X-Robots-Tag", "value": "noindex"} in hdr["headers"]
