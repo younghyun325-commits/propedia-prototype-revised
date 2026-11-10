@@ -11,6 +11,8 @@
   클릭 우선순위(사업 구역 먼저), 참고 구역 이름, 스크린샷 3장(--shot). 클릭 지점은 GeoJSON에서 계산한다(shapely).
 - P19: 편의시설 분류별 선택, 하단 타임라인(T·키보드·스크러버·이벤트 클릭)·'그날 기준'(사업 숨김·규제 흐림·상단 띠)·
   고시 피드·실거래 차트 기준일 선, 원문 모달 이미지, 스크린샷 map_06f~h·07a~d
+- P20: 경계 없는 규제(D5 법정동·D6~D8 서울 전역) 선택 강조·라벨, 설정 메뉴(투명도 줄이기 저장·기존 화면 링크),
+  ? 단축키 도움말(포커스 가두기·복귀), Tab 순서·포커스 링, 움직임 줄이기, 반응형 3폭(map_08c~e), / → /map/ 307, 스크린샷 map_08a~b
 - P18: 생활 인프라(학교·역 기본 켜짐, 정류장 줌 15 안내, 클러스터·이름, 편의시설 분류 행), 역·정류장 인스펙터, 노선 선택 모드,
   반경 보기, 겹침 보기, Ctrl+K 역·정류장 번호·노선, 스크린샷 5장(map_06a~e), --perf로 프레임 시간
 
@@ -1677,13 +1679,262 @@ def perf_check(pw, url: str, check) -> dict:
     return out
 
 
+# ---- P20 (docs/map/PLAN.md P20-A): 경계 없는 규제 선택 · 설정 메뉴 · 단축키 도움말 · 움직임 줄이기 · 반응형 · 첫 화면
+SHOT_D5 = SCREENS / "map_08a_d5_bjd.png"
+SHOT_D6 = SCREENS / "map_08b_d6_gangnam.png"
+SHOT_W = {1440: SCREENS / "map_08c_1440.png", 1180: SCREENS / "map_08d_1180.png", 390: SCREENS / "map_08e_390.png"}
+SCOPE_BJD = "법정동 단위 표시 · 경계 확인 전"
+SCOPE_CITY = "서울 전역 적용 · 지도 경계 없음"
+JS_SCOPE_N = "() => window.__propediaMap.querySourceFeatures('scope-highlight').length"
+JS_DASH = "() => window.__propediaMap.getPaintProperty('scope-highlight-line', 'line-dasharray')"
+JS_BJD_BBOX = """async (code) => { const fc = await (await fetch('/data/base/bjd.geojson')).json();
+  const f = fc.features.find(x => x.properties.bjd_code === code); let w = 999, s = 999, e = -999, n = -999;
+  const walk = c => typeof c[0] === 'number' ? (w = Math.min(w, c[0]), e = Math.max(e, c[0]), s = Math.min(s, c[1]), n = Math.max(n, c[1])) : c.forEach(walk);
+  walk(f.geometry.coordinates); return [w, s, e, n] }"""
+
+
+def _scope_label(page) -> str:
+    loc = page.locator("[data-testid=scope-label]")
+    return loc.inner_text() if loc.count() else ""
+
+
+def _home(url: str) -> str:
+    return url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+
+
+def p20_checks(page, url: str, check, shot: bool, built: bool) -> None:
+    home = _home(url)
+    with_q = home + ("&" if "?" in home else "?")
+
+    # 1. D5 — 고시 피드에서 고르기: 압구정동 경계로 이동 + 점선 강조 + 라벨
+    _open_any(page, with_q + "tab=feed")
+    page.locator("[data-testid=feed-card][data-sel='regulation:D5'] button").first.click()
+    page.wait_for_selector("[data-testid=scope-label]", timeout=8000)
+    page.wait_for_timeout(900)
+    page.evaluate(JS_IDLE)
+    lab = _scope_label(page)
+    n = page.evaluate(JS_SCOPE_N)
+    lon, lat, z = page.evaluate(JS_CENTER)
+    w, s, e, nn = page.evaluate(JS_BJD_BBOX, "1168011000")
+    check("P20 D5(피드): 법정동 단위 라벨", lab == SCOPE_BJD, lab)
+    check("P20 D5(피드): 압구정동 경계 점선 강조", n > 0 and page.evaluate(JS_DASH) is not None, f"도형 {n}")
+    check("P20 D5(피드): 압구정동으로 이동", w <= lon <= e and s <= lat <= nn and z >= 13, f"중심 {lon:.4f},{lat:.4f} 줌 {z:.1f}")
+    check("P20 D5: URL sel=regulation:D5", _q(page, "sel") == "regulation:D5", page.url)
+    note = _text(page, "[data-testid=regulation-scope-note]")
+    check("P20 D5: 인스펙터에 같은 문구 + 지도에서 보기", note == SCOPE_BJD
+          and page.locator("[data-testid=regulation-show-on-map]").count() == 1, note)
+    if shot:
+        page.screenshot(path=str(SHOT_D5))
+    # 선택 해제 → 강조·라벨 사라짐
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(500)
+    check("P20 선택 해제: 라벨·강조 사라짐", not _scope_label(page) and page.evaluate(JS_SCOPE_N) == 0,
+          f"라벨 '{_scope_label(page)}', 도형 {page.evaluate(JS_SCOPE_N)}")
+
+    # 2. D6 — 상단 고시 칩에서 고르기: 강남구 전체 + 구 경계 강조
+    _open(page, home)
+    chips = page.locator("[data-testid=notice-chip]")
+    idx = next((i for i in range(chips.count()) if "토지" in chips.nth(i).inner_text()), 0)
+    chips.nth(idx).click()
+    page.wait_for_selector("[data-testid=notice-open-inspector]", timeout=5000)
+    page.click("[data-testid=notice-open-inspector]")
+    page.wait_for_selector("[data-testid=scope-label]", timeout=8000)
+    page.wait_for_timeout(900)
+    page.evaluate(JS_IDLE)
+    lab = _scope_label(page)
+    check("P20 D6(상단 칩): 서울 전역 라벨", lab == SCOPE_CITY and _q(page, "sel") == "regulation:D6", f"{lab} sel={_q(page, 'sel')}")
+    labels = page.locator("[data-testid=dong-label]").count()
+    check("P20 D6: 강남구 전체 보기 + 구 경계 강조", page.evaluate(JS_SCOPE_N) > 0 and labels == 14
+          and page.evaluate(JS_CENTER)[2] < 13.2, f"법정동 라벨 {labels}, 줌 {page.evaluate(JS_CENTER)[2]:.1f}")
+    if shot:
+        page.screenshot(path=str(SHOT_D6))
+
+    # 3. URL로 열기 + 기준일(t) 함께, D10은 기존 경계 그대로
+    _open(page, with_q + "sel=regulation:D5&t=2026-05-01")
+    page.wait_for_selector("[data-testid=scope-label]", timeout=8000)
+    check("P20 URL sel=regulation:D5&t=2026-05-01: 같은 동작", _scope_label(page) == SCOPE_BJD and _q(page, "t") == "2026-05-01"
+          and page.evaluate(JS_SCOPE_N) > 0, f"{_scope_label(page)} t={_q(page, 't')}")
+    _open(page, with_q + "sel=regulation:D7&t=2026-05-01")
+    page.wait_for_selector("[data-testid=scope-label]", timeout=8000)
+    check("P20 URL sel=regulation:D7: 서울 전역 라벨", _scope_label(page) == SCOPE_CITY, _scope_label(page))
+    _open(page, with_q + "layers=projects,impact250,regulations&sel=regulation:D10")   # 규제 레이어를 켜야 선택 강조가 그려진다 (기존 동작)
+    page.wait_for_timeout(600)
+    sel_n = page.evaluate(JS_RENDERED, ["propedia-regulation-selected"])
+    check("P20 D10: 범위 라벨 없이 기존 경계 강조", not _scope_label(page) and page.evaluate(JS_SCOPE_N) == 0 and sel_n > 0,
+          f"라벨 '{_scope_label(page)}', 선택 강조 {sel_n}")
+
+    # 4. 설정 메뉴: 투명도 줄이기(저장·새로고침 유지), 단축키 보기, 기존 화면 링크
+    _open(page, home)
+    page.click("[data-testid=settings-open]")
+    page.wait_for_selector("[data-testid=settings-menu]", timeout=5000)
+    hrefs = [page.get_attribute("[data-testid=legacy-lookup]", "href"), page.get_attribute("[data-testid=legacy-docs]", "href")]
+    check("P20 설정 메뉴: 기존 화면 링크", hrefs == ["/index.html", "/docs.html"], str(hrefs))
+    page.click("[data-testid=reduce-transparency]")
+    on = page.evaluate("document.documentElement.classList.contains('reduce-transparency')")
+    stored = page.evaluate("() => localStorage.getItem('propedia.map.reduceTransparency.v1')")
+    page.reload()
+    _ready(page)
+    kept = page.evaluate("document.documentElement.classList.contains('reduce-transparency')")
+    check("P20 투명도 줄이기: 켜짐·저장·새로고침 뒤 유지", on and stored == "1" and kept, f"{on} {stored} {kept}")
+    page.click("[data-testid=settings-open]")
+    page.click("[data-testid=reduce-transparency]")
+    page.keyboard.press("Escape")
+    off = not page.evaluate("document.documentElement.classList.contains('reduce-transparency')")
+    check("P20 투명도 줄이기 끄기", off and page.locator("[data-testid=settings-menu]").count() == 0)
+
+    # 5. ? 단축키 도움말: 포커스 가두기·Esc 닫기·포커스 복귀
+    page.click("[data-testid=settings-open]")
+    page.click("[data-testid=shortcuts-open]")
+    page.wait_for_selector("[data-testid=shortcuts-modal]", timeout=5000)
+    inside = []
+    for _ in range(6):
+        page.keyboard.press("Tab")
+        inside.append(page.evaluate("() => !!document.activeElement.closest('[data-testid=shortcuts-modal]')"))
+    rows = page.locator("[data-testid=shortcut-row]").count()
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(200)
+    back = page.evaluate("() => document.activeElement?.dataset?.testid ?? ''")
+    check("P20 단축키 도움말(설정 메뉴): 9줄·포커스 가두기·닫으면 설정 버튼으로", rows == 9 and all(inside) and back == "settings-open"
+          and page.locator("[data-testid=shortcuts-modal]").count() == 0, f"줄 {rows}, 가둠 {inside}, 복귀 {back}")
+    page.evaluate("() => document.activeElement && document.activeElement.blur()")   # 지도를 누르면 필지 조회가 시작되므로 누르지 않는다
+    page.keyboard.press("Shift+Slash")
+    page.wait_for_selector("[data-testid=shortcuts-modal]", timeout=5000)
+    sel_before = _q(page, "sel")
+    page.keyboard.press("Escape")
+    page.wait_for_timeout(200)
+    check("P20 ? 키로 열기·Esc는 도움말만 닫음", page.locator("[data-testid=shortcuts-modal]").count() == 0 and _q(page, "sel") == sel_before,
+          f"sel {sel_before} → {_q(page, 'sel')}")
+
+    # 6. 키보드만으로 시연 순서: Tab으로 상단 바 → 검색 → 좌측 탭, 포커스 링 보임
+    _open(page, home)
+    page.keyboard.press("Tab")
+    seen = []
+    for _ in range(14):
+        seen.append(page.evaluate("""() => { const a = document.activeElement; const cs = getComputedStyle(a);
+          return [a.dataset.testid || a.getAttribute('role') || a.tagName, cs.outlineStyle !== 'none' || cs.boxShadow !== 'none'] }"""))
+        page.keyboard.press("Tab")
+    names = [s[0] for s in seen]
+    pos = {k: next((i for i, n in enumerate(names) if str(n).startswith(k)), 99) for k in ("work-tab-", "search-open", "settings-open", "left-tab-")}
+    check("P20 Tab 순서: 작업 탭 → 검색 → 설정 → 좌측 탭",
+          pos["work-tab-"] < pos["search-open"] < pos["settings-open"] < pos["left-tab-"] < 99, " → ".join(map(str, names)))
+    check("P20 포커스 링(키보드 포커스에 외곽선)", all(s[1] for s in seen), str([s for s in seen if not s[1]][:4]))
+
+
+def p20_motion_check(pw, url: str, check) -> None:
+    """prefers-reduced-motion: 지도 이동이 애니메이션 없이(jumpTo와 같음) 끝난다"""
+    b = pw.chromium.launch()
+    ctx = b.new_context(viewport={"width": 1440, "height": 900}, reduced_motion="reduce")
+    page = ctx.new_page()
+    _open(page, url)
+    page.click("[data-testid=left-tab-projects]")
+    page.wait_for_selector("[data-testid=project-card-1]", timeout=8000)
+    c0 = page.evaluate(JS_CENTER)
+    page.click("[data-testid=project-card-1]")
+    page.wait_for_timeout(80)
+    moving = page.evaluate("() => window.__propediaMap.isMoving()")
+    c1 = page.evaluate(JS_CENTER)
+    check("P20 움직임 줄이기: 사업 고르면 바로 이동(애니메이션 없음)", not moving and abs(c1[2] - c0[2]) > 1,
+          f"80ms 뒤 이동 중 {moving}, 줌 {c0[2]:.1f}→{c1[2]:.1f}")
+    b.close()
+
+
+def p20_responsive(pw, url: str, check, shot: bool) -> None:
+    """반응형 3폭 (1440·1180·390) + 스크린샷 map_08c~e"""
+    b = pw.chromium.launch()
+    home = _home(url)
+    with_q = home + ("&" if "?" in home else "?")
+    for w, h in [(1440, 900), (1180, 800), (390, 844)]:
+        page = b.new_page(viewport={"width": w, "height": h})
+        _open_any(page, with_q + "sel=project:1")
+        vp = page.evaluate("document.documentElement.dataset.viewport")
+        cnt = {t: page.locator(f"[data-testid={t}]").count() for t in
+               ["left-panel", "icon-rail", "right-panel", "timeline", "bottom-sheet", "narrow-notice"]}
+        hscroll = page.evaluate("document.documentElement.scrollWidth") > w
+        check(f"P20 {w}px: 가로 스크롤 없음", not hscroll)
+        if w == 1440:
+            check("P20 1440px: 기본 배치", vp == "wide" and cnt["left-panel"] == 1 and cnt["right-panel"] == 1
+                  and cnt["timeline"] == 1 and cnt["bottom-sheet"] == 0, f"{vp} {cnt}")
+        elif w == 1180:
+            close = page.locator("[data-testid=inspector-close]").first
+            shadow = close.evaluate("e => getComputedStyle(e).boxShadow")
+            check("P20 1180px: 좌측 접힘(아이콘 줄)·인스펙터 겹침·타임라인 그대로", vp == "mid" and cnt["left-panel"] == 0
+                  and cnt["icon-rail"] == 1 and cnt["right-panel"] == 1 and cnt["timeline"] == 1, f"{vp} {cnt}")
+            check("P20 1180px: 인스펙터 닫기 버튼 강조", shadow not in ("", "none"), shadow)
+            if shot:
+                page.screenshot(path=str(SHOT_W[w]))
+            page.click("[data-testid=rail-feed]")
+            opened = page.locator("[data-testid=left-panel]").count() == 1 and _wait_url(page, lambda u: "tab=feed" in u)
+            page.click("[data-testid=left-collapse]")
+            page.wait_for_timeout(200)
+            check("P20 1180px: 아이콘 줄 → 패널 열기·접기", opened and page.locator("[data-testid=icon-rail]").count() == 1,
+                  f"열림 {opened}, 접은 뒤 아이콘 줄 {page.locator('[data-testid=icon-rail]').count()}")
+            close.click()
+            page.wait_for_timeout(300)
+            check("P20 1180px: 닫기 → 인스펙터 사라짐", page.locator("[data-testid=right-panel]").count() == 0)
+            page.close()
+            continue
+        else:
+            check("P20 390px: 보기 전용(하단 시트·안내)", vp == "narrow" and cnt["bottom-sheet"] == 1 and cnt["narrow-notice"] == 1
+                  and cnt["left-panel"] == 0 and cnt["timeline"] == 0, f"{vp} {cnt}")
+            note = _text(page, "[data-testid=narrow-notice]")
+            check("P20 390px: 안내 문구", note == "큰 화면에서 모든 기능을 쓸 수 있습니다", note)
+            snap = page.get_attribute("[data-testid=bottom-sheet]", "data-snap")
+            tab = page.get_attribute("[data-testid=bottom-sheet]", "data-tab")
+            check("P20 390px: 사업을 고르면 시트 '정보' 절반", snap == "half" and tab == "info"
+                  and page.locator("[data-testid=sheet-body] [data-testid=inspector-title]").count() == 1, f"{snap} {tab}")
+            hidden = page.evaluate("""() => ['radius-tool'].map(t => { const e = document.querySelector(`[data-testid=${t}]`);
+              return !e || getComputedStyle(e).display === 'none' })""")
+            check("P20 390px: 반경 보기 숨김", all(hidden), str(hidden))
+            if shot:
+                page.screenshot(path=str(SHOT_W[w]))
+            snaps = []
+            for _ in range(3):
+                page.click("[data-testid=sheet-handle]")
+                page.wait_for_timeout(150)
+                snaps.append(page.get_attribute("[data-testid=bottom-sheet]", "data-snap"))
+            check("P20 390px: 시트 3단(손잡이)", snaps == ["full", "collapsed", "half"], str(snaps))
+            page.click("[data-testid=sheet-tab-timeline]")
+            page.wait_for_selector("[data-testid=sheet-timeline] [data-testid=tl-root]", timeout=8000)
+            page.wait_for_timeout(500)
+            scrub = page.evaluate("""() => { const e = document.querySelector('[data-testid=tl-scrubber]');
+              return !e || getComputedStyle(e).display === 'none' }""")
+            check("P20 390px: 타임라인은 시트 안 탭, 스크러버 끌기 숨김", scrub)
+            page.click("[data-testid=sheet-tab-layers]")
+            check("P20 390px: 레이어 탭", page.locator("[data-testid=sheet-body] [data-testid=layer-tree]").count() == 1)
+            page.close()
+            continue
+        if shot:
+            page.screenshot(path=str(SHOT_W[w]))
+        page.close()
+    b.close()
+
+
+def _open_any(page, url: str) -> None:
+    """좌측 패널이 없는 폭(1180·390)에서도 쓰는 _open"""
+    page.goto(url)
+    page.wait_for_function("() => window.__propediaMap && window.__propediaMap.loaded()", timeout=20000)
+    page.wait_for_load_state("networkidle")
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(800)
+
+
+def p20_root_redirect(pw, check) -> None:
+    """첫 화면 / → /map/ (307) — 로컬 FastAPI. Vercel은 vercel.json redirects (Preview 확인 목록)"""
+    ctx = pw.request.new_context()
+    r = ctx.get("http://127.0.0.1:8000/", max_redirects=0)
+    check("P20 / → /map/ 307", r.status == 307 and r.headers.get("location") == "/map/", f"{r.status} {r.headers.get('location')}")
+    r2 = ctx.get("http://127.0.0.1:8000/index.html")
+    check("P20 기존 화면 /index.html 200", r2.status == 200, str(r2.status))
+    ctx.dispose()
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--built", action="store_true", help="빌드본 http://127.0.0.1:8000/map/ 점검")
     ap.add_argument("--shot", action="store_true", help=f"스크린샷 저장 {SHOT.relative_to(ROOT)}")
     ap.add_argument("--perf", action="store_true", help="P18 프레임 시간 측정")
-    ap.add_argument("--only", choices=["p19", "p19-1"], help="기본 점검 + 이 단계만 (반복 확인용)")
+    ap.add_argument("--only", choices=["p19", "p19-1", "p20"], help="기본 점검 + 이 단계만 (반복 확인용)")
     a = ap.parse_args()
     url = "http://127.0.0.1:8000/map/?debug=1" if a.built else "http://localhost:3000/map/"
 
@@ -1869,6 +2120,11 @@ def main() -> int:
             p19_poi_checks(page, url, check, a.shot)
         if not a.only or a.only == "p19":
             p19_checks(page, url, check, a.shot)
+        if not a.only or a.only == "p20":
+            p20_checks(page, url, check, a.shot, a.built)
+            p20_motion_check(p, url, check)
+            p20_responsive(p, url, check, a.shot)
+            p20_root_redirect(p, check)
         if a.perf:
             if not a.only:
                 perf = perf_check(p, url, check)
