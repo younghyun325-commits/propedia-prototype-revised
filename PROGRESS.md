@@ -4,7 +4,14 @@
 - 작업은 `feat/map-console`에서만 한다. `main` 병합은 P20에서 사람이 한다. (로컬 `.git/hooks/pre-commit`·`pre-push`가 main 커밋·push를 막음, 커밋되지 않는 로컬 훅)
 - `origin/main`에는 2026-11-10까지 P13~P15가 실수로 먼저 올라가 있다(`c79cac0`). 되돌리지 않기로 결정. 운영 배포 영향은 HUMAN_TODO 45에서 확인.
 
-현재 단계: P17 아파트 단지·실거래 완료 (2026-11-11). 다음은 docs/map/PLAN.md P18 생활 인프라
+현재 단계: P18 생활 인프라 — 1단계 원천 확인 끝, 분류표·정류장 기준 확정 대기 (2026-11-11)
+
+## P18 생활 인프라 — 진행 중 (2026-11-11)
+- [x] A: `db/market.db` 커밋(3c8fc3a) — 개인 정보 성격 필드 0·키 0·freelist 0·41,566건. 갱신 규칙 README·PLAN(947ff44), HUMAN_TODO 48 갱신
+- [x] `.gitignore`에 `data_raw/12.생활인프라/`
+- [x] 1단계 원천 확인: `pipeline/check_infra_api.py`(상가 sdsc2 `storeListInDong`·`largeUpjongList`·`middleUpjongList`·`smallUpjongList`, 155회 호출, 원 응답 `build/infra_api_check/`), CSV 4종(학교 79·역 32개 이름·정류장 625·노선 295)
+- [x] `seed/poi_categories.yaml` 초안 (status: draft, 결정 필요 17개 업종, 은행은 원자료에 없음)
+- [ ] (사람) 분류표 확정, 정류장 좌표 기준(WGS84 원자료) 확인, 노선-정류장 전체 연결률 51%(경기·인천 정류장 ID가 서울 마스터에 없음) 진행 여부 → 2단계
 
 
 ## P17 아파트 단지·실거래 — 완료 (2026-11-11)
