@@ -6,7 +6,7 @@
 
 ## 준비 (시연 10분 전)
 
-1. 화면 주소를 엽니다: 배포본 `https://propedia-pretotype.vercel.app/` (첫 화면이 `/map/`으로 넘어갑니다) 또는 로컬 `http://localhost:3000/map/`.
+1. 화면 주소를 엽니다: 배포본 `https://propedia-prototype.vercel.app/` (첫 화면이 `/map/`으로 넘어갑니다) 또는 로컬 `http://localhost:3000/map/`.
    - 로컬은 터미널 2개: `python -m uvicorn api.index:app --port 8000 --reload`, `npm --prefix web run dev`.
 2. 첫 화면에 강남구 전체가 보이고, 오른쪽 위에 '오늘'·'DB 기준' 날짜가 있는지 봅니다.
 3. 선택이 남아 있으면 `Esc`를 누릅니다. 주소창에 `sel=`·`t=`가 없으면 깨끗한 상태입니다.

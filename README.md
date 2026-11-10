@@ -5,7 +5,8 @@
 - 작업 지시서: [agents.md](agents.md) · 지도 계획: [docs/map/PLAN.md](docs/map/PLAN.md) · 진행 기록: [PROGRESS.md](PROGRESS.md) · 사람 확인 목록: [HUMAN_TODO.md](HUMAN_TODO.md)
 - 시연 대본: 지도 화면 [DEMO_MAP.md](DEMO_MAP.md) (5분, P20) · 기존 화면 [DEMO.md](DEMO.md)
 - GitHub(비공개): https://github.com/greekyogurt02/propedia-pretotype
-- 배포 주소: https://propedia-pretotype.vercel.app (Vercel Hobby, GitHub `main` push 시 자동 배포)
+- 배포 주소: https://propedia-prototype.vercel.app (Vercel Hobby, GitHub `main` push 시 자동 배포)
+- 옛 주소 propedia-pretotype.vercel.app 은 Vercel 도메인 설정으로 새 주소로 넘어간다.
 
 ## 지도 화면 (`/map/`, P11~P20)
 
@@ -124,7 +125,7 @@ pip install -r requirements.txt -r requirements-build.txt
 |---|---|---|---|
 | `VITE_VWORLD_KEY` | 브라우저 배경지도(WMTS 타일). **빌드 때 번들(`public/map/assets/*.js`)에 그대로 들어가는 것이 정상**이므로, 브이월드에서 **서비스 URL 제한을 건 키**(배포 주소만 허용)여야 합니다 | Production · Preview (빌드 때 필요) | 지도 배경에 필수 (없으면 경계·레이어만 보임) |
 | `VWORLD_API_KEY` | 서버 실시간 조회: 토지 정보·필지 클릭 조회·지오코더·참고 WMS 프록시 (`core/live/vworld.py`) | Production · Preview | 필수 (없으면 시연 주소만 빌드 캐시로 동작) |
-| `VWORLD_DOMAIN` | 브이월드 요청의 `domain` (인증키에 등록한 서비스 URL). 없으면 운영 주소 | Production · Preview | 선택 |
+| `VWORLD_DOMAIN` | 브이월드 요청의 `domain` (인증키에 등록한 서비스 URL). 없으면 운영 주소 `https://propedia-prototype.vercel.app` | Production · Preview | 선택 |
 | `JUSO_CONFM_KEY` | 도로명주소 검색 (`core/live/juso.py`). 없거나 실패하면 브이월드 검색으로 대체 | Production · Preview | 선택 |
 | `DATA_GO_KR_SERVICE_KEY` (+ `DATA_GO_KR_*_URL`) | 실거래·단지 목록·상가·건축물대장 **로컬 빌드용** (`fetch_trades`·`fetch_pois`·`fetch_buildings`·`fetch_apt_basis`) | **넣지 않음** (런타임에서 쓰지 않음) | 빌드 때만 |
 | `VWORLD_API_KEY_DEV`, `VWORLD_DEV_DOMAIN` | 로컬 개발 서버(localhost:3000)용 브이월드 키·서비스 URL | 넣지 않음 | 로컬 선택 |

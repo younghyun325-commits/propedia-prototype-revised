@@ -6,6 +6,13 @@
 
 현재 단계: P19 하단 타임라인·고시 피드 완료 (2026-11-11). 다음은 docs/map/PLAN.md P20 다듬기·테스트·배포
 
+## P20 운영 주소 변경 (propedia-pretotype → propedia-prototype.vercel.app) — 저장소 쪽 완료 (2026-11-11)
+- 한 일: `core/live/vworld.py` `DEFAULT_DOMAIN`과 그 테스트(`test_live_vworld.py`), `test_parcel_at.py` 저장 응답 금지 목록에 새 주소 추가(옛 주소도 유지), `.env.example` 주석, README(배포 주소·옛 주소 리디렉트 한 줄·`VWORLD_DOMAIN` 기본값), DEMO.md, DEMO_MAP.md, HUMAN_TODO 34, agents.md §15-1-1·§21
+- 바꿀 것 없었음: `vercel.json`·`api/index.py`·WMS 프록시에 호스트 조건 없음, `ui_check*.py`·`demo_map_run.py`·`run_eval --live`에 운영 주소 기본값 없음, `tests/fixtures`에 옛 주소 없음, docs/map/PLAN.md에 운영 주소 표기 없음
+- 그대로 둔 것: GitHub 저장소 주소·git 원격·폴더·Vercel 프로젝트 이름, 이 파일의 지난 기록, HUMAN_TODO 4(닫힘), agents.md §21 지난 줄, feedback*.md
+- 완료 확인: `pytest -q` 312 passed / `npm --prefix web run test` 156 passed / `npm --prefix web run build` 통과 / `tests/ui_check_map.py`(3000번) 188/188
+- 남은 일 (사람): HUMAN_TODO 53 Vercel 도메인 추가·옛 주소 리디렉트, 54 새 서비스 URL로 브이월드 키 발급·Vercel 환경변수 교체·재배포, 55 접속 확인
+
 ## P20-A 다듬기·테스트·문서·Preview 준비 — 완료 (2026-11-11) · main 병합·운영 배포는 사람이
 
 범위: docs/map/PLAN.md P20 중 배포를 뺀 것. 브랜치 `feat/map-console`만. 시작 때 P19 커밋 4개 빨리감기 push(e13fbe7..3c13087).

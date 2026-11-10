@@ -104,7 +104,7 @@ def test_domain_from_env(monkeypatch):
     import core.live.http as live_http
     monkeypatch.setattr(live_http, "_ENV_LOADED", True)      # 로컬 .env 값이 끼어들지 않게
     monkeypatch.setenv("VWORLD_DOMAIN", "")
-    assert vworld.domain() == vworld.DEFAULT_DOMAIN == "https://propedia-pretotype.vercel.app"
+    assert vworld.domain() == vworld.DEFAULT_DOMAIN == "https://propedia-prototype.vercel.app"
     monkeypatch.setenv("VWORLD_DOMAIN", "http://localhost:3000")
     assert vworld.domain() == "http://localhost:3000"
     assert vworld._params("k")["domain"] == "http://localhost:3000"

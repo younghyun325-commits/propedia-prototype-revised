@@ -228,7 +228,7 @@ def test_check_keys_never_saves_geocoder_body():
 
 def test_parcel_fixtures_have_no_key_or_domain():
     env = ROOT / ".env"
-    vals = ["propedia-pretotype.vercel.app", "localhost:3000"]
+    vals = ["propedia-pretotype.vercel.app", "propedia-prototype.vercel.app", "localhost:3000"]
     if env.exists():
         vals += [ln.split("=", 1)[1].strip().strip('"') for ln in env.read_text(encoding="utf-8").splitlines()
                  if "=" in ln and not ln.lstrip().startswith("#")]
