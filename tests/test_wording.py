@@ -53,7 +53,9 @@ def test_public_files():
 # 지도 화면(web/src): §9-6 금지어 + '시세' (docs/map/PLAN.md '먼저 정해야 할 것'). 브랜드 문구 파일만 예외.
 # P17 실거래: 평가어(상승·하락·저평가·고평가)도 쓰지 않는다 — 문구는 '실거래가(국토교통부 신고 자료, 계약일 기준)'
 MARKET_BANNED = ["시세", "상승", "하락", "저평가", "고평가"]
-WEB_BANNED = BANNED + MARKET_BANNED
+# P18 생활 인프라: 이름·분류·번호·주소·거리·개수만 — 평가어(편리·좋은·역세권·가까워 유리) 금지
+INFRA_BANNED = ["편리", "좋은", "역세권", "유리"]
+WEB_BANNED = BANNED + MARKET_BANNED + INFRA_BANNED
 WEB_SRC = ROOT / "web" / "src"
 WEB_EXEMPT = {WEB_SRC / "copy" / "brand.ts"}
 

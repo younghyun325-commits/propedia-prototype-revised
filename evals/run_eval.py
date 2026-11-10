@@ -528,6 +528,9 @@ def evaluate(live: bool = False) -> dict:
     # M22·M23 실거래 단지 (docs/map/PLAN.md P17)
     mk_metrics, market = market_metrics(errors)
     metrics += mk_metrics
+    # M24 생활 인프라 건수 일치 (docs/map/PLAN.md P18)
+    inf_metrics, infra = infra_metrics(errors)
+    metrics += inf_metrics
 
     drafts = [g_ext.get("draft"), g_addr.get("draft"), g_scope.get("draft"), g_land.get("draft"), g_bnd.get("draft")]
     return {
@@ -547,6 +550,7 @@ def evaluate(live: bool = False) -> dict:
         "addresses": addr_rows,
         "excluded_addresses": g_addr.get("excluded", []),
         "market": market,
+        "infra": infra,
         "errors": errors,
     }
 
@@ -670,6 +674,99 @@ def market_metrics(errors: list) -> tuple[list[dict], dict | None]:
     return out, market
 
 
+INFRA_RAW = ROOT / "data_raw" / "12.생활인프라"
+POIS_RAW = ROOT / "build" / "pois_raw"
+
+
+def _csv_rows(path: Path) -> list[dict] | None:
+    import csv
+    if not path.exists():
+        return None
+    raw = path.read_bytes()
+    for enc in ("utf-8-sig", "cp949"):
+        try:
+            return list(csv.DictReader(raw.decode(enc).splitlines()))
+        except UnicodeDecodeError:
+            continue
+    return None
+
+
+def _pct_s(n: int, d: int) -> str:
+    return f"{n / d * 100:.1f}%" if d else "—"
+
+
+def infra_metrics(errors: list) -> tuple[list[dict], dict | None]:
+    """M24 생활 인프라 건수 일치 = 레이어 건수 ÷ (원자료 강남구 건수 − 사유가 기록된 제외 건수), 원천 4종 각각 100%.
+    원자료 건수는 여기서 원본(data_raw/12.생활인프라 CSV, build/pois_raw 상가 응답)으로 따로 센다. 제외 사유·건수는 manifest.
+    참고(목표 없음): 버스 노선 연결률 2가지 (노선-정류장 행 중 서울 정류장 마스터에 있는 정류장, 노선이 연결된 강남구 정류장)."""
+    man = (json.loads((LAYER_DIR / "manifest.json").read_text(encoding="utf-8")).get("layers") or {}) if (LAYER_DIR / "manifest.json").exists() else {}
+    if not all(k in man for k in ("schools", "stations", "bus_stops", "pois")):
+        return [{"id": "M24", "name": "생활 인프라 건수 일치", "value": None, "display": "레이어 없음", "target": "원천 4종 100%",
+                 "pass": False, "note": "pipeline.fetch_pois 실행 전"}], None
+    from pyproj import Transformer
+    from shapely.geometry import Point, shape
+    from shapely.prepared import prep
+    t = Transformer.from_crs("EPSG:4326", "EPSG:5186", always_xy=True)
+    gfc = json.loads((ROOT / "public" / "data" / "base" / "gangnam.geojson").read_text(encoding="utf-8"))
+    gg = shape(gfc["features"][0]["geometry"])
+    import shapely
+    g5 = shapely.transform(gg, lambda x, y: t.transform(x, y), interleaved=False)
+    bufs = {m: prep(g5.buffer(m)) for m in (100, 500)}
+
+    def near(lon, lat, m) -> bool:
+        try:
+            lon, lat = float(lon), float(lat)
+        except (TypeError, ValueError):
+            return False
+        return lon != 0 and lat != 0 and bufs[m].covers(Point(*t.transform(lon, lat)))
+
+    def layer_count(name: str) -> int:
+        e = man[name]
+        files = [c["file"] for c in e.get("categories") or [] if c.get("file")] or [e["file"]]
+        return sum(len(json.loads((LAYER_DIR / f).read_text(encoding="utf-8"))["features"]) for f in files)
+
+    rows = []
+    school = _csv_rows(INFRA_RAW / "학교" / "전국초중등학교위치표준데이터.csv")
+    rows.append(("학교", "schools", None if school is None else
+                 sum(1 for r in school if "서울특별시 강남구" in (r.get("소재지도로명주소", "") + r.get("소재지지번주소", ""))), "학교 (강남구 주소)"))
+    st = _csv_rows(INFRA_RAW / "지하철역" / "서울시 역사마스터 정보.csv")
+    rows.append(("지하철역", "stations", None if st is None else sum(1 for r in st if near(r["경도"], r["위도"], 500)), "역사 행 (경계 + 500m)"))
+    stops = _csv_rows(INFRA_RAW / "버스정류장" / "서울시 정류장마스터 정보.csv")
+    rows.append(("버스정류장", "bus_stops", None if stops is None else sum(1 for r in stops if near(r["경도"], r["위도"], 100)), "정류장 (경계 + 100m)"))
+    pages = sorted(POIS_RAW.glob("p*.json")) if POIS_RAW.exists() else []
+    raw_pois = sum(len(((json.loads(p.read_text(encoding="utf-8")).get("body") or {}).get("items") or [])) for p in pages) if pages else None
+    rows.append(("편의시설", "pois", raw_pois, "상가 (강남구 전체)"))
+
+    out_rows, ok_all = [], True
+    for name, key, raw, basis in rows:
+        excl = man[key].get("excluded") or {}
+        n = layer_count(key)
+        ok = None if raw is None else (raw - sum(excl.values()) == n)
+        if ok is False:
+            ok_all = False
+            errors.append({"type": "infra", "detail": f"{name}: 레이어 {n} ≠ 원자료 {raw} − 제외 {sum(excl.values())}"})
+        out_rows.append({"name": name, "key": key, "basis": basis, "raw": raw, "excluded": excl, "layer": n, "ok": ok})
+    checked = [r for r in out_rows if r["ok"] is not None]
+
+    bus_links = None
+    rstop = _csv_rows(INFRA_RAW / "버스정류장" / "서울시 노선 정류장마스터 정보.csv")
+    if stops is not None and rstop is not None:
+        sid = {r["정류장_ID"].strip() for r in stops}
+        num = sum(1 for r in rstop if r["정류장_ID"].strip() in sid)
+        bus = json.loads((LAYER_DIR / man["bus_stops"]["file"]).read_text(encoding="utf-8"))["features"]
+        linked = sum(1 for f in bus if f["properties"].get("route_count"))
+        bus_links = {"all": {"num": num, "den": len(rstop), "pct": _pct_s(num, len(rstop))},
+                     "gangnam": {"num": linked, "den": len(bus), "pct": _pct_s(linked, len(bus))}}
+    disp_s = " · ".join(f"{r['name']} {'—' if r['raw'] is None else ('100%' if r['ok'] else '다름')}" for r in out_rows)
+    note = "분모 = 원자료 강남구 건수 − 사유가 기록된 제외(manifest excluded)"
+    if bus_links:
+        note += (f" · 참고: 버스 노선 연결률 전체 {bus_links['all']['pct']} ({bus_links['all']['num']:,}/{bus_links['all']['den']:,}), "
+                 f"강남구 정류장 {bus_links['gangnam']['pct']} ({bus_links['gangnam']['num']}/{bus_links['gangnam']['den']}) — 목표 없음")
+    metric = {"id": "M24", "name": "생활 인프라 건수 일치", "value": (len([r for r in checked if r["ok"]]) / len(out_rows)) if out_rows else None,
+              "display": disp_s, "target": "원천 4종 각각 100%", "pass": ok_all and len(checked) == len(out_rows), "note": note}
+    return [metric], {"sources": out_rows, "bus_links": bus_links}
+
+
 def write_report_md(rep: dict) -> None:
     lines = ["# 평가 리포트", "",
              f"- 실행: {rep['run_at']} · DB 빌드: {rep['build_at']}",
@@ -722,6 +819,19 @@ def write_report_md(rep: dict) -> None:
         if mk.get("unmatched"):
             lines += ["", "위치를 못 찾은 단지 (신고 지번의 필지가 지금 연속지적도에 없음 — 재건축 뒤 지번이 바뀐 단지 등일 수 있음, "
                       "build/apartments_unmatched.csv):", ""] + [f"- {x}" for x in mk["unmatched"]]
+    inf = rep.get("infra")
+    if inf:
+        lines += ["", "## 생활 인프라 (M24)", "",
+                  "레이어 건수 ÷ (원자료 강남구 건수 − 사유가 기록된 제외 건수). 원자료 건수는 평가 스크립트가 원본 CSV·상가 원 응답에서 따로 셉니다.", "",
+                  "| 원천 | 원자료 강남구 | 사유 기록 제외 | 레이어 | 일치 |", "|---|---|---|---|---|"]
+        for x in inf["sources"]:
+            ex = ", ".join(f"{k} {v}" for k, v in x["excluded"].items()) or "—"
+            lines.append(f"| {x['name']} | {x['raw'] if x['raw'] is not None else '원자료 없음'} | {ex} | {x['layer']} | "
+                         f"{'—' if x['ok'] is None else ('일치' if x['ok'] else '다름')} |")
+        b = inf.get("bus_links")
+        if b:
+            lines += ["", f"- 참고(목표 없음): 노선-정류장 행 중 서울 정류장 마스터에 있는 정류장 {b['all']['num']:,}/{b['all']['den']:,} "
+                      f"({b['all']['pct']}) · 노선이 연결된 강남구 정류장 {b['gangnam']['num']}/{b['gangnam']['den']} ({b['gangnam']['pct']})"]
     lines += ["", "## 오류 목록", ""]
     if rep["errors"]:
         lines += [f"- [{e['type']}] {e['detail']}" for e in rep["errors"]]

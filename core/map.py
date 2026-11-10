@@ -60,15 +60,16 @@ REF_WMS = [
 ]
 WMS_BADGE = "참고"
 
-# 아직 데이터가 없는 레이어 (P18에서 채움)
-PENDING = [
-    {"id": "schools", "group": "infra", "name": "학교", "kind": "symbol",
-     "source": "전국초중등학교위치표준데이터", "license": "이용허락범위 제한 없음", "available_from": "P18"},
-    {"id": "subway", "group": "infra", "name": "지하철역", "kind": "symbol",
-     "source": "서울시 역사마스터 정보", "license": "출처표시", "available_from": "P18"},
-    {"id": "amenities", "group": "infra", "name": "편의시설", "kind": "symbol",
-     "source": "소상공인시장진흥공단 상가(상권)정보", "license": "이용허락범위 제한 없음", "available_from": "P18"},
+# 생활 인프라 (P18): pipeline/fetch_pois.py가 manifest.json에 쓴 항목. 패널 id → manifest 키·이름·표시 방법
+INFRA = [
+    {"id": "schools", "key": "schools", "name": "학교", "default_on": True},
+    {"id": "stations", "key": "stations", "name": "지하철역", "default_on": True},
+    {"id": "bus_stops", "key": "bus_stops", "name": "버스정류장", "default_on": False, "min_zoom": 15,
+     "label_min_zoom": 17},
+    {"id": "pois", "key": "pois", "name": "편의시설", "default_on": False},
 ]
+INFRA_KEYS = ("file", "size_bytes", "excluded", "as_of_note", "dataset_id", "url", "categories", "routes_file", "lazy")
+PENDING: list[dict] = []
 
 BASEMAPS = [("basemap-base", "기본"), ("basemap-gray", "회색"), ("basemap-satellite", "위성"),
             ("basemap-hybrid", "하이브리드")]
@@ -180,6 +181,19 @@ def map_manifest(con) -> dict:
           note=(ap or {}).get("note") or "pipeline.build_map_layers 실행 전", lazy=True, file=(ap or {}).get("file"),
           size_bytes=(ap or {}).get("size_bytes"), points_file=(ap or {}).get("points_file"),
           fill_min_zoom=(ap or {}).get("fill_min_zoom"), boundary_note=(ap or {}).get("boundary_note"))
+
+    for spec in INFRA:
+        src = L.get(spec["key"])
+        extra = {k: src.get(k) for k in INFRA_KEYS if src and k in src}
+        if spec["key"] == "bus_stops" and L.get("bus_routes"):
+            r = L["bus_routes"]
+            extra["routes"] = {"file": r.get("file"), "count": r.get("count"), "source": r.get("source"),
+                               "license": r.get("license"), "as_of": r.get("as_of"), "dataset_id": r.get("dataset_id"),
+                               "url": r.get("url"), "as_of_note": r.get("as_of_note")}
+        entry(spec["id"], "infra", spec["name"], "symbol", src, status="ready" if src else "pending",
+              note=(src or {}).get("note") or (None if src else "pipeline.fetch_pois 실행 전"),
+              default_on=spec["default_on"], min_zoom=spec.get("min_zoom"), label_min_zoom=spec.get("label_min_zoom"),
+              **extra)
 
     for p in PENDING:
         layers.append({"id": p["id"], "group": p["group"], "name": p["name"], "kind": p["kind"], "source": p["source"],

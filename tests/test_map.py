@@ -58,10 +58,14 @@ def test_manifest_status(client):
     d = {x["id"]: x for x in client.get("/api/v1/map/manifest").json()["layers"]}
     assert d["regulation-d5"]["status"] == "not_adopted"
     assert d["regulation-d5"]["note"] == "경계 확인 전, 법정동(압구정동) 단위로만 표시"
-    for lid, phase in [("schools", "P18"), ("subway", "P18"), ("amenities", "P18")]:
-        assert d[lid]["status"] == "pending" and d[lid]["available_from"] == phase, lid
+    # P18 생활 인프라 4종: pipeline/fetch_pois.py manifest 항목이 있으면 ready (준비 중 레이어는 더 없음)
+    assert not [x for x in d.values() if x["status"] == "pending"]
+    assert {lid: d[lid]["default_on"] for lid in ("schools", "stations", "bus_stops", "pois")} ==         {"schools": True, "stations": True, "bus_stops": False, "pois": False}
+    assert (d["bus_stops"]["min_zoom"], d["bus_stops"]["label_min_zoom"]) == (15, 17)
+    assert d["bus_stops"]["routes"]["file"] == "bus_routes.json" and len(d["pois"]["categories"]) == 6
     for lid in ("basemap-gray", "projects", "impact250", "impact500", "parcels", "regulations",
-                "ref-seoulplan", "ref-uije", "ref-zoning", "ref-district", "ref-cadastral", "apartments"):
+                "ref-seoulplan", "ref-uije", "ref-zoning", "ref-district", "ref-cadastral", "apartments",
+                "schools", "stations", "bus_stops", "pois"):
         assert d[lid]["status"] == "ready", lid
 
 
