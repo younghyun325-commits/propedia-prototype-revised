@@ -51,10 +51,11 @@ describe('레이어 데이터 (public/data/layers)', () => {
   const all = [projectsRaw, impactRaw, parcelsRaw, regsRaw].map((r) => JSON.parse(r) as PropediaFC)
   const [projects, impact, parcels, regs] = all
 
-  it('건수: 사업 2, 영향권 4, 필지 18, 규제 1 이상', () => {
+  // 필지 19 = 18 + 압구정동 528 (2026-11-10 영현 결정: D1 p018 결정도 대조, likely, 사람 확인 전, HUMAN_TODO 35)
+  it('건수: 사업 2, 영향권 4, 필지 19, 규제 1 이상', () => {
     expect(projects.features).toHaveLength(2)
     expect(impact.features).toHaveLength(4)
-    expect(parcels.features).toHaveLength(18)
+    expect(parcels.features).toHaveLength(19)
     expect(regs.features.length).toBeGreaterThanOrEqual(1)
   })
   it('확인 전 도형 라벨에는 "확인 전"', () => {

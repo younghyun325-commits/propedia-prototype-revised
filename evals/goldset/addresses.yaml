@@ -9,8 +9,9 @@ note: >
   P10(2026-10-26): 좌표를 브이월드 지오코더(토지 정보)로 바꿨다. 사업 중심도 대표 지번(527·619) 지오코더 좌표.
   거리(토지 좌표 ↔ 사업 중심)를 정답셋 작성 때 따로 계산해 규칙(500m)으로 정했다: A2 66m·A4 293m → nearby,
   B2는 지도 대조 후보(likely), B3 275m → nearby. B1~B5 추가.
+  P13.5(2026-11-10): A2(압구정동 528)는 D1 p018 결정도 대조로 한양7차 likely (영현 결정, 사람 확인 전).
 written_at: "2026-10-26"
-# inclusion: included | possible | nearby | same_dong(필지 밖, 같은 법정동 층에 표시) | none
+# inclusion: included | possible | likely | nearby | same_dong(필지 밖, 같은 법정동 층에 표시) | none
 excluded: []
 addresses:
   - {addr_id: A1, input: "강남구 압구정동 527", status: ok, pnu: "1168011000105270000",
@@ -20,7 +21,8 @@ addresses:
   - {addr_id: A2, input: "서울특별시 강남구 압구정로61길 37", status: ok, pnu: "1168011000105280000",
      bjd_code: "1168011000", sgg_code: "11680", saenghwal: "압구정·청담",
      expect_regulations: {city: [D6-01, D7-01, D8-01], dong: [D5-01]},
-     projects: [{project_key: apgujeong-6-1-hanyang7, inclusion: nearby}]}
+     # 2026-11-10 영현 결정: D1 p018 결정도 대조, likely, 사람 확인 전 (HUMAN_TODO 35)
+     projects: [{project_key: apgujeong-6-1-hanyang7, inclusion: likely}]}
   - {addr_id: A3, input: "서울특별시 강남구 압구정동 527번지", status: ok, pnu: "1168011000105270000",
      bjd_code: "1168011000", sgg_code: "11680", saenghwal: "압구정·청담",
      expect_regulations: {city: [D6-01, D7-01, D8-01], dong: [D5-01]},

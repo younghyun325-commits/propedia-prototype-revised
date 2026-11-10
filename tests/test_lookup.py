@@ -115,10 +115,12 @@ def test_a2_road_address_input(con):
     r = lookup(con, "서울특별시 강남구 압구정로61길 37")
     assert r["status"] == "ok" and r["normalized"]["addr_id"] == "A2"
     assert r["normalized"]["pnu"] == "1168011000105280000"   # 527은 도로명이 없어 인접 528
-    assert r["layers"]["parcel"]["included_projects"] == []
-    # P10: 토지 정보 좌표가 생겨 528은 한양7차 중심(527)에서 500m 안 → 주변 사업 (법정동 층에서는 빠짐)
-    near = r["layers"]["parcel"]["nearby_projects"]
-    assert [p["project_id"] for p in near] == [1] and near[0]["distance_m"] < 500
+    # 2026-11-10 영현 결정: D1 p018 결정도 대조, likely, 사람 확인 전 (HUMAN_TODO 35)
+    # (P10~P13에서는 한양7차 중심에서 66m '주변 사업'이었다)
+    inc = r["layers"]["parcel"]["included_projects"]
+    assert [(p["project_id"], p["inclusion"], p["basis"]) for p in inc] == [(1, "likely", "map_reading")]
+    assert inc[0]["review_id"] is not None and inc[0]["source"]["pdf_page"] == 18
+    assert r["layers"]["parcel"]["nearby_projects"] == []
     assert r["layers"]["dong"]["projects"] == []
 
 
@@ -254,7 +256,7 @@ def test_b5_green_parcel_land_only(con):
 
 
 def test_group_approval_and_exclusion(con):
-    rid = con.execute("SELECT id FROM review_queue WHERE item_type='parcel_group'").fetchone()["id"]
+    rid = con.execute("SELECT id FROM review_queue WHERE item_type='parcel_group' AND ref_key='2:map_reading'").fetchone()["id"]
     r = lookup(con, B2, decisions=[{"review_id": rid, "action": "approve"}])
     assert [p["inclusion"] for p in r["layers"]["parcel"]["included_projects"]] == ["included"]
     r = lookup(con, B2, decisions=[{"review_id": rid, "action": "approve",

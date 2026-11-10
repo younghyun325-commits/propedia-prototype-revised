@@ -4,9 +4,11 @@
 - applicability_rules.confidence < 0.7 → scope_uncertain
 - extracted_fields.confidence < 0.8 → field_low_confidence
 - (item_type, ref_key) 중복 방지
+- 맨 끝: seed/map_reading_parcels.csv의 결정도 대조 묶음 검수(parcel_group, P13.5) — 기존 검수 id가 밀리지 않게 마지막에
 """
 import json
 
+from pipeline.build_projects import extra_group_reviews
 from pipeline.common import connect_rw, log, setup_stdout
 
 ITEM_EDITABLE = ["summary", "scope_type", "scope_ref", "tier"]
@@ -53,6 +55,8 @@ def build(con) -> dict[str, int]:
             {"current": {"field": f["field"], "value": json.loads(f["value"]) if f["value"] else None,
                          "evidence": f["evidence"], "pdf_page": f["pdf_page"]},
              "options": ["approve", "reject"], "editable_fields": []}, f["document_id"], f["pdf_page"])
+    for args in extra_group_reviews(con):
+        add(*args)
     return dict(con.execute("SELECT item_type, count(*) FROM review_queue GROUP BY item_type").fetchall())
 
 

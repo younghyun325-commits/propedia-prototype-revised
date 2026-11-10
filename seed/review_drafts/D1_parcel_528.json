@@ -1,27 +1,80 @@
 {
+ "_status": "반영됨 (2026-11-10, likely, 사람 확인 전)",
  "_note": "검수 항목 초안 (P13-6-4). review_queue 열 형식 그대로지만 어떤 파이프라인도 읽지 않는다. 사람이 판단한 뒤 DB 반영 여부를 정한다. 판정·정답셋·project_parcels는 바꾸지 않았다.",
- "item_type": "parcel_inclusion",
- "ref_table": "project_parcels",
- "ref_key": "1:1168011000105280000",
- "title": "한양7차아파트 재건축 — 압구정동 528 포함 여부 (도면 대조)",
- "reason": "D1 본문(1~17쪽)에는 '527번지 일대'만 있고 528이 없으나, 18쪽 정비구역 결정도의 경계(정비구역계(안))는 528 필지 전체를 감싼다. 연속지적도 대조 결과 528 겹침 99.7%, 경계에서 34.3m 안쪽",
- "proposed": {
-  "current": {
-   "project": "압구정아파트지구 특별계획구역6-1 재건축 정비구역",
-   "pnu": "1168011000105280000",
-   "jibun": "압구정동 528",
-   "inclusion": "nearby (A2 정답: 66m)",
-   "basis": null,
-   "proposed_basis": "map_reading",
-   "proposed_inclusion": "likely",
-   "evidence": "정비구역 결정도 — 경계 안 지번 표기 '527 대', '528 대' (그림 속 글자, 쪽 텍스트 없음)",
-   "pdf_page": 18,
-   "overlay": "build/overlay_D1.png",
-   "parcels_table": "build/align/D1_parcels.csv"
-  },
-  "options": ["approve", "reject"],
-  "editable_fields": []
+ "decision": {
+  "by": "영현",
+  "at": "2026-11-10",
+  "action": "likely로 반영, 사람 확인 전",
+  "detail": "D1 본문(1~17쪽)은 '527번지 일대'만 적고 528이 없어 '포함'이 아니라 '포함된 것으로 보임'(map_reading, verified=0). HUMAN_TODO 35에서 경계와 함께 사람 확인"
  },
- "document_id": 1,
- "pdf_page": 18
+ "applied_as": {
+  "source": "seed/map_reading_parcels.csv",
+  "db": "pipeline/patch_parcels.py (원본 PC에서는 run_all이 같은 값)",
+  "review_queue": {
+   "id": 17,
+   "item_type": "parcel_group",
+   "ref_table": "project_parcels",
+   "ref_key": "1:map_reading",
+   "title": "한양7차아파트 재건축 — 결정도 대조 필지 1필지 (압구정동 528)",
+   "reason": "고시 본문에는 없지만 정비구역 결정도 경계 안쪽인 필지 (판정표 3번 강도: 포함된 것으로 보임)",
+   "proposed": {
+    "current": {
+     "project": "압구정아파트지구 특별계획구역6-1 재건축 정비구역",
+     "inclusion": "likely",
+     "basis": "map_reading",
+     "parcels": [
+      {
+       "pnu": "1168011000105280000",
+       "jibun": "압구정동 528",
+       "reason": "D1 p018 정비구역 결정도 대조(경계 겹침 99.7%)",
+       "note": "본문은 527번지 일대만 언급, 528 미기재",
+       "confidence": 0.9,
+       "checked_by": null,
+       "decided_by": "영현",
+       "decided_at": "2026-11-10"
+      }
+     ],
+     "pdf_page": 18
+    },
+    "options": [
+     "approve",
+     "reject"
+    ],
+    "editable_fields": [
+     "exclude_pnus"
+    ]
+   },
+   "document_id": 1,
+   "pdf_page": 18
+  }
+ },
+ "draft_before": {
+  "item_type": "parcel_inclusion",
+  "ref_table": "project_parcels",
+  "ref_key": "1:1168011000105280000",
+  "title": "한양7차아파트 재건축 — 압구정동 528 포함 여부 (도면 대조)",
+  "reason": "D1 본문(1~17쪽)에는 '527번지 일대'만 있고 528이 없으나, 18쪽 정비구역 결정도의 경계(정비구역계(안))는 528 필지 전체를 감싼다. 연속지적도 대조 결과 528 겹침 99.7%, 경계에서 34.3m 안쪽",
+  "proposed": {
+   "current": {
+    "project": "압구정아파트지구 특별계획구역6-1 재건축 정비구역",
+    "pnu": "1168011000105280000",
+    "jibun": "압구정동 528",
+    "inclusion": "nearby (A2 정답: 66m)",
+    "basis": null,
+    "proposed_basis": "map_reading",
+    "proposed_inclusion": "likely",
+    "evidence": "정비구역 결정도 — 경계 안 지번 표기 '527 대', '528 대' (그림 속 글자, 쪽 텍스트 없음)",
+    "pdf_page": 18,
+    "overlay": "build/overlay_D1.png",
+    "parcels_table": "build/align/D1_parcels.csv"
+   },
+   "options": [
+    "approve",
+    "reject"
+   ],
+   "editable_fields": []
+  },
+  "document_id": 1,
+  "pdf_page": 18
+ }
 }

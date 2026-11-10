@@ -25,8 +25,8 @@ P3_SQL = [
      "parcel_inclusion | 1:1168011000105270000 / parcel_inclusion | 2:1168011400106190000"),
     ("SELECT pnu, basis, verified FROM project_parcels WHERE basis='representative_only' ORDER BY project_id",
      "1168011000105270000 | representative_only | 0 / 1168011400106190000 | representative_only | 0"),
-    ("SELECT basis, count(*), sum(verified) FROM project_parcels WHERE basis='map_reading' GROUP BY basis",
-     "map_reading | 16 | 0"),
+    ("SELECT project_id, count(*), sum(verified) FROM project_parcels WHERE basis='map_reading' GROUP BY project_id",
+     "1 | 1 | 0 / 2 | 16 | 0"),        # 1 = 압구정동 528 결정도 대조 (P13.5, seed/map_reading_parcels.csv)
 ]
 
 

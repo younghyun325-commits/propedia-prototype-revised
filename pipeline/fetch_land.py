@@ -1,6 +1,7 @@
 """브이월드 토지 정보 빌드 캐시 (feedback2.md §3-3, 네트워크 사용, 빌드 때만).
 
-대상: 범위 안 시연 주소, 사업 대표 필지(추출 JSON의 projects), 대청마을 지도 대조 후보(seed/daecheong_map_reading.csv).
+대상: 범위 안 시연 주소, 사업 대표 필지(추출 JSON의 projects), 대청마을 지도 대조 후보(seed/daecheong_map_reading.csv),
+     그 밖의 지도 대조 필지(seed/map_reading_parcels.csv, P13.5).
 - core/live/vworld.get_land()와 같은 코드로 받아 seed/land_cache.json(커밋함)에 쓴다 → 시연 주소는 네트워크 없이도 동작.
 - 좌표(location): 브이월드 지오코더 결과는 저장할 수 없어(docs/map/PLAN.md 데이터 조건) seed/parcels.geojson의
   필지 경계 중심점(EPSG:5186 representative_point, pipeline.fetch_parcels)을 쓴다 (P13). 지오코더는 부르지 않는다.
@@ -10,6 +11,7 @@
 
 사용: python -m pipeline.fetch_land                  # 토지 3종을 다시 받고 좌표는 필지 중심점
      python -m pipeline.fetch_land --relocate-only  # 네트워크 없이 seed/land_cache.json의 좌표만 필지 중심점으로 바꿈
+     python -m pipeline.fetch_land --dry-run        # 토지 3종을 받아 지금 seed와 비교만 (seed는 쓰지 않음, build/land_compare.json)
 """
 import argparse
 import csv
@@ -58,11 +60,36 @@ def dist_m(a: dict | None, b: dict | None) -> float | None:
     return math.hypot(dx, dy)
 
 
+COMPARE_KEYS = ("status", "jimok", "area_m2", "land_use_zone", "land_use_zone2", "use_situation", "road_side", "terrain",
+                "official_price", "zones", "characteristics_year")
+
+
+def compare(lands: list[dict], old: dict, targets: dict) -> None:
+    """--dry-run: 새로 받은 값과 seed/land_cache.json을 필드별로 비교해 표로 찍고 build/land_compare.json에 남긴다."""
+    rows = []
+    for land in lands:
+        o = old.get(land["pnu"])
+        for k in COMPARE_KEYS:
+            ov = None if o is None else o.get(k)
+            if o is None or ov != land.get(k):
+                rows.append({"pnu": land["pnu"], "why": targets[land["pnu"]], "field": k,
+                             "before": ov if o is not None else "(seed에 없음)", "after": land.get(k)})
+    (BUILD / "land_compare.json").write_text(json.dumps(rows, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    log(f"[dry-run] 대상 {len(lands)}필지, 값이 다른 칸 {len(rows)}개 (seed는 쓰지 않음, build/land_compare.json)")
+    log("PNU | 대상 | 필드 | 지금 seed | 새로 받은 값")
+    for r in rows:
+        log(f"{r['pnu']} | {r['why']} | {r['field']} | {json.dumps(r['before'], ensure_ascii=False)} | "
+            f"{json.dumps(r['after'], ensure_ascii=False)}")
+
+
 def main() -> None:
     setup_stdout()
     ap = argparse.ArgumentParser()
     ap.add_argument("--relocate-only", action="store_true", help="네트워크 없이 좌표만 바꾼다 (토지 값은 그대로)")
+    ap.add_argument("--dry-run", action="store_true", help="받은 값을 지금 seed와 비교만 한다 (seed를 쓰지 않음)")
     args = ap.parse_args()
+    if args.dry_run and args.relocate_only:
+        fail("--dry-run과 --relocate-only는 함께 쓸 수 없습니다")
     key = "" if args.relocate_only else env_key(vworld.KEY_ENV)
     if not key and not args.relocate_only:
         fail("VWORLD_API_KEY가 없습니다 (.env 또는 환경변수). 좌표만 바꾸려면 --relocate-only")
@@ -84,6 +111,8 @@ def main() -> None:
             targets.setdefault(pnu, f"사업 대표 {prj['project_key']}")
     for r in load_csv(SEED / "daecheong_map_reading.csv"):
         targets.setdefault(r["pnu"], "지도 대조 후보")
+    for r in load_csv(SEED / "map_reading_parcels.csv"):
+        targets.setdefault(r["pnu"], f"지도 대조 {r['project_key']}")
 
     RAW.mkdir(parents=True, exist_ok=True)
     points = parcel_points()
@@ -118,6 +147,9 @@ def main() -> None:
     text = json.dumps(lands, ensure_ascii=False, indent=1)
     if key and key in text:
         fail("land_cache에 키가 들어 있어 저장하지 않습니다")
+    if args.dry_run:
+        compare(lands, old, targets)
+        return
     (SEED / "land_cache.json").write_text(text + "\n", encoding="utf-8")
 
     log("좌표 변경: 이전 land_cache.location → 필지 경계 중심점")

@@ -4,6 +4,9 @@
 - 단계는 seed/stage_rules.yaml 을 문서 제목(공백만 정리)에 적용해 정한다. 추출값(stage_candidate)과 다르면 검수 큐.
 - 대표 지번만 있는 필지는 basis='representative_only', verified=0 → 검수 큐(parcel_inclusion).
 - 지도 대조 후보(seed/daecheong_map_reading.csv)는 basis='map_reading', verified=0 → 사업마다 검수 1건(parcel_group).
+- 그 밖의 사업의 결정도 대조 필지(seed/map_reading_parcels.csv, P13.5: 한양7차 528)도 basis='map_reading', verified=0.
+  이 묶음 검수(parcel_group)는 기존 검수 id가 밀리지 않게 review_queue.py 맨 끝에서 넣는다 (extra_group_reviews).
+  pipeline/patch_parcels.py가 같은 함수로 DB만 갱신한다.
 - 사업 중심 좌표: seed/project_coords.csv(대표 지번을 브이월드 지오코더로 받은 값) → 같은 PNU 시연 주소 좌표.
 """
 import csv
@@ -21,6 +24,7 @@ D1_FACT_FIELDS = ["area_m2", "land_use", "households_before", "households_after"
                   "legal_max_far"]
 MAP_READING_CSV = SEED / "daecheong_map_reading.csv"
 MAP_READING_PROJECT = "ilwon-daecheong-north-moatown"
+EXTRA_MAP_CSV = SEED / "map_reading_parcels.csv"
 
 
 def load_rules() -> list[dict]:
@@ -58,6 +62,51 @@ def review(con, item_type, ref_table, ref_key, title, reason, proposed, doc_pk, 
         """INSERT INTO review_queue(item_type, ref_table, ref_key, title, reason, proposed, document_id, pdf_page)
            VALUES (?,?,?,?,?,?,?,?)""",
         (item_type, ref_table, ref_key, title, reason, json.dumps(proposed, ensure_ascii=False), doc_pk, page))
+
+
+def extra_parcel_values(con) -> list[tuple]:
+    """seed/map_reading_parcels.csv → project_parcels 행 값 (project_id, pnu, basis, verified, source_doc_id, pdf_page,
+    evidence). 메모(note)는 저장할 열이 없어 근거 문장 뒤에 붙인다. 대표 지번과 같은 필지는 건너뛴다."""
+    out = []
+    for r in read_csv(EXTRA_MAP_CSV):
+        p = con.execute("SELECT id, stage_source_doc_id FROM projects WHERE project_key=?", (r["project_key"],)).fetchone()
+        if p is None:
+            fail(f"seed/map_reading_parcels.csv: 사업 {r['project_key']}가 DB에 없습니다")
+        rep_ = con.execute("SELECT 1 FROM project_parcels WHERE project_id=? AND pnu=? AND basis='representative_only'",
+                           (p[0], r["pnu"])).fetchone()
+        if rep_:
+            continue
+        evidence = r["reason"] + (f". {r['note']}" if r.get("note") else "")
+        out.append((p[0], r["pnu"], "map_reading", 0, p[1], int(r["map_page"]), evidence))
+    return out
+
+
+def extra_group_reviews(con) -> list[tuple]:
+    """seed/map_reading_parcels.csv의 사업마다 parcel_group 검수 1건 (대청마을 묶음 검수와 같은 형식).
+    값: (item_type, ref_table, ref_key, title, reason, proposed, document_id, pdf_page)"""
+    groups: dict[str, list[dict]] = {}
+    for r in read_csv(EXTRA_MAP_CSV):
+        groups.setdefault(r["project_key"], []).append(r)
+    out = []
+    for key, rows in groups.items():
+        p = con.execute("SELECT id, name, aliases, stage_source_doc_id FROM projects WHERE project_key=?",
+                        (key,)).fetchone()
+        if p is None:
+            fail(f"seed/map_reading_parcels.csv: 사업 {key}가 DB에 없습니다")
+        short = (json.loads(p[2] or "[]") or [p[1]])[0]
+        parcels = [{"pnu": r["pnu"], "jibun": r["jibun"], "reason": r["reason"], "note": r.get("note") or None,
+                    "confidence": float(r["confidence"]), "checked_by": r.get("checked_by") or None,
+                    "decided_by": r.get("decided_by") or None, "decided_at": r.get("decided_at") or None}
+                   for r in rows]
+        page = int(rows[0]["map_page"])
+        jibuns = ", ".join(r["jibun"] for r in rows)
+        out.append(("parcel_group", "project_parcels", f"{p[0]}:map_reading",
+                    f"{short} — 결정도 대조 필지 {len(rows)}필지 ({jibuns})",
+                    "고시 본문에는 없지만 정비구역 결정도 경계 안쪽인 필지 (판정표 3번 강도: 포함된 것으로 보임)",
+                    {"current": {"project": p[1], "inclusion": "likely", "basis": "map_reading", "parcels": parcels,
+                                 "pdf_page": page},
+                     "options": ["approve", "reject"], "editable_fields": ["exclude_pnus"]}, p[3], page))
+    return out
 
 
 def page_text(con, doc_pk: int, pdf_page: int) -> str:
@@ -187,6 +236,10 @@ def build(con) -> list[dict]:
                         "options": ["approve", "reject"], "editable_fields": ["exclude_pnus"]}, doc_pk, page)
             out.append({"project_id": pid, "key": prj["project_key"], "stage": code, "rule": rule_id, "pnu": pnu,
                         "coord": lat is not None, "map": n_map})
+    for v in extra_parcel_values(con):
+        con.execute("""INSERT INTO project_parcels(project_id, pnu, basis, verified, source_doc_id, pdf_page, evidence)
+                       VALUES (?,?,?,?,?,?,?)""", v)
+        log(f"build_projects: 결정도 대조 필지 사업 {v[0]} {v[1]} (map_reading, 확인 전)")
     return out
 
 

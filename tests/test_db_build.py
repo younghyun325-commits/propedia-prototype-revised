@@ -20,12 +20,15 @@ def test_review_queue_parcel_inclusion(con):
     rows = con.execute("SELECT ref_key FROM review_queue WHERE item_type='parcel_inclusion' ORDER BY id").fetchall()
     assert [r["ref_key"] for r in rows] == ["1:1168011000105270000", "2:1168011400106190000"]
     g = con.execute("SELECT ref_key FROM review_queue WHERE item_type='parcel_group'").fetchall()
-    assert [r["ref_key"] for r in g] == ["2:map_reading"]
+    # 1:map_reading = 압구정동 528 결정도 대조 (2026-11-10 영현 결정, likely, 사람 확인 전, HUMAN_TODO 35)
+    assert [r["ref_key"] for r in g] == ["2:map_reading", "1:map_reading"]
 
 
 def test_project_parcel_representative(con):
-    r = con.execute("SELECT pnu, basis, verified FROM project_parcels WHERE project_id=1").fetchone()
-    assert tuple(r) == ("1168011000105270000", "representative_only", 0)
+    rows = con.execute("SELECT pnu, basis, verified FROM project_parcels WHERE project_id=1 ORDER BY pnu").fetchall()
+    # 528: 2026-11-10 영현 결정, D1 p018 결정도 대조, likely, 사람 확인 전 (HUMAN_TODO 35)
+    assert [tuple(r) for r in rows] == [("1168011000105270000", "representative_only", 0),
+                                        ("1168011000105280000", "map_reading", 0)]
     rows = con.execute("SELECT basis, verified, count(*) FROM project_parcels WHERE project_id=2 GROUP BY basis").fetchall()
     assert {r[0]: (r[1], r[2]) for r in rows} == {"representative_only": (0, 1), "map_reading": (0, 16)}
 

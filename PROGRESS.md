@@ -1,5 +1,29 @@
 # 진행 기록
-현재 단계: P13 Propedia 레이어 빌드 완료 (2026-11-10, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P14 좌측 레이어 패널·상단 바
+현재 단계: P13.5 528번지 likely 반영·키 확인 완료 (2026-11-10, 브랜치 `feat/map-console`). 다음은 docs/map/PLAN.md P14 좌측 레이어 패널·상단 바
+
+
+## P13.5 528번지 likely 반영, 키 확인 — 완료 (2026-11-10)
+### A. 브이월드 키
+- `.env`: `VWORLD_API_KEY` 있음 · `VWORLD_DOMAIN` 있음 · `VITE_VWORLD_KEY` 있음 · `JUSO_CONFM_KEY` **빈 값** (HUMAN_TODO 39)
+- `pipeline.check_keys`: 토지 3종 × (527, 619) 6건 HTTP 200 OK(18·13·1·1·1·1건), getcoord 200 OK, image getmap 200 png 312,540B, juso 200 **E0001**(키 비어 있음). 저장 응답이 `tests/fixtures/`에 덮어써져 `git checkout -- tests/fixtures`로 되돌림
+- `pipeline.fetch_land --dry-run`(새 옵션, seed를 쓰지 않고 `build/land_compare.json`): 28필지 다시 받아 지금 `seed/land_cache.json`과 비교 → **값이 다른 칸 0개** (지목·면적·용도지역 1·2·이용상황·도로·지형·공시지가·지역지구·기준연도·status). seed 그대로
+- `evals.run_eval --live` M18: **100% (20/20), p95 278ms** 통과. 20건 모두 `vworld-search` 경로(juso 키 없음). 양재대로55길 14만 PNU '다름'(상태·토지 ok)
+
+### B. 압구정동 528(A2) → 한양7차 likely (영현 결정 2026-11-10)
+- 원천: `seed/map_reading_parcels.csv`(새, 열 = 대청마을 CSV + `project_key,note,decided_by,decided_at`) 1행: 528, 근거 'D1 p018 정비구역 결정도 대조(경계 겹침 99.7%)', 메모 '본문은 527번지 일대만 언급, 528 미기재'. `seed/daecheong_map_reading.csv`·527 대표 지번 행은 그대로
+- `build_projects.extra_parcel_values()` → `project_parcels`(map_reading, verified 0, D1 p18, evidence = 근거 + 메모). `extra_group_reviews()` → 검수 `parcel_group 1:map_reading`을 `review_queue.py` **맨 끝**에서 넣음 (기존 검수 id 1~16 그대로, 새 행 id 17)
+- 판정 값·문구는 기존 그대로: `core/lookup.py` map_reading → `likely` "…구역에 포함된 것으로 보입니다. 확인해 주세요", 지도 `INCLUSION['map_reading']='likely'`(점선)
+- 결정도 경계 안이지만 사업 필지에 없는 것 (추가 안 함): 505 공(안쪽, 겹침 65.7%), 508 도(걸침, 47.4%), 529-1 도(걸침, 4.1%)
+- `pipeline/patch_parcels.py`(새, 네트워크·`../data` 없음): `build/propedia.db.bak` 복사 → 시연 15건 판정 → map_reading 행·묶음 검수 행만 seed에 맞춤 → 다시 판정. seed와 상관없는 주소 판정이 바뀌거나 대상 주소가 likely가 아니면 되돌리고 종료 1
+  - 1회: 추가 1 · 수정 0 · 삭제 0 / 검수 1 → sha256 `8b89e328…`, 2회: 0·0·0/0 → `8b89e328…` 같음
+  - 원본 PC `run_all`도 같은 seed·같은 함수(`extra_parcel_values`·`extra_group_reviews`)로 같은 행을 만들고 검수 행이 마지막 id를 받는다. 다른 것은 `meta.build_at`·rowid 순서뿐 (HUMAN_TODO 38에 확인 추가)
+- 시연 15건 전·후: **A2만 바뀜** `주변 1 66m` → `포함 1:likely`(basis map_reading, review_id 17, 원문 D1 p18). A1·A3 possible, A4 주변 293m, A5 법정동, B1 possible, B2 likely, B3 주변 275m, 나머지 사업 없음, A10 범위 밖 — 그대로. A2 사업 카드 = A1과 같은 사업 1(재건축 13단계 중 2번째, 공람 2026-11-06 마감)
+- `evals/goldset/addresses.yaml` A2 `nearby` → `likely` (주석 '2026-11-10 영현 결정: D1 p018 결정도 대조, likely, 사람 확인 전 (HUMAN_TODO 35)')
+- `run_eval` M1~M20 모두 통과. 전과 다른 곳: M8 주변 판정 쌍 3 → 2 (8/8 그대로), M20 25 → 26 도형, M10 6 → 8ms. 그 밖 같음
+- `build_map_layers` 2회: 필지 18 → **19** (`parcel:1:1168011000105280000`, likely), manifest count 19, 5개 파일 sha256 2회 같음(parcels `f7eefbde…`, manifest `0f8bf69d…`)
+- 테스트: `test_lookup.py` A2(likely·map_reading·D1 p18), `test_db_build.py`(묶음 검수 2건, 사업 1 필지 2개), `run_all.py` P3_SQL(`1 | 1 | 0 / 2 | 16 | 0`), `web/src/map/layers.test.ts` 필지 19 — 모두 같은 근거 주석
+- 기록: `seed/review_drafts/D1_parcel_528.json` '반영됨' + 결정 + review_queue 행, HUMAN_TODO 36 닫음·35에 528 추가·38에 patch_parcels 확인 추가·39 juso 키
+- 완료 확인: `pytest -q` 123 passed / `npm --prefix web run test` 21 passed / `tests/ui_check_map.py` 27/27
 
 ## P13 Propedia 레이어 빌드 — 완료 (2026-11-10)
 고시 도면을 연속지적도와 맞춰 사업 구역 2·규제 구역 1의 경계를 만들고, 영향권·포함 판정 필지와 함께 `public/data/layers/`에 냈다. 좌표는 지오코더 결과 대신 필지 경계 중심점. 모든 도형은 사람 확인 전(`verified=0`, 지도 라벨 '확인 전').
