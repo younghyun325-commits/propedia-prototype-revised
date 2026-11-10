@@ -5,10 +5,12 @@
  *   그룹 순서는 사업 → 주소 → 단지 (지번을 넣으면 Enter가 주소를 고른다)
  * - 주소: 기존 /api/v1/lookup 그대로. ambiguous면 후보 목록, 실패하면 응답의 안내 문구 그대로
  * - 고르면: 사업 → 그 구역으로 이동 + 선택 / 주소 → 필지 경계가 있으면 강조, 없으면 임시 핀 (좌표는 화면 메모리에만)
+ * - P18: '역·학교'(역 원자료 이름 포함), 5자리 숫자면 '정류장'(ARS) 먼저 + 같은 번호 노선, '노선'(노선 번호 일치).
+ *   편의시설은 검색하지 않는다. 노선 목록은 창을 열 때, 정류장은 5자리 숫자를 넣었을 때 불러온다
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Building2, Clock, MapPin, Search, Shapes } from 'lucide-react'
+import { Building2, Bus, Clock, MapPin, Route, School, Search, Shapes, TrainFront } from 'lucide-react'
 import { getJson, useMapProjects, type MapProject } from '../api/map'
 import { UI } from '../copy/ui'
 import { selectProject } from '../state/actions'
@@ -17,6 +19,9 @@ import { bboxOf } from '../map/geo'
 import { useMapStore } from '../state/useMapStore'
 import { GlassPanel } from '../ui/GlassPanel'
 import { addressQuery, loadRecent, pushRecent, saveRecent, searchProjects } from './search'
+import { useBusRoutes, useBusStops, useSchools, useStations, type BusRoute, type BusStopProps, type SchoolProps, type StationProps } from '../infra/data'
+import { isArsQuery } from '../infra/pick'
+import { searchPlaces, searchRoutes, searchStops } from '../infra/search'
 
 const DEBOUNCE_MS = 300
 
@@ -34,6 +39,12 @@ type Item =
   | { kind: 'address'; key: string; label: string; sub: string; lookup: Lookup }
   | { kind: 'candidate'; key: string; label: string; sub: string; query: string }
   | { kind: 'recent'; key: string; label: string; sub: string; query: string }
+  | { kind: 'place'; key: string; label: string; sub: string; place: StationProps | SchoolProps }
+  | { kind: 'stop'; key: string; label: string; sub: string; stop: BusStopProps }
+  | { kind: 'route'; key: string; label: string; sub: string; route: BusRoute }
+
+/** 점 둘레 작은 상자 (이동 요청용, 줌 17 정도) */
+const around = (lon: number, lat: number): [number, number, number, number] => [lon - 0.0008, lat - 0.0006, lon + 0.0008, lat + 0.0006]
 
 function pointOf(r: Lookup): [number, number] | null {
   const n = r.normalized
@@ -49,6 +60,9 @@ export default function CommandPalette() {
   const projects = useMemo(() => projectsData?.projects ?? [], [projectsData])
   const aptData = useApartmentLayer(true).data
   const aptProps = useMemo(() => (aptData?.features ?? []).map((f) => f.properties), [aptData])
+  const stationsData = useStations().data
+  const schoolsData = useSchools().data
+  const routesData = useBusRoutes(true).data
   const [q, setQ] = useState('')
   const [debounced, setDebounced] = useState('')
   const [lookup, setLookup] = useState<Lookup | null>(null)
@@ -78,6 +92,14 @@ export default function CommandPalette() {
 
   const projectHits = useMemo(() => searchProjects(projects, debounced), [projects, debounced])
   const aptHits = useMemo(() => searchApartments(aptProps, debounced), [aptProps, debounced])
+  const ars = isArsQuery(debounced)
+  const stopsData = useBusStops(ars).data
+  const placeHits = useMemo(
+    () => searchPlaces((stationsData?.features ?? []).map((f) => f.properties), (schoolsData?.features ?? []).map((f) => f.properties), debounced),
+    [stationsData, schoolsData, debounced],
+  )
+  const stopHits = useMemo(() => searchStops((stopsData?.features ?? []).map((f) => f.properties), debounced), [stopsData, debounced])
+  const routeHits = useMemo(() => searchRoutes(routesData?.routes ?? [], debounced), [routesData, debounced])
   const items: Item[] = useMemo(() => {
     if (!debounced) return recent.map((r) => ({ kind: 'recent', key: `r:${r}`, label: r, sub: UI.palette.recent, query: r }))
     const out: Item[] = projectHits.map((h) => ({
@@ -96,10 +118,11 @@ export default function CommandPalette() {
         lookup,
       })
     if (lookup?.status === 'ambiguous')
-      for (const c of lookup.candidates ?? [])
+      // 같은 필지에 도로명이 여럿인 후보가 있어 순번을 키에 넣는다
+      for (const [i, c] of (lookup.candidates ?? []).entries())
         out.push({
           kind: 'candidate',
-          key: `c:${c.pnu ?? c.road_address}`,
+          key: `c:${i}:${c.pnu ?? c.road_address}`,
           label: c.road_address ?? c.jibun_address ?? '',
           sub: [c.jibun_address, c.bld_name].filter(Boolean).join(' · '),
           query: c.jibun_address ?? c.road_address ?? '',
@@ -113,8 +136,19 @@ export default function CommandPalette() {
         sub: [h.props.jibuns.slice(0, 2).join(', '), h.props.aliases.length ? h.props.aliases.join(', ') : null].filter(Boolean).join(' · '),
         apt: h.props,
       })
+    for (const h of placeHits)
+      out.push({
+        kind: 'place', key: h.props.id, label: h.props.name, place: h.props,
+        sub: h.props.kind === 'station' ? `${UI.inspector.kind.station} · ${h.props.lines.join(', ')}` : `${h.props.level} · ${h.props.address ?? ''}`,
+      })
+    for (const s of stopHits)
+      out.push({ kind: 'stop', key: s.id, label: s.name, sub: UI.palette.stopSub(s.ars_no, s.stop_type), stop: s })
+    for (const r of routeHits)
+      out.push({ kind: 'route', key: `route:${r.route_id}`, label: r.route_no, sub: UI.palette.routeSub(r.route_type, new Set(r.gangnam_stop_ids).size), route: r })
+    // 5자리 숫자 = 정류장 번호(ARS)가 먼저
+    if (ars) out.sort((a, b) => Number(b.kind === 'stop') - Number(a.kind === 'stop'))
     return out
-  }, [debounced, projectHits, aptHits, lookup, recent])
+  }, [debounced, projectHits, aptHits, lookup, recent, placeHits, stopHits, routeHits, ars])
 
   useEffect(() => setActive(0), [items.length, debounced])
 
@@ -143,6 +177,25 @@ export default function CommandPalette() {
         const [[w, so], [e, n]] = bboxOf([f])
         s.requestView({ type: 'bbox', bbox: [w, so, e, n] })
       }
+    } else if (it.kind === 'place') {
+      const p = it.place
+      s.setSearchHit(null)
+      s.setLayerVisible(p.kind === 'station' ? 'stations' : 'schools', true)
+      s.select({ kind: p.kind, id: p.id.replace(/^[a-z]+:/, '') })
+      s.requestView({ type: 'bbox', bbox: around(p.lon, p.lat) })
+    } else if (it.kind === 'stop') {
+      s.setSearchHit(null)
+      s.setLayerVisible('bus_stops', true)
+      s.select({ kind: 'bus', id: it.stop.ars_no })
+      s.requestView({ type: 'bbox', bbox: around(it.stop.lon, it.stop.lat) })
+    } else if (it.kind === 'route') {
+      s.setSearchHit(null)
+      s.setRoute(it.route.route_id)
+      const pts = (stopsData?.features ?? []).filter((f) => it.route.gangnam_stop_ids.includes(f.properties.ars_no))
+      if (pts.length) {
+        const xs = pts.map((f) => f.properties.lon), ys = pts.map((f) => f.properties.lat)
+        s.requestView({ type: 'bbox', bbox: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] })
+      }
     } else {
       const pnu = it.lookup.normalized?.pnu ?? null
       s.setSearchHit({ label: it.label, pnu, point: pointOf(it.lookup) })
@@ -157,23 +210,29 @@ export default function CommandPalette() {
       close()
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
-      setActive((a) => Math.min(items.length - 1, a + 1))
+      setActive((a) => Math.min(ordered.length - 1, a + 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
       setActive((a) => Math.max(0, a - 1))
-    } else if (e.key === 'Enter' && items[active]) {
+    } else if (e.key === 'Enter' && ordered[active]) {
       e.preventDefault()
-      void choose(items[active])
+      void choose(ordered[active])
     }
   }
 
+  const base: [string, Item[]][] = [
+    [UI.palette.projects, items.filter((i) => i.kind === 'project')],
+    [UI.palette.addresses, items.filter((i) => i.kind === 'address' || i.kind === 'candidate')],
+    [UI.palette.apartments, items.filter((i) => i.kind === 'apartment')],
+    [UI.palette.places, items.filter((i) => i.kind === 'place')],
+  ]
+  const stopsG: [string, Item[]] = [UI.palette.stops, items.filter((i) => i.kind === 'stop')]
+  const routesG: [string, Item[]] = [UI.palette.routes, items.filter((i) => i.kind === 'route')]
   const groups: [string, Item[]][] = debounced
-    ? [
-        [UI.palette.projects, items.filter((i) => i.kind === 'project')],
-        [UI.palette.addresses, items.filter((i) => i.kind === 'address' || i.kind === 'candidate')],
-        [UI.palette.apartments, items.filter((i) => i.kind === 'apartment')],
-      ]
+    ? ars ? [stopsG, routesG, ...base] : [...base, stopsG, routesG]
     : [[UI.palette.recent, items]]
+  // 화면 순서(그룹 순서)와 ↑↓ 순서를 맞춘다
+  const ordered = groups.flatMap(([, list]) => list)
   const message =
     lookup && (lookup.status === 'not_found' || lookup.status === 'out_of_scope') ? lookup.message : null
 
@@ -199,7 +258,7 @@ export default function CommandPalette() {
             role="combobox"
             aria-expanded="true"
             aria-controls="palette-list"
-            aria-activedescendant={items[active] ? `pi-${active}` : undefined}
+            aria-activedescendant={ordered[active] ? `pi-${active}` : undefined}
             aria-label={UI.palette.label}
             placeholder={UI.palette.placeholder}
             value={q}
@@ -217,8 +276,10 @@ export default function CommandPalette() {
                 </div>
                 <ul role="group" aria-label={title}>
                   {list.map((it) => {
-                    const idx = items.indexOf(it)
-                    const Icon = it.kind === 'project' ? Shapes : it.kind === 'apartment' ? Building2 : it.kind === 'recent' ? Clock : MapPin
+                    const idx = ordered.indexOf(it)
+                    const Icon = it.kind === 'project' ? Shapes : it.kind === 'apartment' ? Building2 : it.kind === 'recent' ? Clock
+                      : it.kind === 'place' ? (it.place.kind === 'station' ? TrainFront : School) : it.kind === 'stop' ? Bus
+                      : it.kind === 'route' ? Route : MapPin
                     return (
                       <li
                         key={it.key}

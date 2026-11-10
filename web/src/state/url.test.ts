@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { DEFAULT_VISIBLE, defaultUrlState, mergeSearch, parseSelected, parseUrl, toSearch } from './url'
 
 describe('URL ↔ 상태 (P14)', () => {
-  it('기본값: 사업 구역·영향권 250·500·필지 켜짐, 규제 꺼짐, 회색 배경, 레이어 탭', () => {
+  it('기본값: 사업 구역·영향권 250·500·필지·학교·지하철역 켜짐, 규제·버스정류장·편의시설 꺼짐, 회색 배경, 레이어 탭', () => {
     const s = parseUrl('')
-    expect(DEFAULT_VISIBLE).toEqual(['projects', 'impact250', 'impact500', 'parcels'])
+    expect(DEFAULT_VISIBLE).toEqual(['projects', 'impact250', 'impact500', 'parcels', 'schools', 'stations'])
+    expect([s.layers.bus_stops.visible, s.layers.pois.visible]).toEqual([false, false])
+    expect([s.poiHidden, s.route, s.radius]).toEqual([[], null, null])
     expect(s.layers.regulations.visible).toBe(false)
     expect(s.layers.projects).toEqual({ visible: true, opacity: 100 })
     expect([s.basemap, s.leftTab, s.overlap, s.selected, s.camera]).toEqual(['gray', 'layers', false, null, null])

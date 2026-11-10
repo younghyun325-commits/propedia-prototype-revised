@@ -1,7 +1,8 @@
 /**
  * 지도 클릭 우선순위 (docs/map/PLAN.md P15-3-3). 순수 함수 — Vitest.
  *
- * 사업 구역 → 규제 구역 → 사업 필지 → (P17 아파트, P18 생활 인프라 자리) → 빈 곳 = 필지 조회.
+ * 사업 구역 → 규제 구역 → 사업 필지 → 아파트 단지 → 학교·역·버스정류장·편의시설 → 빈 곳 = 필지 조회.
+ * 생활 인프라 아이콘은 아이콘을 정확히 누른 경우(히트 반경 안, infra/pick.ts)에만 대상에 들어온다.
  * 공식 참고 레이어(서울플랜+·의제처리구역·WMS)는 클릭 대상이 아니다.
  * Propedia 도형이 하나면 바로 선택, 둘 이상 겹치면 우선순위 순서의 선택 목록(P14 방식 유지, 영현 결정 2026-11-10).
  */
@@ -10,7 +11,11 @@ export const PICK_ORDER: Record<string, number> = {
   regulation: 1,
   parcel: 2,
   apartment: 3, // P17 자리
-  poi: 4, // P18 자리
+  // P18 생활 인프라 (도형 속성 kind)
+  school: 4,
+  station: 4,
+  bus_stop: 4,
+  poi: 4,
 }
 
 export type PickTarget = { id: string; kind: string }

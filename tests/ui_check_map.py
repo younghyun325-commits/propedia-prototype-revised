@@ -9,6 +9,8 @@
   호버 툴팁·겹친 지점 선택 목록, 라벨 충돌, 키보드, 스크린샷 5장(--shot). 건수는 /api/v1/map/manifest에서 읽는다.
 - P15: 공식 참고 레이어(지연 로딩·출처·WMS 줌 조건·타일 200), 빈 곳 클릭 필지 조회(강조·카드·URL 복원),
   클릭 우선순위(사업 구역 먼저), 참고 구역 이름, 스크린샷 3장(--shot). 클릭 지점은 GeoJSON에서 계산한다(shapely).
+- P18: 생활 인프라(학교·역 기본 켜짐, 정류장 줌 15 안내, 클러스터·이름, 편의시설 분류 행), 역·정류장 인스펙터, 노선 선택 모드,
+  반경 보기, 겹침 보기, Ctrl+K 역·정류장 번호·노선, 스크린샷 5장(map_06a~e), --perf로 프레임 시간
 
 사용: python tests/ui_check_map.py [--built] [--shot]
 """
@@ -155,9 +157,9 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     check("[P14] D5 행: 비활성 + '경계 확인 전'",
           page.locator("[data-testid=layer-toggle-regulation-d5]").is_disabled()
           and "경계 확인 전" in page.inner_text("[data-testid=layer-row-regulation-d5]"))
-    pend = [i for i in ("schools", "subway", "amenities")
-            if page.locator(f"[data-testid=layer-toggle-{i}]").is_disabled()]
-    check("[P14] 준비 중 레이어(P18) 비활성", len(pend) == 3, str(pend))
+    infra_on = [i for i in ("schools", "stations", "bus_stops", "pois")
+                if not page.locator(f"[data-testid=layer-toggle-{i}]").is_disabled()]
+    check("[P14→P18] 생활 인프라 4종 활성 (준비 중 레이어 없음)", len(infra_on) == 4, str(infra_on))
     page.hover("[data-testid=layer-row-projects] button[aria-label$='레이어 정보']")
     page.wait_for_timeout(200)
     tip = _text(page, "[data-testid=layer-info-projects]")
@@ -351,8 +353,9 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     st = {r: page.get_attribute(f"[data-testid=status-row-{r}]", "data-status")
           for r in ("projects", "regulation-d5", "ref-seoulplan", "schools")}
     keys = _text(page, "[data-testid=status-keys]")
-    check("[P14] 데이터 상태: ready·not_adopted·pending, 키는 있음/없음만",
-          st == {"projects": "ready", "regulation-d5": "not_adopted", "ref-seoulplan": "ready", "schools": "pending"}
+    # P18부터 준비 중(pending) 레이어가 없다 (생활 인프라 4종 ready)
+    check("[P14] 데이터 상태: ready·not_adopted, 키는 있음/없음만",
+          st == {"projects": "ready", "regulation-d5": "not_adopted", "ref-seoulplan": "ready", "schools": "ready"}
           and re.fullmatch(r"실시간 조회 키: 브이월드 (있음|없음) · 도로명주소 (있음|없음)", keys) is not None, f"{st} {keys}")
     if shot:
         page.screenshot(path=str(SHOT_STATUS))
@@ -999,11 +1002,285 @@ def p17_checks(page, url: str, check, shot: bool) -> None:
           all(k in mk for k in ("M22", "M23", "수집일", "해제", "기본 정보 연결 0 / 236")), mk.replace("\n", " / ")[:200])
 
 
+SHOT_P18 = {k: SCREENS / f"map_06{k}.png" for k in ("a_poi", "b_radius", "c_station", "d_bus_stops", "e_bus_route")}
+LAYER_FILES = ROOT / "public" / "data" / "layers"
+JS_ICON_PT = """([src, id]) => { const m = window.__propediaMap;
+  const f = m.querySourceFeatures(src).find(x => x.properties.id === id); if (!f) return null;
+  const p = m.project(f.geometry.coordinates); const r = m.getCanvas().getBoundingClientRect();
+  return [p.x + r.left, p.y + r.top] }"""
+JS_FRAMES = """(ms) => new Promise(res => { const m = window.__propediaMap; const ts = []; let last = performance.now();
+  const steps = [[127.0276, 37.4979, 15], [127.0490, 37.5045, 16], [127.0631, 37.5088, 15.5], [127.0400, 37.5150, 14.5],
+                 [127.0276, 37.4979, 16.5], [127.0550, 37.4950, 15]];
+  let i = 0; const go = () => { const [x, y, z] = steps[i++ % steps.length]; m.easeTo({center: [x, y], zoom: z, duration: 900}) };
+  go(); const iv = setInterval(go, 950);
+  const tick = (t) => { ts.push(t - last); last = t; if (performance.now() - start < ms) requestAnimationFrame(tick);
+    else { clearInterval(iv); ts.sort((a, b) => a - b); const avg = ts.reduce((a, b) => a + b, 0) / ts.length;
+      res({frames: ts.length, avg, p95: ts[Math.floor(ts.length * 0.95)], max: ts[ts.length - 1], over33: ts.filter(x => x > 33.4).length}) } };
+  const start = performance.now(); requestAnimationFrame(tick) })"""
+
+
+def _infra_props() -> dict:
+    import json
+    out = {}
+    for name in ("stations", "bus_stops", "schools"):
+        for f in json.loads((LAYER_FILES / f"{name}.geojson").read_text(encoding="utf-8"))["features"]:
+            out[f["id"]] = f["properties"]
+    return out
+
+
+def _infra_wait(page, layer: str, timeout=10000) -> None:
+    page.wait_for_function(f"() => !!window.__propediaMap.getLayer('{layer}')", timeout=timeout)
+
+
+def p18_checks(page, url: str, check, shot: bool) -> None:
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+    P = _infra_props()
+    station = next(k for k, v in P.items() if v.get("kind") == "station" and v["name"] == "삼성")
+    stop = "bus:22339"          # 강남역8번출구 (노선 있음)
+    no_route = "bus:23811"      # 역삼역 (노선 연결 없음, D3)
+
+    # 1. 기본: 학교·역 켜짐, 정류장·편의시설 꺼짐 (URL 기본값과 같음)
+    _open(page, home)
+    on = {i: page.locator(f"[data-testid=layer-toggle-{i}]").is_checked() for i in ("schools", "stations", "bus_stops", "pois")}
+    _infra_wait(page, "stations-icon")
+    check("[P18] 기본: 학교·지하철역 켜짐, 버스정류장·편의시설 꺼짐 (URL layers 없음)",
+          on == {"schools": True, "stations": True, "bus_stops": False, "pois": False} and _q(page, "layers") is None, str(on))
+
+    # 2. 버스정류장 켜기 → 줌 15 미만 안내·안 그려짐, 15 이상 그려짐
+    reqs: list[str] = []
+    page.on("request", lambda r: ("bus_stops.geojson" in r.url or "bus_routes.json" in r.url) and reqs.append(r.url))
+    page.evaluate(JS_JUMP, [127.0276, 37.4979, 14.0])
+    page.evaluate(JS_IDLE)
+    page.click("[data-testid=layer-toggle-bus_stops]")
+    _infra_wait(page, "bus-icon")
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(400)
+    hint = _text(page, "[data-testid=layer-zoomhint-bus_stops]")
+    n14 = page.evaluate(JS_RENDERED, ["bus-icon"])
+    page.evaluate(JS_JUMP, [127.0276, 37.4979, 16.0])
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(600)
+    n16 = page.evaluate(JS_RENDERED, ["bus-icon"])
+    hint16 = page.locator("[data-testid=layer-zoomhint-bus_stops]").count()
+    check("[P18] 버스정류장: 켤 때 불러옴, 줌 14 '줌 15 이상에서 표시'·0개, 줌 16 그려짐·안내 사라짐",
+          len(reqs) >= 1 and "줌 15 이상에서 표시" in hint and n14 == 0 and n16 > 0 and hint16 == 0,
+          f"요청 {len(reqs)} '{hint}' z14={n14} z16={n16}")
+    central = page.evaluate("() => JSON.stringify(window.__propediaMap.getLayoutProperty('bus-icon', 'icon-image'))")
+    check("[P18] 중앙차로 정류장만 칩 테두리가 다름 (색 같음)", "chip-bus-central" in (central or ""), central or "")
+    if shot:
+        page.screenshot(path=str(SHOT_P18["d_bus_stops"]))
+
+    # 3. 편의시설 켜기 → 클러스터(개수 마커) → 줌 16 이름, 분류·하위 분류 행
+    _open(page, with_q + "c=127.03500,37.50300&z=13.5")
+    page.click("[data-testid=layer-toggle-pois]")
+    _infra_wait(page, "pois-cluster")
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(800)
+    cl = page.locator("[data-testid=cluster-count]").count()
+    cl_pois = page.locator("[data-testid=cluster-count][data-source=infra-pois]").count()
+    cl_sch = page.locator("[data-testid=cluster-count][data-source=infra-schools]").count()
+    rows = page.locator("[data-testid=poi-categories] > li").count()
+    check("[P18] 줌 15 미만 클러스터(개수 원): 편의시설·학교, 편의시설 분류 행 6개",
+          cl_pois > 0 and cl_sch > 0 and rows == 6, f"클러스터 {cl} (편의시설 {cl_pois}, 학교 {cl_sch}) 분류 행 {rows}")
+    if shot:
+        page.screenshot(path=str(SHOT_P18["a_poi"]))
+    page.evaluate(JS_JUMP, [127.0280, 37.4990, 16.5])
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(800)
+    names = page.locator("[data-testid=infra-label][data-kind=poi]").count()
+    check("[P18] 줌 16 이상 이름 (편의시설)", names > 0 and page.locator("[data-testid=cluster-count]").count() == 0, f"{names}개")
+    before = page.evaluate(JS_RENDERED, ["pois-icon"])
+    page.click("[data-testid=poi-cat-toggle-cafe]")
+    page.wait_for_timeout(600)
+    page.evaluate(JS_IDLE)
+    after = page.evaluate(JS_RENDERED, ["pois-icon"])
+    page.click("[data-testid=poi-cat-expand-clinic]")
+    page.click("[data-testid=poi-sub-row][data-key='clinic/치과'] [data-testid=poi-sub-toggle]")
+    _wait_url(page, lambda u: "clinic/" in (_q(page, "ph") or ""), 3000)
+    ph = _q(page, "ph") or ""
+    subs = page.locator("[data-testid=poi-sub-row]").all_inner_texts()
+    check("[P18] 편의시설 분류 끄기(카페) → 그려진 수 줄어듦, 병원·의원 펼쳐 '치과' 끄기 → URL ph",
+          after < before and "cafe" in ph and "clinic/치과" in ph and len(subs) == 4, f"{before}→{after} ph={ph} 하위 {len(subs)}")
+    page.click("[data-testid=poi-cat-toggle-cafe]")
+    page.click("[data-testid=poi-sub-row][data-key='clinic/치과'] [data-testid=poi-sub-toggle]")
+    _wait_url(page, lambda u: _q(page, "ph") is None, 3000)
+
+    # 4. 역 클릭 → 인스펙터: 호선·원자료 이름 (삼성 = 삼성 + 삼성(무역센터))
+    _open(page, home)
+    lon, lat = P[station]["lon"], P[station]["lat"]
+    page.evaluate(JS_JUMP, [lon, lat, 16.5])
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(400)
+    page.mouse.click(*page.evaluate(JS_PT, [lon, lat]))
+    page.wait_for_timeout(300)
+    if page.locator("[data-testid=pick-list]").count():
+        page.click(f"[data-testid=pick-item][data-id='{station}']")
+    _wait_url(page, lambda u: _q(page, "sel") == station, 4000)
+    _inspector_ready(page)
+    lines = _text(page, "[data-testid=poi-lines]")
+    aliases = _text(page, "[data-testid=poi-aliases]")
+    check("[P18] 역 클릭 → 인스펙터 '삼성' 호선 2개·원자료 이름 '삼성(무역센터)'",
+          _q(page, "sel") == station and _text(page, "[data-testid=inspector-title]") == "삼성"
+          and "2호선" in lines and "수도권 광역급행철도" in lines and "삼성(무역센터)" in aliases, f"{lines} / {aliases}")
+    if shot:
+        page.screenshot(path=str(SHOT_P18["c_station"]))
+    # 히트 반경: 칩 중심에서 20px 떨어진 곳은 아이콘 선택이 아님
+    page.click("[data-testid=inspector-close]")
+    x, y = page.evaluate(JS_PT, [lon, lat])
+    page.mouse.click(x + 20, y + 20)
+    page.wait_for_timeout(500)
+    check("[P18] 아이콘 밖(20px)을 누르면 아이콘을 고르지 않음", _q(page, "sel") != station, str(_q(page, "sel")))
+
+    # 5. 정류장 클릭 → ARS(고정폭)·지나는 노선 칩 → 노선 선택 모드 → 해제
+    _open(page, with_q + "layers=projects,impact250,impact500,parcels,schools,stations,bus_stops")
+    sp = P[stop]
+    page.evaluate(JS_JUMP, [sp["lon"], sp["lat"], 17.2])
+    page.evaluate(JS_IDLE)
+    _infra_wait(page, "bus-icon")
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(500)
+    page.mouse.click(*page.evaluate(JS_PT, [sp["lon"], sp["lat"]]))
+    page.wait_for_timeout(300)
+    if page.locator("[data-testid=pick-list]").count():
+        page.click(f"[data-testid=pick-item][data-id='{stop}']")
+    _wait_url(page, lambda u: _q(page, "sel") == stop, 4000)
+    _inspector_ready(page)
+    ars = _text(page, "[data-testid=poi-ars]")
+    mono = page.evaluate("() => getComputedStyle(document.querySelector('[data-testid=poi-ars] span')).fontFamily")
+    chips = page.locator("[data-testid=route-chip-button]").count()
+    rsrc = _text(page, "[data-testid=poi-route-source]")
+    check("[P18] 정류장 클릭 → ARS(고정폭)·지나는 노선 칩·노선 자료 출처 줄, '노선 정보 없음' 문구 없음",
+          _q(page, "sel") == stop and "22339" in ars and "mono" in mono.lower() and chips > 0 and "노선-정류장 마스터" in rsrc
+          and page.locator("[data-testid=poi-no-routes]").count() == 0, f"'{ars}' {mono[:30]} 칩 {chips} '{rsrc}'")
+    rid = page.get_attribute("[data-testid=route-chip-button] >> nth=0", "data-route")
+    page.click("[data-testid=route-chip-button] >> nth=0")
+    _wait_url(page, lambda u: _q(page, "route") == rid, 4000)
+    page.wait_for_selector("[data-testid=route-chip]", timeout=5000)
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(500)
+    chip = _text(page, "[data-testid=route-chip]")
+    hi = page.evaluate(JS_RENDERED, ["bus-route"])
+    dim = page.evaluate(JS_PAINT, ["bus-icon", "icon-opacity"])
+    check("[P18] 노선 칩 → 노선 선택 모드: 상단 칩 '노선 … · 강남구 정류장 n곳'·정류장 강조·나머지 흐림·URL route",
+          _q(page, "route") == rid and "강남구 정류장" in chip and hi > 0 and dim == 0.3, f"route={rid} '{chip}' 강조 {hi} 흐림 {dim}")
+    if shot:
+        page.evaluate(JS_JUMP, [sp["lon"], sp["lat"], 14.6])
+        page.evaluate(JS_IDLE)
+        page.wait_for_timeout(500)
+        page.screenshot(path=str(SHOT_P18["e_bus_route"]))
+    page.reload()
+    _ready(page)
+    page.wait_for_selector("[data-testid=route-chip]", timeout=8000)
+    check("[P18] 새로고침 후 노선 선택 복원 (URL route)", _q(page, "route") == rid)
+    page.click("[data-testid=route-clear]")
+    _wait_url(page, lambda u: _q(page, "route") is None, 3000)
+    check("[P18] 노선 해제 → 칩·URL route 사라짐", _q(page, "route") is None and page.locator("[data-testid=route-chip]").count() == 0)
+
+    # 노선 없는 정류장 → '노선 정보는 이 자료에 없습니다'
+    _open(page, with_q + f"layers=projects,stations,bus_stops&sel={no_route}")
+    _inspector_ready(page)
+    page.wait_for_timeout(300)
+    check("[P18] 노선이 연결되지 않은 정류장(역삼역 23811) → '노선 정보는 이 자료에 없습니다'",
+          "노선 정보는 이 자료에 없습니다" in _text(page, "[data-testid=poi-no-routes]"))
+
+    # 6. 반경 보기 500m (강남역 부근) → 분류별 개수 표: 정류장 수·이름 수·노선 수, 학원 하위 분류 괄호
+    _open(page, home)
+    page.evaluate(JS_JUMP, [127.0276, 37.4979, 15.2])
+    page.evaluate(JS_IDLE)
+    page.click("[data-testid=radius-tool]")
+    page.mouse.click(*page.evaluate(JS_PT, [127.0276, 37.4979]))
+    page.wait_for_selector("[data-testid=radius-panel]", timeout=5000)
+    page.wait_for_function("() => !document.querySelector('[data-testid=radius-row-pois]').textContent.includes('불러오는')"
+                           " && !document.querySelector('[data-testid=radius-row-bus]').textContent.includes('불러오는')", timeout=20000)
+    page.evaluate(JS_IDLE)
+    page.wait_for_timeout(500)
+    bus = _text(page, "[data-testid=radius-row-bus]")
+    pois = _text(page, "[data-testid=radius-row-pois]")
+    r = _q(page, "r") or ""
+    check("[P18] 반경 보기 500m: 표에 정류장 수·이름 수·지나는 노선 수, 학원·병원·의원 하위 분류 괄호, URL r",
+          r.endswith(",500") and re.search(r"정류장 \d+곳 · 이름 \d+개 · 지나는 노선 \d+개", bus) is not None
+          and re.search(r"학원 \d+ \(교과 \d+ · 외국어 \d+ · 예체능·기타 \d+\)", pois) is not None
+          and "병원·의원" in pois and "(병원" in pois, f"r={r} | {bus} | {pois.replace(chr(10), ' / ')[:160]}")
+    if shot:
+        page.screenshot(path=str(SHOT_P18["b_radius"]))
+    page.click("[data-testid=radius-250]")
+    _wait_url(page, lambda u: (_q(page, "r") or "").endswith(",250"), 3000)
+    check("[P18] 반경 250m 전환 → URL r", (_q(page, "r") or "").endswith(",250"), str(_q(page, "r")))
+    page.click("[data-testid=radius-tool]")
+    _wait_url(page, lambda u: _q(page, "r") is None, 3000)
+
+    # 7. 겹침 보기: 생활 인프라 칩도 영향권 밖 25%
+    page.click("[data-testid=overlap-switch]")
+    page.wait_for_timeout(400)
+    e = page.evaluate(JS_PAINT, ["schools-icon", "icon-opacity"])
+    e2 = page.evaluate(JS_PAINT, ["stations-icon", "icon-opacity"])
+    check("[P18] 겹침 보기: 학교·역 칩 영향권 밖 25%",
+          isinstance(e, list) and e[2] == 0.25 and isinstance(e2, list) and e2[2] == 0.25, f"{e} {e2}")
+    page.click("[data-testid=overlap-switch]")
+
+    # 8. Ctrl+K: '선릉' → 역, 정류장 번호 5자리 → 정류장(먼저), '146' → 노선 → 노선 선택 모드
+    _open(page, home)
+    _palette(page, "선릉")
+    groups = page.locator("[data-testid=palette-group]").all_inner_texts()
+    places = page.locator("[data-testid=palette-item-place]").all_inner_texts()
+    check("[P18] Ctrl+K '선릉' → '역·학교' 그룹에 선릉", "역·학교" in groups and any(t.startswith("선릉") for t in places),
+          f"{groups} {places[:3]}")
+    page.keyboard.press("Escape")
+    _palette(page, "22339")
+    page.wait_for_selector("[data-testid=palette-item-stop]", timeout=8000)
+    groups = page.locator("[data-testid=palette-group]").all_inner_texts()
+    check("[P18] Ctrl+K 정류장 번호 '22339' → '정류장' 그룹이 맨 위", groups[:1] == ["정류장"], str(groups))
+    page.keyboard.press("Escape")
+    _palette(page, "146")
+    page.wait_for_selector("[data-testid=palette-item-route]", timeout=8000)
+    groups = page.locator("[data-testid=palette-group]").all_inner_texts()
+    first = page.locator("[data-testid=palette-item-route] >> nth=0").inner_text()
+    page.click("[data-testid=palette-item-route] >> nth=0")
+    page.wait_for_selector("[data-testid=route-chip]", timeout=8000)
+    _wait_url(page, lambda u: _q(page, "route") is not None, 3000)
+    check("[P18] Ctrl+K '146' → '노선' 그룹 → 고르면 노선 선택 모드", "노선" in groups and first.startswith("146")
+          and _q(page, "route") is not None and "146" in _text(page, "[data-testid=route-chip]"), f"{groups} '{first}'")
+    page.click("[data-testid=route-clear]")
+
+
+PERF_ARGS = ["--use-angle=d3d11", "--enable-gpu", "--ignore-gpu-blocklist"]
+
+
+def perf_check(pw, url: str, check) -> dict:
+    """줌·이동 중 rAF 프레임 간격 (8초): 생활 인프라 끔 vs 정류장·편의시설까지 모두 켬.
+    헤드리스 기본(SwiftShader 소프트웨어 GL)은 레이어와 상관없이 느리므로 GPU를 켠 브라우저를 따로 띄운다."""
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+    b = pw.chromium.launch(args=PERF_ARGS)
+    page = b.new_page(viewport={"width": 1440, "height": 900})
+    gl = page.evaluate("() => { const c = document.createElement('canvas').getContext('webgl2'); "
+                       "const d = c && c.getExtension('WEBGL_debug_renderer_info'); return d ? c.getParameter(d.UNMASKED_RENDERER_WEBGL) : 'n/a' }")
+    out = {"gl": gl}
+    for k, layers in (("off", "projects,impact250,impact500,parcels"),
+                      ("all", "projects,impact250,impact500,parcels,schools,stations,bus_stops,pois")):
+        _open(page, with_q + f"layers={layers}&c=127.02760,37.49790&z=15")
+        if k == "all":
+            _infra_wait(page, "pois-icon", 20000)
+            _infra_wait(page, "bus-icon", 20000)
+        page.wait_for_timeout(2000)
+        page.evaluate(JS_IDLE)
+        out[k] = page.evaluate(JS_FRAMES, 8000)
+    b.close()
+    r, o = out["all"], out["off"]
+    gpu = "SwiftShader" not in gl
+    check("[P18] 성능(GPU): 정류장·편의시설 모두 켠 채 줌·이동 — 프레임 p95 ≤ 20ms (50fps 이상)", gpu and r["p95"] <= 20,
+          f"{gl[:40]} · 모두 켬 평균 {r['avg']:.1f}ms p95 {r['p95']:.1f}ms 최대 {r['max']:.1f}ms 33ms 초과 {r['over33']}/{r['frames']}"
+          f" · 끔 평균 {o['avg']:.1f}ms p95 {o['p95']:.1f}ms")
+    return out
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--built", action="store_true", help="빌드본 http://127.0.0.1:8000/map/ 점검")
     ap.add_argument("--shot", action="store_true", help=f"스크린샷 저장 {SHOT.relative_to(ROOT)}")
+    ap.add_argument("--perf", action="store_true", help="P18 프레임 시간 측정")
     a = ap.parse_args()
     url = "http://127.0.0.1:8000/map/?debug=1" if a.built else "http://localhost:3000/map/"
 
@@ -1183,6 +1460,10 @@ def main() -> int:
         p16_checks(page, url, check, a.shot)
         p17_fit_checks(page, url, check)
         p17_checks(page, url, check, a.shot)
+        p18_checks(page, url, check, a.shot)
+        if a.perf:
+            perf = perf_check(p, url, check)
+            print(f"성능(P18): {perf}")
 
         if a.built:
             other = [e for e in console_errors if "api.vworld.kr" not in e and "Failed to load resource" not in e]

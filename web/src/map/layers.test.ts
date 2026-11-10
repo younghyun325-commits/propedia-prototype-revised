@@ -11,6 +11,9 @@ import {
   type PropediaFC,
 } from './layers'
 import { REF_GEO_IDS, REF_WMS_IDS, refGeoLayers, refWmsLayer } from './reference'
+import { infraLayers } from '../infra/layers'
+
+const EMPTY = { type: 'FeatureCollection', features: [] }
 
 describe('Propedia 레이어 모양 (PLAN.md 지도 레이어 모양)', () => {
   const layers = propediaLayers(DEFAULT_COLORS)
@@ -127,6 +130,7 @@ describe('P14 겹침 보기·점선·강조 식', () => {
       ...REF_GEO_IDS.flatMap((id) => refGeoLayers(id, DEFAULT_COLORS.ref)),
       ...REF_WMS_IDS.map(refWmsLayer),
       ...apartmentLayers(DEFAULT_COLORS),
+      ...infraLayers({ schools: EMPTY as never, stations: EMPTY as never, bus: EMPTY as never, pois: EMPTY as never }, '#5d34a9'),
     ].map((l) => l.id))
     for (const p of Object.values(PANEL_LAYERS)) for (const l of p.layers) expect(ids.has(l)).toBe(true)
   })

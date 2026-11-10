@@ -5,6 +5,7 @@
  * - 내용은 패널 안에서만 스크롤. 지도 이동 중(.map-moving)에도 그대로 둔다
  * 대상: 사업·규제 = /api/v1/map/feature, 사업 필지 = /api/v1/map/feature/parcel, 빈 곳 클릭 = /map/parcel-at(store.parcel)
  * P17 아파트 단지: sel=apt:{단지키} → /api/v1/map/feature/apartment/apt:{단지키} (탭 하나)
+ * P18 생활 인프라: sel=school:·station:·bus:·poi: → 불러온 레이어의 원자료 값 (API 없음, 탭 하나)
  */
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { Link2, X } from 'lucide-react'
@@ -12,7 +13,10 @@ import { useFeature, type Badge as BadgeT, type EvidenceItem, type Feature, type
 import type { ParcelAt } from '../api/parcel'
 import { UI } from '../copy/ui'
 import { todayKst } from '../state/actions'
-import { featureId, isParcelLookup } from '../state/url'
+import { featureId, INFRA_SELECT_KINDS, isParcelLookup } from '../state/url'
+import { useInfra } from '../infra/useInfra'
+import type { InfraProps } from '../infra/data'
+import { infraAsOf, PoiBody } from './PoiView'
 import { useMapStore } from '../state/useMapStore'
 import { EvidenceLine } from '../ui/EvidenceLine'
 import { GlassPanel } from '../ui/GlassPanel'
@@ -22,14 +26,19 @@ import { ParcelView } from './ParcelView'
 import { ProjectView } from './ProjectView'
 import { RegulationView } from './RegulationView'
 
-const TABS: Record<FeatureKind, string[]> = {
+type HeadKind = FeatureKind | 'school' | 'station' | 'bus' | 'poi'
+const TABS: Record<HeadKind, string[]> = {
   project: ['overview', 'evidence', 'parcels', 'nearby', 'history'],
   regulation: ['overview', 'evidence', 'history'],
   parcel: ['overview', 'evidence'],
   apartment: ['overview'],
+  school: ['overview'],
+  station: ['overview'],
+  bus: ['overview'],
+  poi: ['overview'],
 }
 
-type Head = { kind: FeatureKind; title: string; subtitle: string | null; asOf: string; dataAsOf: string | null;
+type Head = { kind: HeadKind; title: string; subtitle: string | null; asOf: string; dataAsOf: string | null;
   badges: BadgeT[]; unverified: boolean }
 
 function Header({ h }: { h: Head }) {
@@ -153,7 +162,7 @@ function Body({ kind, tab, feature, parcel, boundaryNote }: {
   return null
 }
 
-function Shell({ head, kind, children }: { head: Head | null; kind: FeatureKind | null; children: (tab: string) => React.ReactNode }) {
+function Shell({ head, kind, children }: { head: Head | null; kind: HeadKind | null; children: (tab: string) => React.ReactNode }) {
   const tabs = kind ? TABS[kind] : []
   const [tab, setTab] = useState('overview')
   const idBase = 'inspector'
@@ -251,6 +260,42 @@ function Selected({ kind, id }: { kind: FeatureKind; id: string }) {
   )
 }
 
+/** 생활 인프라 (P18): 학교·역·정류장·편의시설 — 불러온 레이어에서 찾는다 */
+const INFRA_LAYER: Record<string, 'schools' | 'stations' | 'bus_stops' | 'pois'> = {
+  school: 'schools', station: 'stations', bus: 'bus_stops', poi: 'pois',
+}
+function InfraSelected({ kind, fid }: { kind: 'school' | 'station' | 'bus' | 'poi'; fid: string }) {
+  const infra = useInfra()
+  const find = (id: string): InfraProps | undefined => {
+    for (const fc of [infra.schools, infra.stations, infra.bus]) {
+      const f = fc?.features.find((x) => x.properties.id === id)
+      if (f) return f.properties
+    }
+    return infra.poiFeatures.find((x) => x.properties.id === id)?.properties
+  }
+  const p = find(fid)
+  const loading = kind === 'bus' ? infra.busLoading || !infra.bus : kind === 'poi' ? infra.poiLoading || !infra.cats.length
+    : kind === 'school' ? !infra.schools : !infra.stations
+  if (!p) {
+    if (loading && !infra.error) return <Shell head={null} kind={null}>{() => <Skeleton />}</Shell>
+    return <Shell head={null} kind={null}>{() => <Message text={`${UI.poi.notLoaded}: ${fid}`} testId="inspector-error" />}</Shell>
+  }
+  const layer = infra.man[INFRA_LAYER[kind]]
+  const cat = p.kind === 'poi' ? infra.cats.find((c) => c.key === p.category) : undefined
+  const subtitle = p.kind === 'poi' ? [cat?.label, p.sub_category].filter(Boolean).join(' · ')
+    : p.kind === 'school' ? p.level : p.kind === 'station' ? p.lines.join(', ') : p.kind === 'bus_stop' ? p.stop_type : null
+  const head: Head = {
+    kind, title: p.name, subtitle: subtitle || null, asOf: infraAsOf(p.as_of), dataAsOf: null, badges: [], unverified: false,
+  }
+  return (
+    <Shell key={fid} head={head} kind={kind}>
+      {() => (
+        <PoiBody p={p} layer={layer} routesLayer={layer?.routes} routes={infra.routes} cats={infra.cats} byId={find} />
+      )}
+    </Shell>
+  )
+}
+
 export default function Inspector({ style }: { style: CSSProperties }) {
   const selected = useMapStore((s) => s.selected)
   const parcelStatus = useMapStore((s) => s.parcel.status)
@@ -277,8 +322,10 @@ export default function Inspector({ style }: { style: CSSProperties }) {
       ) : selected ? (
         selected.kind === 'apt' ? (
           <Selected kind="apartment" id={featureId(selected)} />
+        ) : (INFRA_SELECT_KINDS as readonly string[]).includes(selected.kind) ? (
+          <InfraSelected kind={selected.kind as 'school' | 'station' | 'bus' | 'poi'} fid={featureId(selected)} />
         ) : (
-          <Selected kind={selected.kind} id={selected.id} />
+          <Selected kind={selected.kind as FeatureKind} id={selected.id} />
         )
       ) : (
         <div className="space-y-2 p-4" data-testid="inspector-empty">

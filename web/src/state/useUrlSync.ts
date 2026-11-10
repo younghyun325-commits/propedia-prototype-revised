@@ -5,7 +5,8 @@ import { mergeSearch, toSearch, type UrlState } from './url'
 const DEBOUNCE_MS = 300
 
 function pick(s: MapState): UrlState {
-  return { layers: s.layers, basemap: s.basemap, overlap: s.overlap, selected: s.selected, leftTab: s.leftTab, camera: s.camera }
+  return { layers: s.layers, basemap: s.basemap, overlap: s.overlap, selected: s.selected, leftTab: s.leftTab, camera: s.camera,
+    poiHidden: s.poiHidden, route: s.route, radius: s.radius }
 }
 
 /** store → URL (history.replaceState, 300ms 디바운스). 카메라는 지도가 이동을 끝냈을 때만 store에 들어온다. */

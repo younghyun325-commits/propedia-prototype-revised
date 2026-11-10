@@ -1,10 +1,12 @@
 /**
  * 지도 상태 ↔ URL (docs/map/PLAN.md P14). 순수 함수 — Vitest로 검사한다.
  * 예: ?layers=projects,impact250,impact500,parcels&op=projects:80&base=gray&ov=1&sel=project:1&tab=layers&c=127.05,37.50&z=13
+ * P18: ph=cafe,clinic/치과 (숨긴 편의시설 분류·하위 분류), route=100100025 (노선 선택), r=127.02760,37.49794,500 (반경 보기)
  * - 잘못된 값은 무시하고 기본값을 쓴다.
  * - 기본값과 같은 항목은 URL에 쓰지 않는다 (layers는 기본과 다를 때만, 카메라는 이동한 뒤에만).
  */
 import { BASEMAP_ORDER, DEFAULT_BASEMAP, type BasemapId } from '../map/basemaps'
+import { formatRadius, parseRadius, type Radius } from '../infra/radius'
 
 export const PANEL_LAYER_IDS = [
   'projects', 'impact250', 'impact500', 'parcels', 'regulations',
@@ -12,9 +14,11 @@ export const PANEL_LAYER_IDS = [
   'ref-seoulplan', 'ref-uije', 'ref-zoning', 'ref-district', 'ref-cadastral',
   // P17 시장 (기본 꺼짐, 켤 때 불러오기)
   'apartments',
+  // P18 생활 인프라: 학교·지하철역 기본 켜짐, 버스정류장·편의시설 기본 꺼짐 (수가 많아서, 켤 때 불러오기)
+  'schools', 'stations', 'bus_stops', 'pois',
 ] as const
 export type PanelLayerId = (typeof PANEL_LAYER_IDS)[number]
-export const DEFAULT_VISIBLE: PanelLayerId[] = ['projects', 'impact250', 'impact500', 'parcels']
+export const DEFAULT_VISIBLE: PanelLayerId[] = ['projects', 'impact250', 'impact500', 'parcels', 'schools', 'stations']
 
 export type LayerState = { visible: boolean; opacity: number } // opacity 0~100 (%)
 export type LayerStates = Record<PanelLayerId, LayerState>
@@ -23,7 +27,9 @@ export const LEFT_TABS = ['layers', 'projects', 'feed', 'status'] as const
 export type LeftTab = (typeof LEFT_TABS)[number]
 
 // apt = 아파트 단지 (P17): sel=apt:11680-218 → 도형 id apt:11680-218, 인스펙터 /map/feature/apartment/apt:11680-218
-export const SELECT_KINDS = ['project', 'parcel', 'regulation', 'apt'] as const
+// P18: school:{학교ID} · station:{역사_ID} · bus:{정류장 번호(ARS)} · poi:{상가업소번호} (도형 id와 같다)
+export const SELECT_KINDS = ['project', 'parcel', 'regulation', 'apt', 'school', 'station', 'bus', 'poi'] as const
+export const INFRA_SELECT_KINDS = ['school', 'station', 'bus', 'poi'] as const
 export type SelectKind = (typeof SELECT_KINDS)[number]
 /** id는 도형 id에서 kind를 뺀 나머지 (예: project:1 → '1', parcel:1:1168011000105280000 → '1:1168011000105280000') */
 export type Selected = { kind: SelectKind; id: string } | null
@@ -36,6 +42,12 @@ export type UrlState = {
   selected: Selected
   leftTab: LeftTab
   camera: Camera
+  /** 숨긴 편의시설 분류('cafe') 또는 하위 분류('clinic/치과') */
+  poiHidden: string[]
+  /** 노선 선택 모드: 노선 id */
+  route: string | null
+  /** 반경 보기 */
+  radius: Radius | null
 }
 
 /** 강남구 주변만 받는다 (지도 이동 범위보다 넓게) */
@@ -50,7 +62,8 @@ export function defaultLayers(): LayerStates {
 }
 
 export function defaultUrlState(): UrlState {
-  return { layers: defaultLayers(), basemap: DEFAULT_BASEMAP, overlap: false, selected: null, leftTab: 'layers', camera: null }
+  return { layers: defaultLayers(), basemap: DEFAULT_BASEMAP, overlap: false, selected: null, leftTab: 'layers', camera: null,
+    poiHidden: [], route: null, radius: null }
 }
 
 /** sel=parcel:{19자리 PNU} = 지도 클릭 필지 조회 (P15). parcel:{사업}:{PNU}는 Propedia 사업 필지 */
@@ -104,8 +117,15 @@ export function parseUrl(search: string): UrlState {
   const z = Number(q.get('z'))
   if (c.length === 2 && inRange(c[0], LON) && inRange(c[1], LAT) && q.get('z') !== null && inRange(z, ZOOM))
     s.camera = { lon: c[0], lat: c[1], zoom: z }
+  const ph = (q.get('ph') ?? '').split(',').map((x) => x.trim()).filter((x) => POI_HIDDEN_RE.test(x))
+  s.poiHidden = [...new Set(ph)].sort()
+  const route = q.get('route')
+  if (route && /^\d{1,12}$/.test(route)) s.route = route
+  s.radius = parseRadius(q.get('r'))
   return s
 }
+
+const POI_HIDDEN_RE = /^[a-z]{2,20}(\/[^,/]{1,12})?$/
 
 /** 우리 키만 쓴 쿼리 문자열 (앞의 ? 없음). 기본값과 같은 항목은 뺀다. */
 export function toSearch(s: UrlState): string {
@@ -125,16 +145,19 @@ export function toSearch(s: UrlState): string {
     q.set('c', `${s.camera.lon.toFixed(5)},${s.camera.lat.toFixed(5)}`)
     q.set('z', s.camera.zoom.toFixed(2))
   }
+  if (s.poiHidden.length) q.set('ph', [...s.poiHidden].sort().join(','))
+  if (s.route) q.set('route', s.route)
+  if (s.radius) q.set('r', formatRadius(s.radius))
   return q.toString()
 }
 
-export const URL_KEYS = ['layers', 'op', 'base', 'ov', 'sel', 'tab', 'c', 'z'] as const
+export const URL_KEYS = ['layers', 'op', 'base', 'ov', 'sel', 'tab', 'c', 'z', 'ph', 'route', 'r'] as const
 
 /** 지금 주소의 다른 파라미터(debug 등)는 두고 우리 키만 바꾼 search 문자열 */
 export function mergeSearch(current: string, ours: string): string {
   const q = new URLSearchParams(current)
   for (const k of URL_KEYS) q.delete(k)
   for (const [k, v] of new URLSearchParams(ours)) q.set(k, v)
-  const s = q.toString().replaceAll('%2C', ',').replaceAll('%3A', ':')
+  const s = q.toString().replaceAll('%2C', ',').replaceAll('%3A', ':').replaceAll('%2F', '/')
   return s ? `?${s}` : ''
 }

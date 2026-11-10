@@ -88,6 +88,12 @@ export function initialFitTarget(
   if (!fc) return done ? null : 'wait'
   const fid = `${sel.kind}:${sel.id}`
   const f = fc.features.find((x) => (x.properties as { id?: string } | null)?.id === fid)
-  if (!f || (f.geometry.type !== 'Polygon' && f.geometry.type !== 'MultiPolygon')) return null
+  if (!f) return null
+  // 생활 인프라 점 (P18): 점 둘레 약 80m
+  if (f.geometry.type === 'Point') {
+    const [x, y] = f.geometry.coordinates
+    return padBounds([[x, y], [x, y]], 80)
+  }
+  if (f.geometry.type !== 'Polygon' && f.geometry.type !== 'MultiPolygon') return null
   return bboxOf([f as Feature<Area>])
 }

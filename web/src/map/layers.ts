@@ -183,7 +183,13 @@ export const PROPEDIA_SOURCES: Record<LayerKind, string> = {
 }
 
 /** 좌측 패널 레이어 id → 지도 레이어와 투명도 페인트 (기준 값) */
-type PaintSlot = { layer: string; prop: 'fill-opacity' | 'line-opacity' | 'raster-opacity'; base: number }
+type PaintSlot = {
+  layer: string
+  prop: 'fill-opacity' | 'line-opacity' | 'raster-opacity' | 'icon-opacity' | 'circle-opacity' | 'circle-stroke-opacity'
+  base: number
+  /** 겹침 보기에서 흐리지 않음 (클러스터 원: 개수 묶음에는 영향권 속성이 없다) */
+  noOverlap?: boolean
+}
 export const PANEL_LAYERS: Record<PanelLayerId, { layers: string[]; paint: PaintSlot[] }> = {
   projects: {
     layers: ['propedia-project-fill', 'propedia-project-line', 'propedia-project-selected'],
@@ -234,6 +240,31 @@ export const PANEL_LAYERS: Record<PanelLayerId, { layers: string[]; paint: Paint
       { layer: 'apartments-line', prop: 'line-opacity', base: APARTMENT_OPACITY.line },
     ],
   },
+  // P18 생활 인프라 (infra/layers.ts). 칩 투명도 = icon-opacity, 클러스터 원은 겹침 보기에서 흐리지 않음
+  schools: {
+    layers: ['schools-cluster', 'schools-icon', 'schools-selected'],
+    paint: [
+      { layer: 'schools-icon', prop: 'icon-opacity', base: 1 },
+      { layer: 'schools-cluster', prop: 'circle-opacity', base: 0.95, noOverlap: true },
+      { layer: 'schools-cluster', prop: 'circle-stroke-opacity', base: 1, noOverlap: true },
+    ],
+  },
+  stations: { layers: ['stations-icon', 'stations-selected'], paint: [{ layer: 'stations-icon', prop: 'icon-opacity', base: 1 }] },
+  bus_stops: {
+    layers: ['bus-icon', 'bus-route', 'bus-selected'],
+    paint: [
+      { layer: 'bus-icon', prop: 'icon-opacity', base: 1 },
+      { layer: 'bus-route', prop: 'icon-opacity', base: 1, noOverlap: true },
+    ],
+  },
+  pois: {
+    layers: ['pois-cluster', 'pois-icon', 'pois-selected'],
+    paint: [
+      { layer: 'pois-icon', prop: 'icon-opacity', base: 1 },
+      { layer: 'pois-cluster', prop: 'circle-opacity', base: 0.95, noOverlap: true },
+      { layer: 'pois-cluster', prop: 'circle-stroke-opacity', base: 1, noOverlap: true },
+    ],
+  },
 }
 
 /**
@@ -267,7 +298,7 @@ function refWmsPanel(id: 'ref-zoning' | 'ref-district' | 'ref-cadastral'): { lay
  * 겹침 보기 대상 (설정 하나). 도형 속성 impact_buffer_m(빌드 때 계산한 within_impact)이 null이면 흐리게.
  * P17 아파트·P18 생활 인프라도 같은 속성을 빌드에 넣고 여기에 id만 더한다.
  */
-export const OVERLAP_TARGETS: PanelLayerId[] = ['parcels', 'regulations', 'apartments']
+export const OVERLAP_TARGETS: PanelLayerId[] = ['parcels', 'regulations', 'apartments', 'schools', 'stations', 'bus_stops', 'pois']
 
 const r3 = (v: number) => Math.round(v * 1000) / 1000
 
@@ -282,5 +313,5 @@ export function opacityExpr(base: number, overlap: boolean): number | unknown[] 
 export function paintPlan(id: PanelLayerId, opacityPct: number, overlap: boolean): [string, string, number | unknown[]][] {
   const k = Math.max(0, Math.min(100, opacityPct)) / 100
   const on = overlap && OVERLAP_TARGETS.includes(id)
-  return PANEL_LAYERS[id].paint.map((p) => [p.layer, p.prop, opacityExpr(p.base * k, on)])
+  return PANEL_LAYERS[id].paint.map((p) => [p.layer, p.prop, opacityExpr(p.base * k, on && !p.noOverlap)])
 }

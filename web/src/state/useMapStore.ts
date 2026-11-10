@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { EvidenceItem } from '../api/feature'
 import type { ParcelAt } from '../api/parcel'
 import type { BasemapId } from '../map/basemaps'
+import type { Radius } from '../infra/radius'
 import {
   defaultUrlState, isParcelLookup, parseUrl, type Camera, type LayerStates, type LeftTab, type PanelLayerId, type Selected,
 } from './url'
@@ -40,7 +41,12 @@ export type MapState = {
   selected: Selected
   leftTab: LeftTab
   camera: Camera
+  poiHidden: string[]
+  route: string | null
+  radius: Radius | null
   // ---- 화면 안 상태
+  /** 반경 보기 도구가 켜져 있음 (지도를 누르면 원을 그린다) */
+  radiusTool: boolean
   hovered: string | null
   paletteOpen: boolean
   viewRequest: ViewRequest | null
@@ -76,6 +82,10 @@ export type MapState = {
   openEvidence: (items: EvidenceItem[], index: number) => void
   setEvidenceIndex: (index: number) => void
   closeEvidence: () => void
+  togglePoiHidden: (key: string) => void
+  setRoute: (id: string | null) => void
+  setRadius: (r: Radius | null) => void
+  setRadiusTool: (v: boolean) => void
 }
 
 function initialUrlState() {
@@ -106,6 +116,7 @@ export const useMapStore = create<MapState>()((set) => {
     zoom: u.camera?.zoom ?? null,
     parcel: { status: 'idle', reqId: 0 },
     evidence: null,
+    radiusTool: u.radius !== null,
 
     toggleLeft: () => set((s) => ({ leftOpen: !s.leftOpen })),
     toggleRight: () => set((s) => ({ rightOpen: !s.rightOpen })),
@@ -148,5 +159,12 @@ export const useMapStore = create<MapState>()((set) => {
     setEvidenceIndex: (index) =>
       set((s) => (s.evidence ? { evidence: { ...s.evidence, index: Math.max(0, Math.min(s.evidence.items.length - 1, index)) } } : {})),
     closeEvidence: () => set({ evidence: null }),
+    togglePoiHidden: (key) =>
+      set((s) => ({ poiHidden: s.poiHidden.includes(key) ? s.poiHidden.filter((k) => k !== key) : [...s.poiHidden, key].sort() })),
+    // 노선을 고르면 정류장 레이어를 켠다 (강조할 정류장이 보이게)
+    setRoute: (route) =>
+      set((s) => (route ? { route, layers: { ...s.layers, bus_stops: { ...s.layers.bus_stops, visible: true } } } : { route: null })),
+    setRadius: (radius) => set({ radius }),
+    setRadiusTool: (radiusTool) => set(radiusTool ? { radiusTool } : { radiusTool, radius: null }),
   }
 })

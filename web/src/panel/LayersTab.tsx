@@ -12,6 +12,8 @@ import { useMapStore } from '../state/useMapStore'
 import { PANEL_LAYER_IDS, type PanelLayerId } from '../state/url'
 import { Tooltip } from '../ui/Floating'
 import { LayerSwatch, type SwatchKind } from './LayerSwatch'
+import { ChipSwatch, InfraZoomHint, infraSwatchIcon, PoiCategoryRows } from './InfraRows'
+import type { InfraLayer } from '../infra/data'
 
 const isPanelId = (s: string): s is PanelLayerId => (PANEL_LAYER_IDS as readonly string[]).includes(s)
 const TREE_GROUPS = ['basemap', 'propedia', 'reference', 'market', 'infra'] as const
@@ -58,6 +60,11 @@ function InfoTip({ l }: { l: ManifestLayer }) {
             </div>
           ))}
           {l.note && <dd className="col-span-2 mt-1 text-ink-muted">{l.note}</dd>}
+          {(l as InfraLayer).excluded && Object.keys((l as InfraLayer).excluded!).length > 0 && (
+            <dd className="col-span-2 text-ink-muted">
+              {UI.infra.excluded(Object.entries((l as InfraLayer).excluded!).map(([k, n]) => `${k} ${n}`).join(', '))}
+            </dd>
+          )}
         </dl>
       }
     >
@@ -106,7 +113,15 @@ function LayerRow({ l }: { l: ManifestLayer }) {
           className="h-4 w-4 shrink-0 accent-brand-indigo"
         />
         <label htmlFor={inputId} className="flex min-w-0 flex-1 items-center gap-2">
-          <span className="flex shrink-0"><LayerSwatch kind={swatchOf(l)} opacity={state ? state.opacity / 100 : 1} /></span>
+          <span className="flex shrink-0">
+            {l.group === 'infra' && l.status === 'ready' && infraSwatchIcon(l.id) ? (
+              <span className="flex w-7 justify-center" style={{ opacity: state ? Math.max(0.15, state.opacity / 100) : 1 }}>
+                <ChipSwatch icon={infraSwatchIcon(l.id)!} />
+              </span>
+            ) : (
+              <LayerSwatch kind={swatchOf(l)} opacity={state ? state.opacity / 100 : 1} />
+            )}
+          </span>
           <span className="leading-tight break-keep">{l.name}</span>
         </label>
         {l.status === 'ready' && l.count !== null && (
@@ -165,6 +180,8 @@ function LayerRow({ l }: { l: ManifestLayer }) {
           {UI.reference.zoomHint(blockedAt)}
         </p>
       )}
+      {l.group === 'infra' && l.status === 'ready' && <InfraZoomHint l={l as InfraLayer} />}
+      {l.id === 'pois' && l.status === 'ready' && <PoiCategoryRows l={l as InfraLayer} />}
       {l.id === 'parcels' && l.count_by_judgment && (
         <ul className="mt-1 ml-6 space-y-0.5 text-xs text-ink-muted" data-testid="parcel-legend">
           <li className="flex items-center gap-1.5">

@@ -4,6 +4,8 @@
  * P14: 좌측 패널과 연결 — 켜기·끄기는 setLayoutProperty('visibility'), 투명도·겹침 보기는 setPaintProperty(식),
  *      선택·검색 강조는 setFilter (스타일을 다시 만들지 않음). 호버 툴팁, 클릭 선택(겹치면 선택 목록), 라벨 겹침 피하기.
  * P17: 아파트 단지(실거래 신고 단지) — 레이어를 켜거나 단지를 고를 때만 불러온다. 클릭 우선순위는 사업 필지 다음.
+ * P18: 생활 인프라(학교·역·버스정류장·편의시설) — 흰 원형 칩 + 아이콘(infra/icons.ts), 클러스터 개수·이름은 HTML 마커.
+ *      아이콘은 히트 반경(12px, 정류장 8px) 안을 눌렀을 때만 고른다. 노선 선택 모드·반경 보기(infra/).
  *
  * MapLibre v6은 ESM 전용이고, worker를 import.meta.url 옆의 maplibre-gl-worker.mjs에서 찾는다
  * (node_modules/maplibre-gl/build/readme.md). Vite는 라이브러리를 묶어 그 옆 파일이 없으므로
@@ -15,7 +17,7 @@ import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { Map, Marker, type MapRef, type MapLayerMouseEvent } from 'react-map-gl/maplibre'
 import type { LayerSpecification, MapGeoJSONFeature, StyleSpecification } from 'maplibre-gl'
-import type { Feature, FeatureCollection, MultiPolygon, Polygon } from 'geojson'
+import type { Feature, FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson'
 import { MapPin } from 'lucide-react'
 import { useMapProjects } from '../api/map'
 import { UI } from '../copy/ui'
@@ -41,6 +43,17 @@ import {
   type PropediaProps,
 } from './layers'
 import type { Insets } from './insets'
+import { useInfra } from '../infra/useInfra'
+import { addChips, CHIP_IDS, chipImages } from '../infra/icons'
+import {
+  BUS_NAME_MIN_ZOOM, CLUSTER_LAYERS, CLUSTER_MAX_ZOOM, ICON_LAYERS, INFRA_SELECTED, INFRA_SOURCES, NAME_MIN_ZOOM, RADIUS_SOURCE,
+  ROUTE_DIM, STATION_NAME_MIN_ZOOM, infraLayers, radiusLayers, routeFilter, type InfraData,
+} from '../infra/layers'
+import { circlePolygon } from '../infra/radius'
+import { iconHit, type IconAt } from '../infra/pick'
+import type { InfraProps } from '../infra/data'
+import { RouteChip } from '../infra/RouteChip'
+import { RadiusPanel } from '../infra/RadiusPanel'
 
 maplibregl.setWorkerUrl(workerUrl)
 
@@ -65,6 +78,7 @@ const HOVER_ORDER: Record<string, number> = { parcel: 0, apartment: 1, regulatio
 const SELECTED_LAYERS: Record<string, string> = {
   'propedia-project-selected': 'project', 'propedia-regulation-selected': 'regulation',
   'propedia-parcel-selected': 'parcel', 'apartments-selected': 'apt',
+  ...INFRA_SELECTED,
 }
 const CLICK_SOURCE = 'click-parcel'
 const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] }
@@ -72,7 +86,7 @@ const EMPTY_FC: FeatureCollection = { type: 'FeatureCollection', features: [] }
 type RefData = Partial<Record<RefGeoId, FeatureCollection<Polygon | MultiPolygon, Record<string, unknown>>>>
 
 /** 스타일에 넣을 때와 지도에 바로 걸 때 같은 값을 쓰는 상태 묶음 */
-type Snapshot = { layers: LayerStates; overlap: boolean; selected: Selected; searchPnu: string | null }
+type Snapshot = { layers: LayerStates; overlap: boolean; selected: Selected; searchPnu: string | null; routeArs?: string[] }
 
 /** 클릭 필지 강조 도형: 결과가 있고 지금 선택이 그 필지일 때만 */
 function clickParcelData(parcel: ParcelLookup, selected: Selected): FeatureCollection {
@@ -119,6 +133,7 @@ function withState(specs: LayerSpecification[], snap: Snapshot): LayerSpecificat
     if (paints[l.id]) out.paint = { ...(out.paint ?? {}), ...paints[l.id] }
     if (l.id.endsWith('-selected')) out.filter = selectedFilterFor(l.id, snap.selected)
     if (l.id === 'propedia-parcel-search') out.filter = idFilter('pnu', snap.searchPnu)
+    if (l.id === 'bus-route') out.filter = routeFilter(snap.routeArs ?? [])
     return out as LayerSpecification
   })
 }
@@ -134,6 +149,8 @@ function buildStyle(
   ref: RefData = {},
   clickData: FeatureCollection = EMPTY_FC,
   apartments: ApartmentFC | null = null,
+  infra: InfraData = { schools: null, stations: null, bus: null, pois: null },
+  radiusData: FeatureCollection = EMPTY_FC,
 ): StyleSpecification {
   const sources: StyleSpecification['sources'] = {}
   const layers: StyleSpecification['layers'] = [{ id: 'bg', type: 'background', paint: { 'background-color': BG } }]
@@ -197,6 +214,16 @@ function buildStyle(
   if (gu) {
     layers.push({ id: 'gu-line', type: 'line', source: 'gu', paint: { 'line-color': INK, 'line-width': 1.5 } })
   }
+  // 반경 보기 원 (P18) + 생활 인프라 칩 (불러온 것만): 면·선 위
+  sources[RADIUS_SOURCE] = { type: 'geojson', data: radiusData }
+  layers.push(...radiusLayers())
+  const IS = INFRA_SOURCES
+  const clustered = { cluster: true, clusterMaxZoom: CLUSTER_MAX_ZOOM, clusterRadius: 44 }
+  if (infra.pois) sources[IS.pois] = { type: 'geojson', data: infra.pois, promoteId: 'id', ...clustered }
+  if (infra.schools) sources[IS.schools] = { type: 'geojson', data: infra.schools, promoteId: 'id', ...clustered }
+  if (infra.bus) sources[IS.bus_stops] = { type: 'geojson', data: infra.bus, promoteId: 'id' }
+  if (infra.stations) sources[IS.stations] = { type: 'geojson', data: infra.stations, promoteId: 'id' }
+  layers.push(...withState(infraLayers(infra, hl.selected), snap))
   // 빈 곳 클릭으로 조회한 필지 강조 (브랜드 색 외곽선, P15)
   sources[CLICK_SOURCE] = { type: 'geojson', data: clickData }
   layers.push({ id: 'click-parcel-line', type: 'line', source: CLICK_SOURCE,
@@ -208,6 +235,8 @@ type Hover = { x: number; y: number; text: string; id: string }
 type Pick = { x: number; y: number; items: { id: string; kind: string; name: string }[] }
 
 type HitProps = (PropediaProps | ApartmentProps) & { id: string; kind: string; name: string; verified?: number }
+type Cluster = { key: string; source: string; clusterId: number; lon: number; lat: number; n: number }
+const INFRA_LABEL_LIMIT = 400
 function propsOf(f: MapGeoJSONFeature): HitProps {
   return f.properties as unknown as HitProps
 }
@@ -240,12 +269,45 @@ export default function MapView({ insets }: { insets: Insets }) {
   const [refData, setRefData] = useState<RefData>({})
   const refLoading = useRef(new Set<RefGeoId>())
   // 아파트 단지: 레이어를 켜거나 단지를 골랐을 때만 불러온다 (검색 창과 같은 캐시)
-  const aptWanted = layerStates.apartments.visible || selected?.kind === 'apt'
+  // P18 반경 보기도 단지 수를 세므로 불러온다
+  const radiusOn = useMapStore((s) => s.radius !== null)
+  const aptWanted = layerStates.apartments.visible || selected?.kind === 'apt' || radiusOn
   const aptQ = useApartmentLayer(aptWanted)
   const apartments = aptQ.data ?? null
   useEffect(() => {
     if (aptQ.isError) setLoadError(`${UI.apartment.unavailable} (${aptQ.error.message})`)
   }, [aptQ.isError, aptQ.error])
+
+  // 생활 인프라 (P18)
+  const infra = useInfra()
+  const route = useMapStore((s) => s.route)
+  const radius = useMapStore((s) => s.radius)
+  const radiusTool = useMapStore((s) => s.radiusTool)
+  useEffect(() => {
+    if (infra.error) setLoadError(`${UI.infra.loadError} (${infra.error})`)
+  }, [infra.error])
+  const routeArs = useMemo(() => (route ? (infra.routes.get(route)?.gangnam_stop_ids ?? []) : []), [route, infra.routes])
+  const routeArsRef = useRef(routeArs)
+  routeArsRef.current = routeArs
+  const poiFC = useMemo(() => ({ type: 'FeatureCollection', features: infra.mapPois }) as NonNullable<InfraData['pois']>, [infra.mapPois])
+  const poiRef = useRef(poiFC)
+  poiRef.current = poiFC
+  const hasPois = poiFC.features.length > 0
+  const radiusFC = useMemo(
+    () => (radius ? ({ type: 'FeatureCollection', features: [circlePolygon(radius)] } as FeatureCollection) : EMPTY_FC),
+    [radius],
+  )
+  const radiusRef = useRef(radiusFC)
+  radiusRef.current = radiusFC
+  const infraById = useMemo(() => {
+    const m = new globalThis.Map<string, InfraProps>()
+    for (const fc of [infra.schools, infra.stations, infra.bus]) for (const f of fc?.features ?? []) m.set(f.properties.id, f.properties)
+    for (const f of infra.poiFeatures) m.set(f.properties.id, f.properties)
+    return m
+  }, [infra.schools, infra.stations, infra.bus, infra.poiFeatures])
+  const catLabel = useMemo(() => Object.fromEntries(infra.cats.map((c) => [c.key, c.label])), [infra.cats])
+  const chipsRef = useRef<globalThis.Map<string, ImageData> | null>(null)
+  const [clusters, setClusters] = useState<Cluster[]>([])
 
   // 공식 참고 GeoJSON: 행을 처음 켤 때만 불러온다 (켤 때 불러오기). 한 번 받은 것은 다시 받지 않는다
   useEffect(() => {
@@ -294,9 +356,10 @@ export default function MapView({ insets }: { insets: Insets }) {
   const style = useMemo(() => {
     const s = useMapStore.getState()
     return buildStyle(basemap, gu, dongs, propedia, colors, hl, {
-      layers: s.layers, overlap: s.overlap, selected: s.selected, searchPnu: s.searchHit?.pnu ?? null,
-    }, refData, clickParcelData(s.parcel, s.selected), apartments)
-  }, [basemap, gu, dongs, propedia, colors, hl, refData, apartments])
+      layers: s.layers, overlap: s.overlap, selected: s.selected, searchPnu: s.searchHit?.pnu ?? null, routeArs: routeArsRef.current,
+    }, refData, clickParcelData(s.parcel, s.selected), apartments,
+    { schools: infra.schools, stations: infra.stations, bus: infra.bus, pois: hasPois ? poiRef.current : null }, radiusRef.current)
+  }, [basemap, gu, dongs, propedia, colors, hl, refData, apartments, infra.schools, infra.stations, infra.bus, hasPois])
 
   // 사업·규제 구역 라벨 (사람 확인 전이면 '확인 전')
   const areaLabels = useMemo(
@@ -339,13 +402,35 @@ export default function MapView({ insets }: { insets: Insets }) {
     [apartments, aptVisible],
   )
 
+  // 생활 인프라 이름: 역 줌 13, 학교·편의시설 줌 16, 정류장 줌 17 이상 (relayout에서 화면 안만 고른다)
+  const infraLabels = useMemo(() => {
+    const out: { id: string; text: string; at: [number, number]; minZoom: number; kind: string }[] = []
+    const add = (fs: { properties: InfraProps }[] | undefined, minZoom: number, kind: string) => {
+      for (const f of fs ?? [])
+        out.push({ id: `name:${f.properties.id}`, text: f.properties.name, at: [f.properties.lon, f.properties.lat], minZoom, kind })
+    }
+    if (layerStates.stations.visible) add(infra.stations?.features, STATION_NAME_MIN_ZOOM, 'station')
+    if (layerStates.schools.visible) add(infra.schools?.features, NAME_MIN_ZOOM, 'school')
+    if (layerStates.pois.visible) add(infra.mapPois, NAME_MIN_ZOOM, 'poi')
+    if (layerStates.bus_stops.visible) add(infra.bus?.features, BUS_NAME_MIN_ZOOM, 'bus')
+    return out
+  }, [infra.stations, infra.schools, infra.mapPois, infra.bus, layerStates.stations.visible, layerStates.schools.visible,
+    layerStates.pois.visible, layerStates.bus_stops.visible])
+
   const [loaded, setLoaded] = useState(false)
   const getMap = () => mapRef.current?.getMap()
 
   // ---- 패널 상태 → 지도 (setLayoutProperty·setPaintProperty·setFilter, 다시 그리지 않음)
+  // 스타일을 다시 만드는 중(데이터를 나중에 받아 setStyle)에 상태가 바뀌면 건너뛴 것을 기억했다가 스타일이 다 들어오면 다시 건다
+  const applyPending = useRef(false)
   const applyState = useCallback(() => {
     const map = getMap()
-    if (!map || !map.isStyleLoaded()) return
+    if (!map) return
+    if (!map.isStyleLoaded()) {
+      applyPending.current = true
+      return
+    }
+    applyPending.current = false
     const s = useMapStore.getState()
     for (const id of PANEL_LAYER_IDS) {
       const vis = s.layers[id].visible ? 'visible' : 'none'
@@ -360,10 +445,21 @@ export default function MapView({ insets }: { insets: Insets }) {
       map.setFilter('propedia-parcel-search', idFilter('pnu', s.searchHit?.pnu ?? null) as never)
     const click = map.getSource(CLICK_SOURCE) as maplibregl.GeoJSONSource | undefined
     click?.setData(clickParcelData(s.parcel, s.selected) as never)
+    // 노선 선택 모드 (P18): 그 노선 정류장만 강조, 나머지 정류장은 흐리게
+    if (map.getLayer('bus-route')) map.setFilter('bus-route', routeFilter(routeArsRef.current) as never)
+    if (s.route && map.getLayer('bus-icon'))
+      map.setPaintProperty('bus-icon', 'icon-opacity', Math.round((s.layers.bus_stops.opacity / 100) * ROUTE_DIM * 1000) / 1000)
+    const rs = map.getSource(RADIUS_SOURCE) as maplibregl.GeoJSONSource | undefined
+    rs?.setData(radiusRef.current as never)
   }, [])
   useEffect(() => {
     if (loaded) applyState()
-  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState])
+  }, [loaded, layerStates, overlap, selected, searchHit, parcel, applyState, route, routeArs, radiusFC])
+  // 편의시설 분류를 켜고 끌 때는 소스 데이터만 바꾼다 (클러스터가 다시 계산된다)
+  useEffect(() => {
+    const src = getMap()?.getSource(INFRA_SOURCES.pois) as maplibregl.GeoJSONSource | undefined
+    src?.setData(poiFC as never)
+  }, [poiFC])
 
   // 새로고침: URL sel=parcel:{pnu}면 같은 필지를 다시 조회해 강조한다 (한 번)
   const restored = useRef(false)
@@ -405,12 +501,18 @@ export default function MapView({ insets }: { insets: Insets }) {
     if (!loaded || !map || !guBounds || fitted.current) return
     const sel = initialSel.current && !isParcelLookup(initialSel.current) ? initialSel.current : null
     const aptDone = sel?.kind !== 'apt' || aptQ.isFetched
-    const target = initialFitTarget(sel, { ...propedia, apt: apartments ?? undefined }, propediaDone && aptDone)
+    const infraFc = {
+      school: infra.schools ?? undefined, station: infra.stations ?? undefined, bus: infra.bus ?? undefined,
+      poi: infra.poiFeatures.length ? ({ type: 'FeatureCollection', features: infra.poiFeatures } as FeatureCollection) : undefined,
+    }
+    const infraWait = !!sel && sel.kind in infraFc && !infraFc[sel.kind as keyof typeof infraFc] && !infra.error
+    const target = initialFitTarget(sel, { ...propedia, apt: apartments ?? undefined, ...infraFc }, propediaDone && aptDone && !infraWait)
     if (target === 'wait') return
     fitted.current = true
     if (target) map.fitBounds(target, { padding: padding(80), maxZoom: 18, duration: 0 })
     else map.fitBounds(guBounds, { padding: { ...insets, top: insets.top + 24, bottom: insets.bottom + 24 }, duration: 0 })
-  }, [loaded, guBounds, insets, propedia, propediaDone, padding, apartments, aptQ.isFetched])
+  }, [loaded, guBounds, insets, propedia, propediaDone, padding, apartments, aptQ.isFetched, infra.schools, infra.stations,
+    infra.bus, infra.poiFeatures, infra.error])
 
   // 이동 요청 (작업 탭·사업 카드·검색)
   useEffect(() => {
@@ -456,6 +558,28 @@ export default function MapView({ insets }: { insets: Insets }) {
     mapRef.current?.easeTo({ pitch: tilt3d ? TILT : 0, duration: 600 })
   }, [tilt3d])
 
+  // 클러스터 개수 (HTML 마커): 그려진 클러스터 원만
+  const clusterKey = useRef('')
+  const updateClusters = useCallback(() => {
+    const map = getMap()
+    if (!map || !map.isStyleLoaded()) return
+    const ls = CLUSTER_LAYERS.filter((l) => map.getLayer(l) && map.getLayoutProperty(l, 'visibility') !== 'none')
+    const seen = new Set<string>()
+    const out: Cluster[] = []
+    for (const f of ls.length ? map.queryRenderedFeatures({ layers: [...ls] }) : []) {
+      const key = `${f.source}:${f.properties.cluster_id}`
+      if (seen.has(key)) continue
+      seen.add(key)
+      const [lon, lat] = (f.geometry as Point).coordinates
+      out.push({ key, source: f.source, clusterId: Number(f.properties.cluster_id), lon, lat, n: Number(f.properties.point_count) })
+    }
+    const k = out.map((c) => `${c.key}@${c.lon.toFixed(5)},${c.lat.toFixed(5)}`).sort().join('|')
+    if (k !== clusterKey.current) {
+      clusterKey.current = k
+      setClusters(out)
+    }
+  }, [])
+
   // ---- 라벨 배치: 이동이 끝날 때마다 (줌별 표시 + 겹침 피하기)
   const relayout = useCallback(() => {
     const map = getMap()
@@ -492,8 +616,19 @@ export default function MapView({ insets }: { insets: Insets }) {
               const p = map.project(l.at)
               return { id: l.id, x: p.x, y: p.y, w: estimateLabelWidth(l.text), h: LABEL_H, minZoom: APARTMENT_LABEL_MIN_ZOOM }
             })
-    setPlacements(placeLabels([...inputs, ...refInputs, ...aptInputs], zoom, obstacles))
-  }, [labels, areaLabels, refLabels, aptLabels])
+    // 생활 인프라 이름: 화면 안, 칩 아래 (칩 자리는 장애물)
+    const iconBoxes: Box[] = []
+    const infraInputs = infraLabels
+      .filter((l) => zoom >= l.minZoom && bounds.contains(l.at))
+      .slice(0, INFRA_LABEL_LIMIT)
+      .map((l) => {
+        const p = map.project(l.at)
+        iconBoxes.push({ x: p.x, y: p.y, w: 24, h: 24 })
+        return { id: l.id, x: p.x, y: p.y + 20, w: estimateLabelWidth(l.text, 11, 6.5, 3), h: 16, minZoom: l.minZoom }
+      })
+    setPlacements(placeLabels([...inputs, ...refInputs, ...aptInputs, ...infraInputs], zoom, [...obstacles, ...iconBoxes]))
+    updateClusters()
+  }, [labels, areaLabels, refLabels, aptLabels, infraLabels, updateClusters])
   useEffect(() => {
     if (loaded) relayout()
   }, [loaded, relayout])
@@ -516,6 +651,29 @@ export default function MapView({ insets }: { insets: Insets }) {
     [projects],
   )
 
+  /** 생활 인프라 아이콘: 히트 반경 안에서 가장 가까운 것 (보이는 아이콘 레이어만) */
+  const iconAt = (pt: { x: number; y: number }): (IconAt & { props: InfraProps }) | null => {
+    const map = getMap()
+    if (!map) return null
+    const ls = Object.keys(ICON_LAYERS).filter((l) => map.getLayer(l) && map.getLayoutProperty(l, 'visibility') !== 'none')
+    if (!ls.length) return null
+    const icons: (IconAt & { props: InfraProps })[] = []
+    for (const f of map.queryRenderedFeatures([[pt.x - 12, pt.y - 12], [pt.x + 12, pt.y + 12]], { layers: ls })) {
+      const id = String(f.properties.id)
+      const props = infraById.get(id)
+      if (!props) continue
+      const p = map.project([props.lon, props.lat])
+      icons.push({ id, kind: props.kind, x: p.x, y: p.y, props })
+    }
+    return iconHit(pt, icons) as (IconAt & { props: InfraProps }) | null
+  }
+  const infraHover = (p: InfraProps): string => {
+    if (p.kind === 'school') return UI.infra.hover.school(p.name, p.level)
+    if (p.kind === 'station') return UI.infra.hover.station(p.name, p.lines)
+    if (p.kind === 'bus_stop') return UI.infra.hover.bus(p.name, p.ars_no)
+    return UI.infra.hover.poi(p.name, catLabel[p.category] ?? p.category)
+  }
+
   const targetsAt = (e: MapLayerMouseEvent) => {
     const seen = new Set<string>()
     return (e.features ?? [])
@@ -531,9 +689,16 @@ export default function MapView({ insets }: { insets: Insets }) {
   const onMouseMove = (e: MapLayerMouseEvent) => {
     const dongF = e.features?.find((f) => f.layer.id === 'bjd-fill')
     setCursor({ lat: e.lngLat.lat, lon: e.lngLat.lng, dong: (dongF?.properties?.name as string | undefined) ?? null })
+    const st = useMapStore.getState()
+    // 아이콘은 면 위에 있으므로 호버는 아이콘 먼저 (P18)
+    const ic = st.mapMoving ? null : iconAt(e.point)
+    if (ic) {
+      setHover({ x: e.point.x, y: e.point.y, text: infraHover(ic.props), id: ic.id })
+      if (st.hovered !== ic.id) st.setHovered(ic.id)
+      return
+    }
     const ts = targetsAt(e).sort((a, b) => HOVER_ORDER[propsOf(a).kind] - HOVER_ORDER[propsOf(b).kind])
     const t = ts[0]
-    const st = useMapStore.getState()
     if (!t || st.mapMoving) {
       if (hover) setHover(null)
       if (st.hovered) st.setHovered(null)
@@ -545,8 +710,31 @@ export default function MapView({ insets }: { insets: Insets }) {
   }
 
   const onClick = (e: MapLayerMouseEvent) => {
+    const st = useMapStore.getState()
+    const map = getMap()
+    // 반경 보기 도구 (P18): 누른 지점에 원
+    if (st.radiusTool) {
+      setPick(null)
+      st.setRadius({ lon: e.lngLat.lng, lat: e.lngLat.lat, m: st.radius?.m ?? 500 })
+      return
+    }
+    // 클러스터 원 → 그 묶음이 풀리는 줌으로 확대
+    if (map) {
+      const cl = CLUSTER_LAYERS.filter((l) => map.getLayer(l) && map.getLayoutProperty(l, 'visibility') !== 'none')
+      const c = cl.length ? map.queryRenderedFeatures(e.point, { layers: [...cl] })[0] : undefined
+      if (c) {
+        const src = map.getSource(c.source) as maplibregl.GeoJSONSource
+        void src.getClusterExpansionZoom(Number(c.properties.cluster_id)).then((z) =>
+          map.easeTo({ center: (c.geometry as Point).coordinates as [number, number], zoom: Math.min(z + 0.2, MAX_ZOOM) }),
+        )
+        return
+      }
+    }
     const feats = targetsAt(e)
-    const d = decideClick(feats.map((f) => ({ id: propsOf(f).id, kind: propsOf(f).kind })))
+    const ic = iconAt(e.point)
+    const targets: { id: string; kind: string }[] = feats.map((f) => ({ id: propsOf(f).id, kind: propsOf(f).kind }))
+    if (ic) targets.push({ id: ic.id, kind: ic.kind })
+    const d = decideClick(targets)
     if (pick) {
       setPick(null) // 열린 선택 목록은 바깥을 누르면 닫기만 한다
       if (d.type === 'parcel-lookup') return
@@ -561,13 +749,14 @@ export default function MapView({ insets }: { insets: Insets }) {
       useMapStore.getState().select(parseSelected(d.id))
       return
     }
-    const byId = new globalThis.Map(feats.map((f) => [propsOf(f).id, propsOf(f)]))
+    const byId = new globalThis.Map<string, { id: string; kind: string; name: string }>(feats.map((f) => [propsOf(f).id, propsOf(f)]))
+    if (ic) byId.set(ic.id, ic.props)
     setPick({
       x: e.point.x,
       y: e.point.y,
       items: d.items.map((it) => {
         const p = byId.get(it.id)!
-        return { id: p.id, kind: p.kind, name: p.kind === 'project' ? ((p as PropediaProps).short_name ?? p.name) : p.name }
+        return { id: p.id, kind: p.kind, name: p.kind === 'project' ? ((p as unknown as PropediaProps).short_name ?? p.name) : p.name }
       }),
     })
   }
@@ -606,7 +795,7 @@ export default function MapView({ insets }: { insets: Insets }) {
         maxPitch={TILT}
         attributionControl={false}
         interactiveLayerIds={interactive}
-        cursor={hover ? 'pointer' : 'default'}
+        cursor={radiusTool ? 'crosshair' : hover ? 'pointer' : 'default'}
         onMouseMove={onMouseMove}
         onMouseOut={() => {
           setCursor(null)
@@ -632,7 +821,21 @@ export default function MapView({ insets }: { insets: Insets }) {
             if (map && !map.hasImage(HATCH_ID)) map.addImage(HATCH_ID, hatchImage(colors.regulation))
           }
           addHatch()
-          map?.on('styleimagemissing', (e: { id: string }) => e.id === HATCH_ID && addHatch())
+          map?.on('styleimagemissing', (e: { id: string }) => {
+            if (e.id === HATCH_ID) addHatch()
+            else if (map && CHIP_IDS.has(e.id) && chipsRef.current) addChips(map, chipsRef.current, e.id)
+          })
+          // 생활 인프라 칩 (P18): 한 번 만들어 두고, 스타일이 바뀌어 빠지면 위에서 다시 넣는다
+          chipImages()
+            .then((imgs) => {
+              chipsRef.current = imgs
+              if (map) addChips(map, imgs)
+            })
+            .catch((err: Error) => setLoadError(`${UI.infra.loadError} (${err.message})`))
+          map?.on('idle', () => {
+            if (applyPending.current) applyState()
+            updateClusters()
+          })
           // 점검 스크립트(tests/ui_check_map.py)가 페인트·렌더된 도형을 확인할 수 있게: 개발 서버 또는 ?debug=1일 때만
           if (exposeMap()) (window as unknown as { __propediaMap?: unknown }).__propediaMap = map
           if (map) useMapStore.getState().setZoom(map.getZoom())
@@ -679,6 +882,22 @@ export default function MapView({ insets }: { insets: Insets }) {
             </Marker>
           )
         })}
+        {infraLabels.map((l) => {
+          const pl = placements[l.id]
+          if (!pl || !pl.visible) return null
+          return (
+            <Marker key={l.id} longitude={l.at[0]} latitude={l.at[1]} anchor="center" offset={[pl.dx, pl.dy + 20]}>
+              <span className={`map-infra-label map-infra-label--${l.kind}`} data-testid="infra-label" data-kind={l.kind}>{l.text}</span>
+            </Marker>
+          )
+        })}
+        {clusters.map((c) => (
+          <Marker key={c.key} longitude={c.lon} latitude={c.lat} anchor="center" style={{ pointerEvents: 'none' }}>
+            <span className="map-cluster-count" data-testid="cluster-count" data-source={c.source} aria-label={UI.infra.cluster(c.n)}>
+              {c.n.toLocaleString('ko-KR')}
+            </span>
+          </Marker>
+        ))}
         {parcel.status === 'loading' && parcel.point && (
           <Marker longitude={parcel.point[0]} latitude={parcel.point[1]} anchor="bottom">
             <span className="map-area-label" role="status" data-testid="parcel-loading-marker">{UI.parcel.loading}</span>
@@ -702,6 +921,8 @@ export default function MapView({ insets }: { insets: Insets }) {
       <Callout getMap={getMap} loaded={loaded} insets={insets} />
 
       <MapControls insets={insets} hasKey={Boolean(KEY)} />
+      <RouteChip insets={insets} routes={infra.routes} />
+      <RadiusPanel insets={insets} infra={infra} apartments={apartments} projects={propedia.project ?? null} />
 
       {/* 호버 툴팁 (이동 중 숨김) */}
       {hover && !mapMoving && (
