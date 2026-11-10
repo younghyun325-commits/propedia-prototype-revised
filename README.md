@@ -115,7 +115,15 @@ PNU → 토지 정보: 빌드 캐시(land_cache) → 메모리 캐시(1시간) �
 3. 확인: `curl -s https://<주소>/api/v1/health`, 화면 5개.
 4. `/api/*`가 404면 루트에 `vercel.json` `{ "rewrites": [ { "source": "/api/(.*)", "destination": "/api/index" } ] }` 추가 후 재배포 (agents.md §15-3).
 
-`.vercelignore`가 빌드 전용 파일(pipeline, seed, extractions, data_raw, tests, docs 등)을 뺍니다. `db/propedia.db`, `core/`, `api/`, `public/`, `requirements.txt`는 올라갑니다. Hobby 플랜은 운영 주소가 기본 공개이며 비상업·개인 용도 조건입니다.
+`.vercelignore`가 빌드 전용 파일(pipeline, seed, extractions, data_raw, tests, docs 등)을 뺍니다. `db/propedia.db`, `db/market.db`, `core/`, `api/`, `public/`, `requirements.txt`는 올라갑니다. Hobby 플랜은 운영 주소가 기본 공개이며 비상업·개인 용도 조건입니다.
+
+### 실거래 DB(`db/market.db`) 갱신 규칙 (P17)
+
+- `db/market.db`(약 14.5MB)는 **시연·배포 직전에만** 다시 빌드해 커밋합니다. 바이너리 파일이라 커밋할 때마다 저장소 이력이 그만큼 커지므로, 평소에는 로컬에서만 갱신하고 커밋하지 않습니다.
+- 갱신 순서 (공공데이터포털 API, `.env`의 `DATA_GO_KR_SERVICE_KEY`):
+  `python -m pipeline.fetch_trades` → `python -m pipeline.build_trade_complexes` → `python -m pipeline.build_market_db` → (기본 정보 API가 등록되면) `python -m pipeline.fetch_apt_basis` → `python -m pipeline.build_map_layers` → `python -m evals.run_eval`
+- 커밋 전 확인: 개인 정보 성격 필드(buyerGbn·slerGbn·estateAgentSggNm) 0건, 키 문자열 0건, `PRAGMA freelist_count = 0`(VACUUM 상태).
+- 배포본에 market.db가 없으면 실거래 API만 503이고 다른 기능은 그대로입니다.
 
 화면 캡처: [docs/screens/](docs/screens/) (`python tests/ui_check.py`가 다시 만듭니다)
 

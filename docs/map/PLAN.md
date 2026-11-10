@@ -585,6 +585,13 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 
 완료 확인: M22·M23 목표 달성 / 단지 3곳 대조표(HUMAN\_TODO) / `db/market.db` 크기 기록(20MB를 넘으면 원자료 기간 축소 검토) / 스크린샷 `map_05a_apartments.png`·`map_05b_apartment_inspector.png`(은마)·`map_05c_project_nearby.png`
 
+**market.db 갱신 규칙** (2026-11-11 커밋, 14.5MB, 실거래 2016-01~2026-11 41,566건):
+
+- 시연·배포 직전에만 다시 빌드해 커밋한다(바이너리라 커밋마다 저장소 이력이 커짐). 평소에는 로컬에서만 갱신한다.
+- 갱신 순서: `fetch_trades` → `build_trade_complexes` → `build_market_db` → (기본 정보 API가 등록되면) `fetch_apt_basis` → `build_map_layers` → `run_eval`
+- 커밋 전: 개인 정보 성격 필드 0건·키 문자열 0건·`freelist_count = 0` 확인.
+- Vercel: `.vercelignore`에 `db/`가 없어 propedia.db와 같은 방식(업로드 → Python 함수 번들에 포함)으로 들어간다. Python 함수 한도는 압축 해제 500MB.
+
 ### P18 생활 인프라 (1\~2일)
 
 학교·지하철역·편의시설을 올리고, 영향권과 겹쳐 볼 수 있게 합니다.
