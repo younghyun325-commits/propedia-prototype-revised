@@ -1347,6 +1347,12 @@ pause
 ```
 
 ### 15-5. GitHub·Vercel 배포 순서 (P8, 사람과 함께)
+**지금 운영 배포처 (2026-11-11 전환)**: GitHub `younghyun325-commits/propedia-prototype`(**비공개**, git 원격 `origin`, 옛 저장소 원격 없음) · Vercel 계정 klowyh(Hobby), 프로젝트 `propedia-prototype`, Root Directory `./`, 운영 주소 `https://propedia-prototype.vercel.app`.
+- 작업은 `feat/map-console`에서 하고 push하면 Preview가 생긴다. `main` 반영(운영 배포)은 사람이 빨리감기 push로 한다. force push 금지.
+- 새 커밋 작성자는 이 저장소의 `git config --local user.email`(새 계정 noreply)을 쓴다 — Hobby 플랜은 프로젝트 주인 계정이 작성한 커밋만 배포한다.
+- 저장소는 비공개로 유지한다. 공개·외부 공유가 필요하면 현재 파일 상태로 새 저장소를 만든다 (이력에 지오코더 응답·개인 메일이 있음, HUMAN_TODO 44).
+- 이전 기록: 2026-11-11까지는 `greekyogurt02/propedia-pretotype` + 옛 Vercel 프로젝트(`propedia-pretotype.vercel.app`). 아래 1~4는 처음 설정(P8) 때의 순서다.
+
 1. Claude Code: `gh auth status`로 GitHub CLI 로그인 확인.
    - 로그인돼 있으면 `gh repo create propedia-pretotype --private --source . --push`.
    - 아니면 멈추고(§19-1) 사람에게 요청: "GitHub에 빈 비공개 저장소 `propedia-pretotype`를 만들고 주소를 알려 주세요" → `git remote add origin <주소>` → `git push -u origin main`.
@@ -1542,6 +1548,7 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-11-11 | Claude Code (P20) | 운영 저장소·Vercel 프로젝트 전환, 저장소 비공개: GitHub `younghyun325-commits/propedia-prototype`(비공개, `origin`) · Vercel klowyh(Hobby) 프로젝트 `propedia-prototype`(Root `./`). 옛 저장소 `greekyogurt02/propedia-pretotype`는 기록으로만, 원격 없음. 새 커밋 작성자는 `git config --local user.email`. 이력 재작성은 하지 않음(HUMAN_TODO 44 닫힘). §15-5 |
 | 2026-11-11 | Claude Code (P20) | 운영 주소 변경: propedia-pretotype.vercel.app → propedia-prototype.vercel.app (`core/live/vworld.py` `DEFAULT_DOMAIN`·테스트·`.env.example`·README·DEMO·DEMO_MAP·HUMAN_TODO 34·§15-1-1). Vercel 도메인·옛 주소 리디렉트·브이월드 새 키·환경변수는 사람 (HUMAN_TODO 53~55). GitHub 저장소·git 원격·폴더·Vercel 프로젝트 이름은 그대로 |
 | 2026-11-11 | Claude Code (P20-A) | 다듬기·테스트·문서·Preview 준비 (docs/map/PLAN.md P20, 배포 제외): 첫 화면 `/` → `/map/` 307 (`vercel.json` `redirects` + 로컬 FastAPI 같은 동작, 기존 `/index.html`·`/lookup.html`·`/docs.html` 유지), `X-Robots-Tag: noindex`(vercel.json headers)·지도 index.html meta robots, 로컬만 `GZipMiddleware`(fastapi.middleware.gzip, Vercel은 CDN). `/map/notices` regulations에 `scope_type`·`scope_ref`·`has_geometry` — 도형 없는 규제(D5 법정동, D6~D8 서울 전역)는 화면이 법정동·구 경계 점선 강조(`web/src/map/scope.ts`). 설정 메뉴(투명도 줄이기 localStorage `propedia.map.reduceTransparency.v1`·단축키·기존 화면 링크), `?` 단축키 도움말, reduced-motion이면 지도 이동 0ms, 반응형 wide/mid/narrow(`ui/useViewport.ts`, 하단 시트 `ui/BottomSheet.tsx`). 점검 `pipeline/check_secrets.py`(키 노출 건수만), `tests/axe_map.py`, `tests/demo_map_run.py`, `tests/test_geojson_precision.py`. 확인: 로컬 `.env`의 브이월드 키 3개가 같은 값 (HUMAN_TODO 51) |
 | 2026-11-11 | Claude Code (P19) | 하단 타임라인·고시 피드 (docs/map/PLAN.md P19): '그날 기준' 판정을 `core/map.state_at(con, as_of)` 하나로 모음(사업은 첫 근거 문서 발행일 이후에만, 단계·기한은 `progress(today=as_of)`, 규제 효력 `timeutil.effective`) — `/map/projects`·`/map/notices`·`/map/feature`·`/timeline`·`/feed`가 같이 씀. API `/api/v1/timeline?from=&to=`, `/api/v1/feed?limit=&as_of=`, `/apartments/{id}/trades?as_of=`. 화면 URL `?t=`, 하단 타임라인(`web/src/timeline/`), 고시 피드 탭. P19-1: 편의시설 분류별 레이어·하위 분류 `clusterProperties`+`setFilter`, URL `?poi=`. P19-0: 학교 이용허락범위 제한 없음 `[확인 2026-11-11 사람]`, `excludeFiles`에 `public/pages/**` |

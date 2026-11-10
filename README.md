@@ -4,9 +4,10 @@
 
 - 작업 지시서: [agents.md](agents.md) · 지도 계획: [docs/map/PLAN.md](docs/map/PLAN.md) · 진행 기록: [PROGRESS.md](PROGRESS.md) · 사람 확인 목록: [HUMAN_TODO.md](HUMAN_TODO.md)
 - 시연 대본: 지도 화면 [DEMO_MAP.md](DEMO_MAP.md) (5분, P20) · 기존 화면 [DEMO.md](DEMO.md)
-- GitHub(비공개): https://github.com/greekyogurt02/propedia-pretotype
-- 배포 주소: https://propedia-prototype.vercel.app (Vercel Hobby, GitHub `main` push 시 자동 배포)
-- 옛 주소 propedia-pretotype.vercel.app 은 Vercel 도메인 설정으로 새 주소로 넘어간다.
+- GitHub(비공개): https://github.com/younghyun325-commits/propedia-prototype
+- 배포: Vercel 계정 klowyh(Hobby), 프로젝트 propedia-prototype, Root Directory ./, 운영 주소 https://propedia-prototype.vercel.app (GitHub `main` push 시 자동 배포)
+- 저장소는 비공개로 유지한다. 공개·외부 공유가 필요하면 현재 파일 상태로 새 저장소를 만든다(이력에 지오코더 응답·개인 메일이 있음).
+- 이전 저장소(기록): github.com/greekyogurt02/propedia-pretotype, 2026-11-11까지 (옛 주소 propedia-pretotype.vercel.app 은 옛 Vercel 계정의 프로젝트 — HUMAN_TODO 53)
 
 ## 지도 화면 (`/map/`, P11~P20)
 
@@ -159,12 +160,12 @@ PNU → 토지 정보: 빌드 캐시(land_cache) → 메모리 캐시(1시간) �
 ### 지도 화면 배포 절차 (P20)
 
 1. **Preview**: `feat/map-console` 브랜치를 push하면 Vercel이 Preview 배포를 만듭니다. Preview 주소에서 확인 목록(PROGRESS.md P20-A)을 봅니다.
-   - 브랜치의 마지막 커밋 작성자는 저장소 주인 noreply(`232514334+greekyogurt02@users.noreply.github.com`)여야 Hobby 플랜에서 배포가 막히지 않습니다(아래 1번 참고). `git config`는 바꾸지 않고 `--author`로 커밋합니다.
+   - Vercel 배포가 막히지 않게 새 커밋은 이 저장소의 `git config user.email`(저장소 주인 younghyun325-commits 계정 noreply, `--local`로 설정됨)로 합니다. Hobby 플랜은 프로젝트 주인 계정이 작성한 커밋만 배포합니다. 지난 커밋의 작성자는 바꾸지 않습니다.
 2. **Production**: 사람이 `main`을 `feat/map-console`로 **빨리감기 push** 합니다 (`git push origin feat/map-console:main`, 병합 커밋 없이). `main` push가 운영 배포를 만듭니다.
 3. **되돌리기**: Vercel 대시보드 → Deployments → 직전 운영 배포 → **Instant Rollback** (다시 빌드하지 않고 바로 바뀝니다). 코드는 그다음 `git revert`로 맞춥니다.
 4. 검색엔진 노출 막기: 모든 응답에 `X-Robots-Tag: noindex`(`vercel.json` `headers`), 지도 화면 `index.html`에 `<meta name="robots" content="noindex">`.
 
-### 처음 설정 (2026-10, 완료)
+### 처음 설정 (2026-10, 완료 — 이전 기록: 옛 저장소 greekyogurt02/propedia-pretotype·옛 Vercel 프로젝트 기준)
 
 1. GitHub 비공개 저장소에 push (`gh repo create propedia-pretotype --private --source . --push`, 완료).
    - 이후 `git push`가 "Repository not found"로 실패하면 Windows 자격 증명 관리자에 다른 GitHub 계정이 저장된 것입니다. 전역 설정을 바꾸지 않고 `git -c credential.helper= -c "credential.helper=!gh auth git-credential" push`로 올립니다.

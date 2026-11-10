@@ -1,6 +1,9 @@
 # 진행 기록
 
 ## 작업 규칙
+- 원격: `origin` = younghyun325-commits/propedia-prototype (비공개, 2026-11-11 전환). 옛 저장소(greekyogurt02/propedia-pretotype) 원격은 없음.
+- 작업은 `feat/map-console`, `main` 반영은 사람이 (빨리감기, force push 금지).
+- 새 커밋 작성자는 `git config --local user.email` (새 계정 noreply). 지난 커밋 작성자는 바꾸지 않음.
 - 작업은 `feat/map-console`에서만 한다. `main` 병합은 P20에서 사람이 한다. (로컬 `.git/hooks/pre-commit`·`pre-push`가 main 커밋·push를 막음, 커밋되지 않는 로컬 훅)
 - `origin/main`에는 2026-11-10까지 P13~P15가 실수로 먼저 올라가 있다(`c79cac0`). 되돌리지 않기로 결정. 운영 배포 영향은 HUMAN_TODO 45에서 확인.
 
