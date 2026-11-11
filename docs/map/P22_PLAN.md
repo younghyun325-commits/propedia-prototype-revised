@@ -40,6 +40,6 @@
 
 ## 단계별 완료 확인 (공통)
 
-`pytest -q`, `npm --prefix web run test`, `python -m pipeline.check_secrets`, `python -m pipeline.sync_server_data --check`,
+`pytest -q`, `cd web && npm test`, `python -m pipeline.check_secrets`, `python -m pipeline.sync_server_data --check`,
 `tests/test_public_map_fresh.py`, 로컬 `tests/ui_check_map.py --base http://127.0.0.1:8011`(단계마다 새 항목 추가),
 화면이 바뀐 단계는 `tests/ui_check.py --strict`와 `tmp/p22_N/` 캡처. 커밋은 단계 안에서 주제별로 나눈다. push는 사람이 한다.

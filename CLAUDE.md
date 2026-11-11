@@ -18,6 +18,15 @@
 - 커밋 작성자는 `git config --local user.email`(저장소 주인 noreply). 전역 설정은 학교 주소이므로 커밋 전 local 값을 확인한다.
 - push는 사람이 한다 (Claude Code는 명령만 출력). 원본에 반영할지는 P22-8 뒤 영현이 결정한다.
 - 아래 agents.md의 폴더 경로·원격·배포 설명은 원본 기준이다. 이 저장소에서는 위 표가 우선한다.
+- 지도 단위 테스트(vitest)는 `cd web && npm test` 하나로 돌린다. `npm --prefix web run test`는 현재 폴더가 소문자 드라이브(`c:\`)면 실패한다 (HUMAN_TODO 74).
+
+### PC별 `.env` 구성 (2026-11-12, 값은 적지 않는다)
+| 실행 위치 | 브이월드 키 (`VWORLD_API_KEY`·`VITE_VWORLD_KEY`·`VWORLD_API_KEY_DEV`) | `VWORLD_DOMAIN` |
+|---|---|---|
+| 데스크톱 `C:\dev\propedia-prototype-revised\.env` | localhost 서비스 URL로 등록한 개발키 (세 변수 같은 값) | `http://localhost:3000` |
+| Mac `~/dev/propedia-prototype-revised/.env` | 운영 키 | 운영 주소 `https://propedia-prototype.vercel.app` |
+| 운영 (원본 Vercel 프로젝트) | Vercel 환경변수에만 있는 운영 키 | Vercel 환경변수 |
+- 로컬 점검은 `.env` 그대로 돌린다. 서버나 점검 도구에 `VWORLD_DOMAIN`을 따로 덮어쓰지 않는다.
 
 이 폴더(`pretotype`)의 작업 지시서는 `agents.md`다. 작업을 시작하기 전에 끝까지 읽고 그대로 따른다.
 진행 상황은 `PROGRESS.md`, 사람이 확인할 일은 `HUMAN_TODO.md`에 기록한다.

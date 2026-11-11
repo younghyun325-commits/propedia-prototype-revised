@@ -168,7 +168,7 @@ PNU → 토지 정보: 빌드 캐시(land_cache) → 메모리 캐시(1시간) �
 
 - 로컬 실행: `run_demo.bat` 더블클릭 (가상환경이 없으면 만들고 `http://127.0.0.1:8000/`을 엽니다)
 - 개발 중: `python -m uvicorn api.index:app --port 8000 --reload`
-- 테스트: `pytest -q`
+- 테스트: `pytest -q`, 지도 화면 단위 테스트는 `cd web && npm test` (Git Bash·PowerShell 공통. `npm --prefix web run test`는 셸의 현재 폴더가 소문자 드라이브(`c:\`)일 때 vitest가 모듈을 두 번 읽어 13개 파일이 모두 실패한다)
 - 화면 점검 + 캡처: `python tests/ui_check.py` (배포본은 `--base https://….vercel.app`)
 - 화면 메뉴는 **시작 · 주소 조회 · 문서 DB** 세 개입니다 (2026-10-26 동혁 결정). 검수(`review.html`)·평가(`eval.html`) 화면은 메뉴와 링크에서 뺐지만 파일과 API(`/api/v1/review-queue`, `/api/v1/eval`, POST `/api/v1/lookup`의 `decisions`)는 그대로 남아 있습니다. 주소 조회 화면은 검수 결정을 보내지 않고 GET으로만 조회합니다.
 

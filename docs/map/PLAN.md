@@ -382,7 +382,7 @@ export default defineConfig({
 ## 명령
 - API: python -m uvicorn api.index:app --port 8000 --reload
 - 화면: npm --prefix web run dev  (http://localhost:5173/map/)
-- 테스트: pytest -q / npm --prefix web run test / python tests/ui_check_map.py
+- 테스트: pytest -q / cd web && npm test / python tests/ui_check_map.py
 - 평가: python -m evals.run_eval
 - 빌드: npm --prefix web run build  (→ public/map)
 ```
