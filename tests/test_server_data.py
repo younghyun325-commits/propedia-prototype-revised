@@ -21,6 +21,7 @@ from tests.live_fixtures import FixtureFetch
 YEOKSAM = (37.498701, 127.031577)          # 역삼동 823 경계 중심점 (tests/test_parcel_at.py와 같은 값)
 PNU_YEOKSAM = "1168010100108230000"
 REF_ZONE_YEOKSAM = "영동1토지구획정리사업"       # 역삼동 823이 들어 있는 의제처리구역 (ref_uije)
+APT_ID = "apt:11680-218"                   # 은마 (market.db·apartments.geojson)
 GANGNAM_Z14 = (14, 13974, 6348)            # 대치동 부근 — 운영 점검 목록과 같은 타일
 TODAY = date(2026, 11, 10)
 
@@ -33,6 +34,7 @@ SERVER_FILES = [
     ("layers", "propedia_regulations.geojson"),
     ("layers", "ref_seoulplan.geojson"),
     ("layers", "ref_uije.geojson"),
+    ("layers", "apartments.geojson"),
     ("base", "gangnam.geojson"),
     ("base", "bjd.geojson"),
 ]
@@ -85,6 +87,41 @@ def test_refzones_loaded_without_public(no_public):
 def test_feature_project_without_public(client, no_public):
     d = client.get("/api/v1/map/feature/project/1").json()
     assert d["kind"] == "project" and d["title"] and d["as_of"]
+    assert d["bbox"] and len(d["bbox"]) == 4                  # propedia_projects.geojson
+    assert d["sections"]["parcels"]                           # propedia_parcels.geojson
+
+
+def test_nearby_apartments_without_public(client, no_public):
+    """사업 인스펙터 '영향권 안 단지'는 apartments.geojson을 읽어야 나온다 (core/market이 core.map._features 경유).
+
+    이 레이어는 브라우저도 CDN에서 받지만 서버도 읽는다 — 손으로 적은 목록에서 빠뜨려 운영에서 0건이었다.
+    """
+    na = client.get("/api/v1/map/feature/project/1").json()["sections"]["nearby_apartments"]
+    assert na["250"] and na["500"], na
+    assert all(a["name"] for a in na["250"] + na["500"])
+    apt = client.get(f"/api/v1/map/feature/apartment/{APT_ID}").json()
+    assert apt["bbox"] and len(apt["bbox"]) == 4               # core/market.bbox_of
+
+
+def test_feature_names_all_synced():
+    """`core/`가 `_features("...")`로 읽는 레이어 이름이 모두 data/server에 있다 (손으로 적은 목록의 누락 방지).
+
+    sync 목록은 사람이 적지만, 읽는 쪽 이름은 코드에서 뽑아 맞춘다.
+    """
+    import ast
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    names = set()
+    for p in sorted((root / "core").rglob("*.py")):
+        for node in ast.walk(ast.parse(p.read_text(encoding="utf-8"))):
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Name)
+                    and node.func.id == "_features" and node.args
+                    and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str)):
+                names.add(node.args[0].value)
+    assert names, "_features 호출을 찾지 못했습니다 (이름이 바뀌었는지 확인)"
+    missing = sorted(n for n in names if not (SERVER_DATA / "layers" / f"{n}.geojson").exists())
+    assert not missing, ("data/server/layers에 없는 레이어: " + ", ".join(missing)
+                         + " → pipeline/sync_server_data.FILES에 넣으세요")
 
 
 def test_wms_bbox_without_public(client, no_public):

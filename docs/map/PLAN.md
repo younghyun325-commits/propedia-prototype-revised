@@ -652,7 +652,7 @@ P16이 끝나면 ‘지도에서 사업을 눌러 단계·기한·근거를 본�
 - [x] 회귀: `pytest -q`, `python -m evals.run_eval`(M1\~M23), `tests/ui_check.py`(기존 50항목), `tests/ui_check_map.py` — P20-A 결과는 PROGRESS
 - [x] 문서: README(지도 빌드 순서·환경변수), `DEMO_MAP.md` 5분 대본(강남구 전체 → 대청마을 사업 → 영향권 안 단지 → 실거래 → 타임라인 → 원문 근거), HUMAN\_TODO
 - [ ] 배포: Preview 확인 → main 병합 → Production, `/`를 `/map/`으로(결정 후), 브이월드 서비스 URL에 배포 주소 확인 — P20-A에서 `/`→`/map/` 307·noindex 설정까지, Preview 확인·main·Production은 사람이 (HUMAN_TODO 51·52)
-- [x] P20-B 운영 배포에서 드러난 것: Vercel 함수가 `public/`을 읽지 못해 `/map/manifest` 503·참고 WMS 400·`ref_zones` 0건 → 서버가 읽는 9개를 `data/server/`로 옮김(`core/paths.py`, `pipeline/sync_server_data.py`, `tests/test_server_data.py`). 기록은 PROGRESS P20-B
+- [x] P20-B 운영 배포에서 드러난 것: Vercel 함수가 `public/`을 읽지 못해 `/map/manifest` 503·참고 WMS 400·`ref_zones` 0건·'영향권 안 단지' 0건 → 서버가 읽는 10개를 `data/server/`로 옮김(`core/paths.py`, `pipeline/sync_server_data.py`, `tests/test_server_data.py`). 기록은 PROGRESS P20-B
 
 ```text
 @docs/map/PLAN.md 의 P20 '다듬기·배포'를 진행해 줘. Plan 모드로 계획부터.

@@ -2,9 +2,10 @@
 
 **왜**: Vercel은 프로젝트 루트 `public/`을 CDN이 플랫폼 수준에서 서빙하고 Python 함수 묶음에는 넣지 않는다
 (근거·운영 관찰은 `core/paths.py` 머리말). 그래서 브라우저가 받는 파일은 `public/data`에 그대로 두고,
-**서버가 읽는 9개만** `public/` 밖 `data/server/`에 같은 내용으로 둔다. `core/`는 `data/server/`만 읽는다.
+**서버가 읽는 10개만** `public/` 밖 `data/server/`에 같은 내용으로 둔다. `core/`는 `data/server/`만 읽는다.
 
-- 브라우저만 쓰는 큰 레이어(pois_*·apartments·bus_*·schools·stations)는 복사하지 않는다 (함수 묶음을 키우지 않기 위해).
+- 브라우저만 쓰는 큰 레이어(pois_*·bus_*·schools·stations, 5.3MB)는 복사하지 않는다 (함수 묶음을 키우지 않기 위해).
+- 목록은 손으로 적지만, `core/`가 `_features("...")`로 읽는 이름이 다 들어 있는지는 `tests/test_server_data.py`가 코드에서 뽑아 검사한다.
 - 바이트가 다를 때만 쓴다 (멱등 — 다시 실행해도 git이 깨끗하다).
 - `public/data`를 만드는 스크립트(build_map_base·build_map_layers·import_reference·fetch_pois)가 끝에서 이 함수를 부른다.
 - `tests/test_server_data.py`가 두 사본이 같은지, `core/`가 `public/`을 읽지 않는지 확인한다.
@@ -30,6 +31,7 @@ FILES = [
     ("layers", "propedia_regulations.geojson"),
     ("layers", "ref_seoulplan.geojson"),         # core/refzones
     ("layers", "ref_uije.geojson"),
+    ("layers", "apartments.geojson"),            # core/market: apartment·nearby_for_project·bbox_of (core.map._features 경유)
     ("base", "gangnam.geojson"),                 # core/map.map_manifest, gangnam_bbox (WMS 허용 범위)
     ("base", "bjd.geojson"),
 ]
