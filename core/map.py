@@ -213,7 +213,7 @@ def map_manifest(con) -> dict:
                "count": len(fc["features"]) if fc else None}, status="ready" if fc else "pending")
 
     return {"generated_as_of": man.get("generated_as_of"), "db_as_of": m.get("as_of"), "build_at": m.get("build_at"),
-            "crs": man.get("crs"), "groups": GROUPS, "layers": layers, "notes": man.get("notes") or [],
+            "patched_at": m.get("patched_at"), "crs": man.get("crs"), "groups": GROUPS, "layers": layers, "notes": man.get("notes") or [],
             "market": market_status(ap)}
 
 
@@ -452,8 +452,18 @@ def wms_request_error(layer: str, z: int, x: int, y: int, size: int | None = Non
     return None
 
 
+def map_config() -> dict:
+    """지도 화면 설정 (P20). 배경지도(브이월드 WMTS) **브라우저용 키**만 실행 중에 내려준다 — 빌드(public/map)에 키를 넣지 않기 위해.
+    브라우저 키는 어차피 타일 주소에 실려 브라우저에 보이며, 서비스 URL 제한으로 보호한다.
+    키는 VITE_VWORLD_KEY만 읽는다. 서버용 VWORLD_API_KEY로 대신하지 않는다 (없으면 null → 화면은 경계만)."""
+    from core.live.http import env_key
+    key = env_key("VITE_VWORLD_KEY") or None
+    return {"basemap": {"key": key, "configured": bool(key)}}
+
+
 def key_status() -> dict:
-    """실시간 조회 키가 있는지만 ('있음'/'없음'). 값은 어디에도 내보내지 않는다."""
+    """실시간 조회 키가 있는지만 ('있음'/'없음'). 값은 어디에도 내보내지 않는다.
+    예외는 map_config() 하나: 브라우저용 배경지도 키(VITE_VWORLD_KEY)만 지도 화면에 내려간다."""
     from core.live.http import env_key
     has = {"vworld": bool(env_key("VWORLD_API_KEY")),
            "juso": bool(env_key("JUSO_CONFM_KEY") or env_key("JUSO_CONFM_KEY_ALT"))}

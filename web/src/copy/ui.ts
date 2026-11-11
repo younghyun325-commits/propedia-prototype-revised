@@ -116,6 +116,7 @@ export const UI = {
     dbTitle: 'DB 빌드',
     dbAsOf: 'DB 기준일',
     buildAt: '빌드 시각',
+    patchedAt: '마지막 갱신',
     keys: '실시간 조회 키',
     vworld: '브이월드',
     juso: '도로명주소',

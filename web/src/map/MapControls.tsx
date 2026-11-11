@@ -41,7 +41,7 @@ export function MapControls({ insets, hasKey }: { insets: Insets; hasKey: boolea
       )}
       {!hasKey && (
         <p className="glass px-3 py-1 text-xs" style={{ borderRadius: 999 }} role="status">
-          배경지도 키(VITE_VWORLD_KEY)가 설정되지 않아 경계만 표시합니다
+          배경지도 키가 설정되지 않아 경계만 표시합니다
         </p>
       )}
     </div>

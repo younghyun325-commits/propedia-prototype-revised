@@ -75,6 +75,11 @@ export function StatusTab({ manifest, health }: { manifest: Manifest; health: He
         <p data-testid="status-db-as-of">
           {UI.status.dbAsOf} <span className="tabular-nums">{manifest.db_as_of ?? '—'}</span> · {UI.status.buildAt}{' '}
           <span className="tabular-nums">{manifest.build_at ?? '—'}</span>
+          {manifest.patched_at && (
+            <>
+              {' '}· {UI.status.patchedAt} <span className="tabular-nums">{manifest.patched_at}</span>
+            </>
+          )}
         </p>
         {health?.keys && (
           <p data-testid="status-keys">

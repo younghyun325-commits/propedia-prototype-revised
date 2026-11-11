@@ -37,6 +37,7 @@ def health():
     try:
         m = meta(con)
         return {"status": "ok", "build_at": m.get("build_at"), "as_of": m.get("as_of"),
+                "patched_at": m.get("patched_at"), "patched_by": m.get("patched_by"),
                 "schema_version": m.get("schema_version"), "coverage_note": m.get("coverage_note"),
                 **map_mod.key_status()}
     finally:
@@ -59,6 +60,14 @@ def _date_param(v: str | None, name: str, default: date) -> date:
         return date.fromisoformat(v)
     except ValueError:
         raise HTTPException(status_code=400, detail=f"{name}은(는) YYYY-MM-DD 형식입니다") from None
+
+
+@app.get("/api/v1/map/config")
+def map_config():
+    """지도 화면 설정 (P20): 배경지도 브라우저용 키. 빌드에 넣지 않고 실행 중에 받는다. 캐시하지 않는다."""
+    import json as _json
+    return Response(content=_json.dumps(map_mod.map_config(), ensure_ascii=False), media_type="application/json",
+                    headers={"Cache-Control": "no-store"})
 
 
 @app.get("/api/v1/map/manifest")

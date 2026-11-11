@@ -55,6 +55,8 @@ export type Manifest = {
   generated_as_of: string | null
   db_as_of: string | null
   build_at: string | null
+  /** patch_* 스크립트가 DB를 마지막으로 고친 시각 (P20). run_all로 새로 만든 DB면 null */
+  patched_at?: string | null
   groups: { id: string; name: string }[]
   layers: ManifestLayer[]
   notes: string[]
@@ -104,6 +106,7 @@ export type Health = {
   status: string
   as_of: string | null
   build_at: string | null
+  patched_at?: string | null
   keys?: { vworld: string; juso: string }
   key_notes?: string[]
 }
@@ -121,6 +124,17 @@ export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T>
   }
   return r.json() as Promise<T>
 }
+
+/** 지도 설정 (P20): 배경지도(브이월드 WMTS) 키는 빌드에 넣지 않고 실행 중에 서버에서 받는다. 값을 로그에 남기지 않는다 */
+export type MapConfig = { basemap: { key: string | null; configured: boolean } }
+
+export const useMapConfig = () =>
+  useQuery({
+    queryKey: ['map', 'config'],
+    queryFn: ({ signal }) => getJson<MapConfig>('/api/v1/map/config', signal),
+    staleTime: Infinity,
+    retry: 1,
+  })
 
 export const useManifest = () =>
   useQuery({ queryKey: ['map', 'manifest'], queryFn: ({ signal }) => getJson<Manifest>('/api/v1/map/manifest', signal) })

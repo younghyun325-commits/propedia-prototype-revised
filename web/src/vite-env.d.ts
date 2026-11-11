@@ -1,10 +1,3 @@
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
-  /** 브라우저 배경지도(브이월드 WMTS) 키. 루트 .env에서 읽는다 (vite.config.ts envDir). 값을 로그에 남기지 않는다 */
-  readonly VITE_VWORLD_KEY?: string
-}
-
-interface ImportMeta {
-  readonly env: ImportMetaEnv
-}
+// 배경지도 키는 빌드에 넣지 않는다 (P20): 실행 중 /api/v1/map/config에서 받는다. 브라우저에 넣을 VITE_ 변수는 없다

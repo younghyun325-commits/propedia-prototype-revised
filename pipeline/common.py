@@ -64,6 +64,20 @@ def vacuum_db(path: Path | None = None) -> None:
         con.close()
 
 
+def mark_patched(by: str, at: str | None = None, path: Path | None = None) -> str:
+    """DB를 고친 스크립트가 meta에 마지막 갱신 시각·주체를 남긴다 (P20). as_of(가장 최근 문서 날짜)·build_at(run_all)은 건드리지 않는다.
+    실제로 행을 바꿨을 때만 부른다 — 바뀐 것이 없으면 DB 바이트를 그대로 둬야 멱등이다."""
+    from datetime import datetime, timedelta, timezone
+    at = at or datetime.now(timezone(timedelta(hours=9))).isoformat(timespec="seconds")
+    con = sqlite3.connect(str(path or DB_PATH))
+    try:
+        con.executemany("INSERT OR REPLACE INTO meta(key, value) VALUES (?,?)", [("patched_at", at), ("patched_by", by)])
+        con.commit()
+    finally:
+        con.close()
+    return at
+
+
 def connect_rw() -> sqlite3.Connection:
     con = sqlite3.connect(str(DB_PATH))
     con.row_factory = sqlite3.Row

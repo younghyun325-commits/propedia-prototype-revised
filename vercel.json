@@ -1,8 +1,7 @@
 {
   "regions": ["icn1"],
-  "buildCommand": "npm --prefix web ci && npm --prefix web run build",
   "functions": {
-    "api/index.py": { "excludeFiles": "{web/**,public/pages/**}" }
+    "api/index.py": { "excludeFiles": "{web/**,public/pages/**,public/map/**}" }
   },
   "redirects": [
     { "source": "/", "destination": "/map/", "permanent": false }

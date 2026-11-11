@@ -3,3 +3,5 @@
 *.jpg binary
 *.png binary
 *.db binary
+# 지도 빌드 결과 (P20, 커밋함): 줄끝 변환 없이 바이트 그대로 — 빌드 결과·체크아웃·배포가 같은 파일
+public/map/** -text

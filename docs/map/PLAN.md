@@ -324,6 +324,8 @@ export default defineConfig({
 }
 ```
 
+> **P20 변경**: Vercel은 빌드 중에 만든 `public/map/`을 서빙하지 않았다(관찰: Preview ee79ea4, `/map/` 404). 그래서 `buildCommand`를 지우고 **`public/map/` 빌드 결과를 커밋**한다(`.gitattributes` `public/map/** -text`, 함수 묶음에서는 `excludeFiles`로 뺌). `web/`를 고치면 `npm --prefix web run build` 후 `public/map/`을 함께 커밋 — `public/map/build-info.json` 소스 해시를 `tests/test_public_map_fresh.py`가 확인. 배경지도 키는 빌드에 넣지 않고 `/api/v1/map/config`로 실행 중에 받는다.
+
 - 개발 중에는 터미널 2개: `python -m uvicorn api.index:app --port 8000 --reload`와 `npm --prefix web run dev`(http://localhost:5173/map/).
 - Vercel은 FastAPI 프로젝트에서도 `public/**`를 CDN으로 서빙하고, `vercel.json`의 Build Command가 우선합니다. P11에서 Preview 배포로 `/map/`이 열리는지 먼저 확인하고, 빌드가 막히면 `public/map/`을 커밋하는 방식(지금 `db/propedia.db`를 커밋하는 것과 같은 방식)으로 돌아갑니다.
 - 브이월드 키: 토지·2D 데이터 호출은 서버(`core/live`)에서만. 배경지도(WMTS) 타일 주소에는 키가 브라우저에 드러나므로 서비스 URL 제한에 기대고, 브라우저용 키를 따로 씁니다(`VITE_VWORLD_KEY`). 참고 WMS는 CORS 헤더가 없어 서버 프록시(`/api/v1/map/wms`, 서버 키)로 받으므로 브라우저에 키가 나가지 않습니다(P15).

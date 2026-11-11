@@ -1,13 +1,25 @@
 # 진행 기록
 
 ## 작업 규칙
+- 작업 폴더: `~/OneDrive/Desktop/Anti Gravity/propedia-pretotype-main`. `C:\dev\propedia-pretotype`는 옛 저장소 복제본이라 쓰지 않는다.
 - 원격: `origin` = younghyun325-commits/propedia-prototype (비공개, 2026-11-11 전환). 옛 저장소(greekyogurt02/propedia-pretotype) 원격은 없음.
 - 작업은 `feat/map-console`, `main` 반영은 사람이 (빨리감기, force push 금지).
 - 새 커밋 작성자는 `git config --local user.email` (새 계정 noreply). 지난 커밋 작성자는 바꾸지 않음.
+- `web/`를 고치면 `npm --prefix web run build` 후 `public/map/`을 함께 커밋 (Vercel은 빌드하지 않음, `tests/test_public_map_fresh.py`가 소스 해시 확인).
 - 작업은 `feat/map-console`에서만 한다. `main` 병합은 P20에서 사람이 한다. (로컬 `.git/hooks/pre-commit`·`pre-push`가 main 커밋·push를 막음, 커밋되지 않는 로컬 훅)
 - `origin/main`에는 2026-11-10까지 P13~P15가 실수로 먼저 올라가 있다(`c79cac0`). 되돌리지 않기로 결정. 운영 배포 영향은 HUMAN_TODO 45에서 확인.
 
 현재 단계: P19 하단 타임라인·고시 피드 완료 (2026-11-11). 다음은 docs/map/PLAN.md P20 다듬기·테스트·배포
+
+## P20 운영 저장소·Vercel 프로젝트 전환 — push 완료, Preview 1차 확인·/map/ 404 수정 (2026-11-11)
+- 한 일: 새 저장소 younghyun325-commits/propedia-prototype가 우리 이력의 조상임을 확인(merge-base `c79cac0`, 경우 가). 중복 원격 `prototype` 삭제, `origin` 유지, legacy 원격 추가 안 함. 사람이 저장소를 비공개로 전환 → 비인증 GitHub API 404로 확인. 새 커밋 작성자 `git config --local user.email`(새 계정 noreply). 문서 커밋 `ee79ea4`(README·PROGRESS·agents.md §15-5·§21·HUMAN_TODO 44 닫음·53·54)
+- push 전 확인: 올라갈 6커밋(c8ccee1~ee79ea4), 맨 위 작성자 새 noreply, 작업 트리 깨끗, `.env` 키 값 0건(4개 변수, 커밋 diff·HEAD 텍스트 파일·`db/propedia.db`)
+- push: **사람이 VS Code 터미널에서 직접 실행** `git push -u origin feat/map-console` → `3c13087..ee79ea4` (빨리감기). Claude Code의 push는 자동 권한 검사로 막힘. fetch 뒤 `origin/feat/map-console` = `ee79ea4`, `origin/main` = `c79cac0` 그대로(main 반영 안 함)
+- Preview(ee79ea4) 확인 결과 (사람): 빌드 로그에서 `vercel.json` buildCommand(`npm --prefix web ci && npm --prefix web run build`) 실행·`../public/map/index.html`·assets 생성·배포 완료 / `/index.html`(커밋된 정적 파일) 열림 / **`/map/`·`/map/index.html` FastAPI 404 `{"detail":"Not Found"}`** / `/api/v1/health` 200(status ok, keys vworld 있음·juso 없음), Runtime Logs 오류 없음. Vercel 설정: Framework Preset FastAPI, Build Command는 vercel.json이 덮어씀(Overridden), Root Directory `./`
+- 원인: Vercel 문서(FastAPI 프레임워크 페이지 https://vercel.com/docs/frameworks/backend/fastapi)는 "프로젝트 루트 `public/` 파일을 CDN이 같은 경로로 서빙"이라고만 하고 빌드 중에 만든 파일은 설명하지 않음 → **관찰: 빌드 중 생성된 public/ 파일은 서빙되지 않고 커밋된 파일만 서빙됨 (Preview ee79ea4)**
+- 고친 것 (방안 B, 사람 결정): `vercel.json` `buildCommand` 삭제, `.gitignore`에서 `public/map/` 빼고 빌드 결과 커밋(`.gitattributes` `public/map/** -text`), `excludeFiles`에 `public/map/**`(함수는 public/map을 읽지 않음). `web/scripts/build-info.mjs` → `public/map/build-info.json`(web 소스 95개 해시, 시각 없음), `tests/test_public_map_fresh.py`가 같은 규칙으로 비교. 배경지도 키 (a): 빌드에 넣지 않고 `GET /api/v1/map/config`(`VITE_VWORLD_KEY`만, 서버 키로 대체 안 함, no-store) → `web/src/api/map.ts` `useMapConfig`·`MapView` `buildStyle(key)`. `check_secrets`는 public/map에서 모든 키 0건을 요구. meta `patched_at`·`patched_by`: `pipeline/common.mark_patched`(patch_coords·patch_parcels가 행을 바꿨을 때만), 첫 값 `pipeline/mark_patched.py` = 마지막 DB 커밋 8b6def1 시각(2026-11-11T07:45:12+09:00) → health·`/map/manifest`·데이터 상태 탭 '마지막 갱신'
+- 확인: 두 번 빌드한 `public/map` 119개 파일 sha256 목록 같음 / `check_secrets` public/map·git 모든 키 0건 / `pytest -q` 317 passed / `npm --prefix web run test` 156 passed / `tests/ui_check_map.py --built` 188/188 — 8000번은 07:16에 띄운 `--reload` 서버가 옛 코드로 남아 있어(OneDrive 폴더 변경 감지 안 됨) 끄지 않고 8001번 새 서버에 주소만 바꿔 실행(첫 실행 187/188은 P18 '아이콘 밖 클릭' 1건 일시 실패, 재실행 188/188). 배경지도 타일 200(white 4391 등)
+- 남은 일: push(사람) 뒤 Preview에서 `/`, `/map/`, `/map/assets/<js>` content-encoding, `/index.html`, `/api/v1/health`(patched_at), `/api/v1/map/config`(configured만), `/api/v1/apartments/apt:11680-218`, `/pages/D1/p018.jpg`, `x-robots-tag`
 
 ## P20 운영 주소 변경 (propedia-pretotype → propedia-prototype.vercel.app) — 저장소 쪽 완료 (2026-11-11)
 - 한 일: `core/live/vworld.py` `DEFAULT_DOMAIN`과 그 테스트(`test_live_vworld.py`), `test_parcel_at.py` 저장 응답 금지 목록에 새 주소 추가(옛 주소도 유지), `.env.example` 주석, README(배포 주소·옛 주소 리디렉트 한 줄·`VWORLD_DOMAIN` 기본값), DEMO.md, DEMO_MAP.md, HUMAN_TODO 34, agents.md §15-1-1·§21

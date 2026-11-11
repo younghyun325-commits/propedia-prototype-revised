@@ -3,7 +3,7 @@
  * Capabilities의 레이어: Base(png) · midnight(png) · Hybrid(png, 투명 겹침) · Satellite(jpeg) · white(png) 외 해외 도시.
  * 'gray'라는 레이어는 없다(요청 시 오류 XML). 회색 배경은 무채색 지도인 'white'를 쓴다 (평균 RGB 226·227·225).
  * TileMatrixSet GoogleMapsCompatible, TileMatrix 6~18 → 소스 maxzoom 18, 그 위는 확대 표시.
- * 키는 import.meta.env.VITE_VWORLD_KEY로만 읽는다 (소스·로그에 값을 남기지 않음).
+ * 키는 실행 중에 /api/v1/map/config에서 받는다 (P20, 빌드·소스·로그에 값을 남기지 않음).
  */
 export type BasemapId = 'base' | 'gray' | 'satellite' | 'hybrid'
 

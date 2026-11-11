@@ -6,7 +6,6 @@ __pycache__/
 .pytest_cache/
 .vercel/
 web/node_modules/
-public/map/
 # 공간정보 SHP 원본 (서울플랜+ SHP는 공공누리 4유형 — 원격 저장소에 올리지 않음, agents.md §3-6)
 data_raw/11.공간정보/
 # 생활 인프라 원본 CSV (P18) — 원본은 커밋하지 않고 빌드한 GeoJSON만 커밋

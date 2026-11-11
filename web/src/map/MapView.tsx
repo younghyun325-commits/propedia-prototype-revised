@@ -19,7 +19,7 @@ import { Map, Marker, type MapRef, type MapLayerMouseEvent } from 'react-map-gl/
 import type { LayerSpecification, MapGeoJSONFeature, StyleSpecification } from 'maplibre-gl'
 import type { Feature, FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson'
 import { MapPin } from 'lucide-react'
-import { useMapProjects, useNotices } from '../api/map'
+import { useMapConfig, useMapProjects, useNotices } from '../api/map'
 import { UI } from '../copy/ui'
 import { useMapStore, type ParcelLookup } from '../state/useMapStore'
 import { featureId, isParcelLookup, parseSelected, PANEL_LAYER_IDS, type LayerStates, type Selected } from '../state/url'
@@ -66,7 +66,6 @@ maplibregl.setWorkerUrl(workerUrl)
 
 type Area = FeatureCollection<Polygon | MultiPolygon, { name: string; bjd_code?: string; sgg_code: string }>
 
-const KEY = (import.meta.env.VITE_VWORLD_KEY ?? '').trim()
 const MIN_ZOOM = 11
 const MAX_ZOOM = 19
 const TILT = 60
@@ -170,6 +169,8 @@ function withState(specs: LayerSpecification[], snap: Snapshot): LayerSpecificat
 
 function buildStyle(
   basemap: keyof typeof BASEMAPS,
+  /** 배경지도 키 (실행 중 /api/v1/map/config에서 받음, P20). 없으면 배경 없이 경계만 */
+  key: string,
   gu: Area | null,
   dongs: Area | null,
   propedia: Propedia,
@@ -185,12 +186,12 @@ function buildStyle(
 ): StyleSpecification {
   const sources: StyleSpecification['sources'] = {}
   const layers: StyleSpecification['layers'] = [{ id: 'bg', type: 'background', paint: { 'background-color': BG } }]
-  if (KEY) {
+  if (key) {
     BASEMAPS[basemap].layers.forEach((l, i) => {
       const id = `basemap-${basemap}-${i}`
       sources[id] = {
         type: 'raster',
-        tiles: [tileUrl(KEY, l)],
+        tiles: [tileUrl(key, l)],
         tileSize: 256,
         minzoom: TILE_MIN_ZOOM,
         maxzoom: TILE_MAX_ZOOM,
@@ -294,6 +295,9 @@ export default function MapView({ insets }: { insets: Insets }) {
   const mapMoving = useMapStore((s) => s.mapMoving)
   const setMapMoving = useMapStore((s) => s.setMapMoving)
   const projectsQ = useMapProjects().data
+  // 배경지도 키는 빌드에 넣지 않고 실행 중에 받는다 (P20: 커밋된 public/map에 키가 남지 않게)
+  const mapConfig = useMapConfig().data
+  const basemapKey = (mapConfig?.basemap.key ?? '').trim()
   const projects = projectsQ?.projects
   // P19 '그날 기준': 숨긴 사업(첫 근거 문서 발행 전)과 효력 중이 아닌 규제 — 식(setFilter·setPaintProperty)으로만 바꾼다
   const hiddenKey = (projectsQ?.hidden ?? []).map((h) => h.id).join(',')
@@ -411,12 +415,12 @@ export default function MapView({ insets }: { insets: Insets }) {
   // 스타일은 배경·데이터가 바뀔 때만 새로 만든다. 패널 상태는 만들 때의 값을 넣고, 이후 변경은 아래 effect가 지도에 바로 건다
   const style = useMemo(() => {
     const s = useMapStore.getState()
-    return buildStyle(basemap, gu, dongs, propedia, colors, hl, {
+    return buildStyle(basemap, basemapKey, gu, dongs, propedia, colors, hl, {
       layers: s.layers, overlap: s.overlap, selected: s.selected, searchPnu: s.searchHit?.pnu ?? null, routeArs: routeArsRef.current,
       poi: s.poi, ...dateRef.current,
     }, refData, clickParcelData(s.parcel, s.selected), apartments,
     { schools: infra.schools, stations: infra.stations, bus: infra.bus, pois: infra.poiByCat }, radiusRef.current, scopeRef.current)
-  }, [basemap, gu, dongs, propedia, colors, hl, refData, apartments, infra.schools, infra.stations, infra.bus, infra.poiByCat])
+  }, [basemap, basemapKey, gu, dongs, propedia, colors, hl, refData, apartments, infra.schools, infra.stations, infra.bus, infra.poiByCat])
 
   // 사업·규제 구역 라벨 (사람 확인 전이면 '확인 전')
   const areaLabels = useMemo(
@@ -1047,7 +1051,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       </Map>
       <Callout getMap={getMap} loaded={loaded} insets={insets} />
 
-      <MapControls insets={insets} hasKey={Boolean(KEY)} />
+      <MapControls insets={insets} hasKey={!mapConfig || Boolean(basemapKey)} />
       <RouteChip insets={insets} routes={infra.routes} />
       <RadiusPanel insets={insets} infra={infra} apartments={apartments} projects={propedia.project ?? null} />
 

@@ -32,6 +32,8 @@ npm --prefix web run dev            # http://localhost:3000/map/  (/api는 8000�
 
 빌드본 확인: `npm --prefix web run build` → `public/map/` → `http://127.0.0.1:8000/map/` (점검 스크립트는 `?debug=1`).
 
+**`web/`를 고치면 `npm --prefix web run build` 후 `public/map/`을 함께 커밋합니다** (P20). Vercel은 빌드 중에 만든 `public/` 파일을 서빙하지 않아(관찰: Preview ee79ea4) 커밋된 빌드 결과를 그대로 씁니다 — `db/propedia.db`를 커밋하는 것과 같은 방식. 빌드는 `.env`와 무관하게 같은 소스면 같은 파일이 나오고(배경지도 키를 넣지 않음), `public/map/build-info.json`의 소스 해시를 `tests/test_public_map_fresh.py`가 확인합니다.
+
 ### 지도 데이터 빌드 순서
 
 아래 '빌드 순서'(고시 DB) 다음에 지도 레이어를 만듭니다. 모두 빌드 때만 네트워크를 쓰고, 화면·API는 만들어진 파일·DB만 읽습니다.
@@ -44,7 +46,7 @@ npm --prefix web run dev            # http://localhost:3000/map/  (/api는 8000�
 | 4 | 실거래 (아래 'market.db 갱신 규칙') | 사용 (공공데이터포털) | `db/market.db`, `seed/apartments.geojson` |
 | 5 | `python -m pipeline.fetch_pois` | 사용 (상가 API, 캐시 있으면 0회) | `public/data/layers/` 학교·역·정류장·노선·편의시설 |
 | 6 | `python -m pipeline.build_map_layers` | – | `public/data/layers/propedia_*.geojson`, `manifest.json` (좌표 소수 6자리) |
-| 7 | `npm --prefix web run build` | – | `public/map/` (Vercel은 `vercel.json` `buildCommand`가 다시 빌드) |
+| 7 | `npm --prefix web run build` | – | `public/map/` + `build-info.json` — **커밋** (Vercel은 빌드하지 않음, P20) |
 | 8 | `python -m evals.run_eval` (`--live`) | (`--live`만) | M1~M24 (`--live`면 M18·M21까지) |
 | 9 | `python -m pipeline.check_secrets` | – | 빌드 산출물·커밋 파일의 키 노출 건수(변수 이름별, 값은 출력 안 함) |
 
@@ -124,7 +126,7 @@ pip install -r requirements.txt -r requirements-build.txt
 
 | 이름 | 용도 | Vercel 환경 | 필수 여부 |
 |---|---|---|---|
-| `VITE_VWORLD_KEY` | 브라우저 배경지도(WMTS 타일). **빌드 때 번들(`public/map/assets/*.js`)에 그대로 들어가는 것이 정상**이므로, 브이월드에서 **서비스 URL 제한을 건 키**(배포 주소만 허용)여야 합니다 | Production · Preview (빌드 때 필요) | 지도 배경에 필수 (없으면 경계·레이어만 보임) |
+| `VITE_VWORLD_KEY` | 브라우저 배경지도(WMTS 타일). P20부터 **빌드에 넣지 않고 서버가 실행 중에 `/api/v1/map/config`로 내려줍니다**(키를 바꾸면 Redeploy만, 다시 빌드 불필요). 타일 주소에 실려 브라우저에 보이므로 브이월드에서 **서비스 URL 제한을 건 키**(배포 주소만 허용)여야 합니다. 없으면 서버 키로 대신하지 않습니다 | Production · Preview (실행 중) | 지도 배경에 필수 (없으면 경계·레이어만 보임) |
 | `VWORLD_API_KEY` | 서버 실시간 조회: 토지 정보·필지 클릭 조회·지오코더·참고 WMS 프록시 (`core/live/vworld.py`) | Production · Preview | 필수 (없으면 시연 주소만 빌드 캐시로 동작) |
 | `VWORLD_DOMAIN` | 브이월드 요청의 `domain` (인증키에 등록한 서비스 URL). 없으면 운영 주소 `https://propedia-prototype.vercel.app` | Production · Preview | 선택 |
 | `JUSO_CONFM_KEY` | 도로명주소 검색 (`core/live/juso.py`). 없거나 실패하면 브이월드 검색으로 대체 | Production · Preview | 선택 |
@@ -132,8 +134,8 @@ pip install -r requirements.txt -r requirements-build.txt
 | `VWORLD_API_KEY_DEV`, `VWORLD_DEV_DOMAIN` | 로컬 개발 서버(localhost:3000)용 브이월드 키·서비스 URL | 넣지 않음 | 로컬 선택 |
 | `PROPEDIA_LIVE` | `0`이면 실시간 조회를 끈다 (pytest·오프라인 평가가 자동 설정) | 넣지 않음 | – |
 
-- 같은 키를 서버와 브라우저에 함께 쓰면 서버용 키도 번들에 드러납니다. 브라우저용(`VITE_VWORLD_KEY`)은 서비스 URL 제한 키로 따로 발급하는 것을 권장합니다(HUMAN_TODO 29).
-- `/api/v1/health`는 키마다 '있음/없음'만 알려 줍니다.
+- 같은 키를 서버와 브라우저에 함께 쓰면 서버용 키도 브라우저(`/api/v1/map/config`·타일 주소)에 드러납니다. 브라우저용(`VITE_VWORLD_KEY`)은 서비스 URL 제한 키로 따로 발급하는 것을 권장합니다(HUMAN_TODO 29).
+- `/api/v1/health`는 키마다 '있음/없음'만 알려 줍니다. DB 갱신 시각은 `build_at`(run_all)과 `patched_at`·`patched_by`(patch_* 스크립트가 행을 바꾼 마지막 시각, P20)를 함께 보여 줍니다. `as_of`는 가장 최근 문서 날짜 그대로입니다.
 
 ### 실시간 조회 구조
 
