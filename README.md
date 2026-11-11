@@ -108,6 +108,7 @@ export PYTHONUTF8=1
 pip install -r requirements.txt -r requirements-build.txt
 ```
 
+- **복제본(`propedia-prototype-revised`)은 clone 후 `sh scripts/install_hooks.sh`를 실행합니다 (Windows는 Git Bash).** 원본 저장소·`upstream`으로 가는 push, 작성자가 noreply가 아닌 커밋, main 직접 push를 pre-push 훅이 막습니다.
 - 런타임 의존성은 `fastapi`, `uvicorn`뿐입니다. `requirements-build.txt`는 빌드·테스트용입니다.
 - 화면 점검(`tests/ui_check.py`)을 쓰려면 `pip install playwright`. 브라우저는 설치된 것을 그대로 씁니다 — Windows는 Edge(`--channel msedge`), macOS는 Chrome(`--channel chrome`)이 기본값입니다(`sys.platform`으로 정합니다).
 - 지도 화면 점검(`tests/ui_check_map.py`)은 playwright가 내려받는 chromium을 쓰므로 `playwright install chromium`이 한 번 필요합니다.

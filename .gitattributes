@@ -9,3 +9,5 @@ public/map/** -text
 # 줄끝 변환이 한쪽에만 걸리면 두 사본의 바이트가 어긋나므로 양쪽 모두 변환하지 않는다
 public/data/** -text
 data/server/** -text
+# 셸 스크립트 (P22-0): Git Bash·macOS 모두 LF 로 실행되게 고정
+*.sh text eol=lf
