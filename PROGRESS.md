@@ -20,6 +20,14 @@
 - 고친 것 (방안 B, 사람 결정): `vercel.json` `buildCommand` 삭제, `.gitignore`에서 `public/map/` 빼고 빌드 결과 커밋(`.gitattributes` `public/map/** -text`), `excludeFiles`에 `public/map/**`(함수는 public/map을 읽지 않음). `web/scripts/build-info.mjs` → `public/map/build-info.json`(web 소스 95개 해시, 시각 없음), `tests/test_public_map_fresh.py`가 같은 규칙으로 비교. 배경지도 키 (a): 빌드에 넣지 않고 `GET /api/v1/map/config`(`VITE_VWORLD_KEY`만, 서버 키로 대체 안 함, no-store) → `web/src/api/map.ts` `useMapConfig`·`MapView` `buildStyle(key)`. `check_secrets`는 public/map에서 모든 키 0건을 요구. meta `patched_at`·`patched_by`: `pipeline/common.mark_patched`(patch_coords·patch_parcels가 행을 바꿨을 때만), 첫 값 `pipeline/mark_patched.py` = 마지막 DB 커밋 8b6def1 시각(2026-11-11T07:45:12+09:00) → health·`/map/manifest`·데이터 상태 탭 '마지막 갱신'
 - 확인: 두 번 빌드한 `public/map` 119개 파일 sha256 목록 같음 / `check_secrets` public/map·git 모든 키 0건 / `pytest -q` 317 passed / `npm --prefix web run test` 156 passed / `tests/ui_check_map.py --built` 188/188 — 8000번은 07:16에 띄운 `--reload` 서버가 옛 코드로 남아 있어(OneDrive 폴더 변경 감지 안 됨) 끄지 않고 8001번 새 서버에 주소만 바꿔 실행(첫 실행 187/188은 P18 '아이콘 밖 클릭' 1건 일시 실패, 재실행 188/188). 배경지도 타일 200(white 4391 등)
 - 남은 일: push(사람) 뒤 Preview에서 `/`, `/map/`, `/map/assets/<js>` content-encoding, `/index.html`, `/api/v1/health`(patched_at), `/api/v1/map/config`(configured만), `/api/v1/apartments/apt:11680-218`, `/pages/D1/p018.jpg`, `x-robots-tag`
+- **Preview 2차 확인 (사람, 2026-11-11)** — 1차의 `/map/` 404를 방안 B(빌드 결과 커밋)로 고친 뒤:
+  - 배포 73fe4c1 Ready, 빌드 로그에 npm 빌드 없음 (buildCommand 삭제가 반영됨)
+  - `/map/` 지도 화면 정상 → 1차 404 해결 확인. `/index.html`·`/api/v1/apartments/apt:11680-218`·`/pages/D1/p018.jpg` 정상
+  - `/api/v1/health` 200, patched_at 2026-11-11T07:45:12+09:00, keys vworld 있음·juso 없음
+  - `/api/v1/map/config` configured true
+  - 배경 타일·WMS 캐시 HIT은 Preview 주소라 확인 못 함 (브이월드 키의 서비스 URL이 운영 주소) → 운영 배포 후 확인 (HUMAN_TODO 43 열어 둠)
+  - 별도: 2026-11-11 사용자가 채팅에 GitHub 토큰을 붙여 넣은 일이 있어 폐기함
+  - 확인하지 않은 것(배포 후 점검으로 넘김): `/` → `/map/` 307, `x-robots-tag`, `content-encoding`, D5·D6 선택, 390px 하단 시트, 함수 크기
 
 ## P20 운영 주소 변경 (propedia-pretotype → propedia-prototype.vercel.app) — 저장소 쪽 완료 (2026-11-11)
 - 한 일: `core/live/vworld.py` `DEFAULT_DOMAIN`과 그 테스트(`test_live_vworld.py`), `test_parcel_at.py` 저장 응답 금지 목록에 새 주소 추가(옛 주소도 유지), `.env.example` 주석, README(배포 주소·옛 주소 리디렉트 한 줄·`VWORLD_DOMAIN` 기본값), DEMO.md, DEMO_MAP.md, HUMAN_TODO 34, agents.md §15-1-1·§21
