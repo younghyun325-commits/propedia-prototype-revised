@@ -9,7 +9,52 @@
 - 작업은 `feat/map-console`에서만 한다. `main` 병합은 P20에서 사람이 한다. (로컬 `.git/hooks/pre-commit`·`pre-push`가 main 커밋·push를 막음, 커밋되지 않는 로컬 훅)
 - `origin/main`에는 2026-11-10까지 P13~P15가 실수로 먼저 올라가 있다(`c79cac0`). 되돌리지 않기로 결정. 운영 배포 영향은 HUMAN_TODO 45에서 확인.
 
-현재 단계: P19 하단 타임라인·고시 피드 완료 (2026-11-11). 다음은 docs/map/PLAN.md P20 다듬기·테스트·배포
+현재 단계: **P20 완료 (2026-11-11)** — 강남구 지도 콘솔 첫 운영 배포 https://propedia-prototype.vercel.app (`main` = 9470f88, 태그 `v0.2-map`). P11~P20 끝. 성능 기준(Lighthouse 데스크톱 80)은 중앙값 79로 **미달 → P21** (docs/map/PLAN.md 'P21 성능', HUMAN_TODO 60)
+
+## P20 운영 점검 — 완료 (2026-11-11)
+- 배포: 사람이 73eafbf·be7b048·9470f88 push → Preview 확인 → `main`을 9470f88로 빨리감기(운영). 사람이 운영에서 manifest 200·레이어 목록·영향권 안 단지 14/33·필지 클릭·배경 지도 직접 확인, pre-push 훅 되돌림
+- 점검 도구 보강 (커밋 ba1c681): `tests/ui_check.py` PASS/FAIL/SKIP·`--strict`(실시간 단계는 키 없음이면 SKIP, 키가 있는데 실패면 FAIL), 캡처는 `tmp/<도구>/<타임스탬프>/`, `docs/screens/`는 `--update-screens` + FAIL 0일 때만 (`ui_check_map`·`demo_map_run`도 같은 규칙). 확인: 키 비움 PASS 48·SKIP 2(`--strict` 종료 1) / 키 있음 PASS 50 / 가짜 키 FAIL 2(크래시 없음)
+- 로컬 재검증 1차(노트북, 15:32): 그때 `~/dev/propedia-prototype/.env` = Desktop 쪽 `.env` 심볼릭 링크(내용 그대로). `ui_check_map`(8011) `.env` 그대로 180/188 — 원인은 `VWORLD_DOMAIN`(localhost:3000)이 키의 서비스 URL(운영 주소)과 달라서, 그리고 `VITE_VWORLD_KEY` 값이 키가 아니라 옛 운영 주소 URL이어서. 환경변수로만 domain·배경 키를 바꾸면 188/188·배경 타일 200 (코드 수정 없음, HUMAN_TODO 59). `check_secrets` 실패 11건은 그 URL이 문서 5개에 적힌 것(실제 키 노출 아님, HEAD에서도 같음)
+- 로컬 재검증 2차(노트북, 16:30~16:45, 환경변수 덮어쓰기 없음): 사람이 저장소 `.env`를 직접 정리(링크 → 일반 파일, 변수 이름 중복 제거, `VWORLD_DOMAIN` = 운영 주소, `VITE_VWORLD_KEY` = `VWORLD_API_KEY`와 같은 값, 백업은 저장소 밖). 결과는 아래 표 '로컬 2차' 행. `VWORLD_API_KEY_DEV`는 운영 키와 같은 값이라 localhost 전용 개발 키가 아님(HUMAN_TODO 51·59)
+
+| 항목 | 결과 | 수치 | 날짜 |
+|---|---|---|---|
+| `tests/ui_check_map.py --base` 운영 | 통과 | 188/188, 콘솔 오류 0, 배경 타일 200(white 4141·Base 56·Satellite 56·Hybrid 28), 지적도 WMS 200×24. 첫 실행 로그는 남지 않아 **16:42 운영 재실행** 188/188·콘솔 오류 0·타일 200(white 4187·Base 56·Satellite 56·Hybrid 28·WMS 24), 로그 `tmp/ui_check_map_prod/run_20261111-1642.txt`(커밋 안 함) | 2026-11-11 |
+| └ [P17] 영향권 안 단지 → 단지 선택 | 통과 | 47행 → apt:11680-450 선택 | 2026-11-11 |
+| └ 필지 클릭 (역삼동 823) | 통과 | PNU 1168010100108230000, 강조·카드·URL 복원 | 2026-11-11 |
+| └ 배경 채도 | 통과 | 회색 raster-saturation −1, 기본 배경 설정 없음 | 2026-11-11 |
+| `tests/ui_check.py --base … --channel chrome --strict` | 통과 | PASS 50 · FAIL 0 · SKIP 0 (juso 키 없음 → 브이월드 검색 대체로 ⑤-3 통과, HUMAN_TODO 39) | 2026-11-11 |
+| `/api/v1/health` | 200 | status ok, schema 3, keys vworld 있음·juso 없음 | 2026-11-11 |
+| `/api/v1/map/manifest` | 200 | 레이어 22 | 2026-11-11 |
+| `/api/v1/map/config` | 200 | configured true (키 36자 UUID 모양, 값 출력 안 함) | 2026-11-11 |
+| 영향권 안 단지 (사업 1·2) | 200 | 한양7차 250m 14 · 500m 33 / 대청마을 5 · 7 | 2026-11-11 |
+| `apt:11680-218`(은마) bbox | 200 | 있음 | 2026-11-11 |
+| `parcel-at` (37.5005, 127.036) | 200 | status ok | 2026-11-11 |
+| `/` · `/index.html` · `/map/` | 307 → /map/ · 200 · 200 | `x-robots-tag: noindex`, JS `content-encoding: br` | 2026-11-11 |
+| WMS 캐시 (lt_c_uq111 14/13974/6348, lp_pa_cbnd_bubun 18/223574/101577) | HIT | 1번째 MISS, 2·3번째 HIT, `Cache-Control: public, max-age=86400` | 2026-11-11 |
+| Lighthouse 12.8.2 데스크톱 (/map/) | **미달 → P21** | 같은 조건 3회 중앙값 성능 79 (목표 80). 아래 표. 접근성 100 · 권장사항 100 | 2026-11-11 |
+| Lighthouse 12.8.2 모바일 (/map/) | 참고 | 3회 중앙값 성능 41 · LCP 7.03초 · TBT 2,358ms | 2026-11-11 |
+| PageSpeed Insights API | 측정 못 함 | 데스크톱·모바일 모두 429 RESOURCE_EXHAUSTED (키 없이 호출) | 2026-11-11 |
+| 로컬 2차 `.env` | 통과 | 일반 파일·git status에 없음, 변수 11개 이름 중복 없음, `VWORLD_DOMAIN`·`VITE_VWORLD_KEY`를 `_load_dotenv`와 python-dotenv가 같게 읽음 | 2026-11-11 |
+| 로컬 2차 `pipeline.check_keys` | 통과 | 토지 3종 6건 OK, getcoord OK·NOT_FOUND(없는 지번), WMS image/png, 도로 검색 OK, juso E0001(키 없음, 정상) | 2026-11-11 |
+| 로컬 2차 `pipeline.check_secrets` | 통과 | public/map·git 모든 키 0건 (빌드 산출물 119·git 파일 704) | 2026-11-11 |
+| 로컬 2차 `ui_check_map --base http://127.0.0.1:8011` | 통과 | 188/188, 콘솔 오류 0, 배경 타일 200(white 4223·Base 56·Satellite 56·Hybrid 28·WMS 24) | 2026-11-11 |
+| 로컬 2차 `ui_check.py --base http://127.0.0.1:8011 --channel chrome --strict` | 통과 | PASS 50 · FAIL 0 · SKIP 0 | 2026-11-11 |
+| `tests/demo_map_run.py --base` 운영 | 통과 | 8/8 장면, 화면 동작 28.4초, 페이지 오류 0 | 2026-11-11 |
+| Vercel 함수 크기 | 기록 | 17.0MB (한도 500MB, HUMAN_TODO 48) | 2026-11-11 |
+| 회귀 | 통과 | `pytest -q` 338 passed·2 skipped / web 156 passed | 2026-11-11 |
+
+- Lighthouse 3회 측정 (운영 `/map/`, 노트북 1대, 15:33~15:35, JSON `tmp/lighthouse_p20/`):
+
+  | 조건 | 1회 | 2회 | 3회 | 중앙값 |
+  |---|---|---|---|---|
+  | 데스크톱 성능 | 80 | 79 | 79 | **79** |
+  | 데스크톱 LCP · TBT · CLS | 1.22초 · 364ms · 0 | 1.28초 · 406ms · 0 | 1.28초 · 395ms · 0 | 1.28초 · 395ms · 0 |
+  | 모바일 성능 | 41 | 41 | 40 | **41** |
+  | 모바일 LCP · TBT · CLS | 7.03초 · 2,358ms · 0.001 | 6.85초 · 2,309ms · 0.001 | 7.52초 · 2,537ms · 0.001 | 7.03초 · 2,358ms · 0.001 |
+
+  - 경계값 메모: 1회차는 80으로 목표에 닿았지만 판정은 3회 중앙값(79)으로 하므로 **미달 → P21** (사람 결정 2026-11-11). PageSpeed Insights는 429로 막혀 교차 확인을 못 했다. 처음 잰 43·68은 측정 조건이 달라 판정에서 뺐다
+- Lighthouse 원인 후보(고치지 않음, P21에서 다룸): ① `MapView` 청크(MapLibre, gzip 318KB) 스크립트 평가가 주 스레드 7.6초·긴 작업 최대 3초(1회차) ② 측정 PC·첫 방문 편차(43 → 68, P20-A 로컬 94) ③ 모바일 글자 크기 판정 58%. 대응은 HUMAN_TODO 60
 
 ## P20 운영 저장소·Vercel 프로젝트 전환 — push 완료, Preview 1차 확인·/map/ 404 수정 (2026-11-11)
 - 한 일: 새 저장소 younghyun325-commits/propedia-prototype가 우리 이력의 조상임을 확인(merge-base `c79cac0`, 경우 가). 중복 원격 `prototype` 삭제, `origin` 유지, legacy 원격 추가 안 함. 사람이 저장소를 비공개로 전환 → 비인증 GitHub API 404로 확인. 새 커밋 작성자 `git config --local user.email`(새 계정 noreply). 문서 커밋 `ee79ea4`(README·PROGRESS·agents.md §15-5·§21·HUMAN_TODO 44 닫음·53·54)
