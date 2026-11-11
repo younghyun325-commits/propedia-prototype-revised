@@ -68,7 +68,9 @@ export type Notice = {
   doc_id: string
   item_key: string
   short_title: string
+  chip_label: string
   title: string
+  display_title: string
   doc_kind: string
   kind_label: string
   effective_label: string | null

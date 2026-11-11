@@ -124,6 +124,8 @@ export type RegulationSections = {
     issuer: string | null
     published_at: string | null
     title: string
+    display_title: string
+    display_basis: string | null
     summary: string
     scope_label: string
     target_note: string | null

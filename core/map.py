@@ -20,6 +20,7 @@ from core.db import loads, meta, source
 from core import refzones
 from core.lookup import DISCLAIMER, load_items, lookup_pnu
 from core.progress import progress
+from core.regulation_display import chip_label, display_basis, display_title
 from core.market import nearby_for_project
 from core.paths import base_dir as _base_dir, layers_dir as _layers_dir
 from core.review import Overrides
@@ -256,7 +257,8 @@ def _notices(con, items: list[dict], kinds: dict, published: dict, as_of) -> lis
         if it["effective_status"] in ("ended", "not_started") or not published.get(doc):
             continue
         out.append({"doc_id": doc, "item_key": it["item_key"], "short_title": it["source"]["short_title"],
-                    "title": it["title"], "doc_kind": kind, "kind_label": DOC_KIND_LABELS.get(kind, kind),
+                    "chip_label": chip_label(it["item_key"], it["source"]["short_title"]),
+                    "title": it["title"], "display_title": display_title(it["item_key"], it["title"]), "doc_kind": kind, "kind_label": DOC_KIND_LABELS.get(kind, kind),
                     "effective_from": it["effective_from"], "effective_to": it["effective_to"],
                     "effective_label": it["effective_label"], "effective_status_label": it["effective_status_label"],
                     "target_note": it["target_note"], "source": it["source"]})
@@ -551,8 +553,10 @@ def _parcel_banner_evidence(con, included: list, L: dict) -> tuple[list, list]:
 
 def _item_brief(it: dict) -> dict:
     """필지 보기의 '걸린 고시' 펼치기용 (lookup 항목에서 고르기만 함)"""
-    return {k: it.get(k) for k in ("item_key", "title", "summary", "scope_label", "effective_label",
-                                   "effective_status_label", "evidence", "source")}
+    out = {k: it.get(k) for k in ("item_key", "title", "summary", "scope_label", "effective_label",
+                                  "effective_status_label", "evidence", "source")}
+    out["display_title"] = display_title(it["item_key"], it.get("title"))
+    return out
 
 
 def _offline(con) -> dict:
@@ -788,7 +792,8 @@ def feature_regulation(con, rid: str, today) -> dict | None:
     published = st["documents"][doc_id]["shown"]
     return {
         "kind": "regulation", "id": rid, "kind_label": FEATURE_KINDS["regulation"],
-        "title": d["short_title"], "subtitle": it["title"], "badges": badges,
+        "title": chip_label(it["item_key"], d["short_title"]), "subtitle": display_title(it["item_key"], it["title"]),
+        "badges": badges,
         "unverified": bool(boundary and not boundary["verified"]) or bool(boundary_note),
         "shown": True, "published": published,
         "note": None if published else REG_PUBLISHED_NOTE.format(as_of=today.isoformat(), date=d["published_at"]),
@@ -799,7 +804,9 @@ def feature_regulation(con, rid: str, today) -> dict | None:
         "sections": {
             "regulation": {"doc_id": doc_id, "item_key": it["item_key"], "doc_kind": d["doc_kind"],
                            "doc_kind_label": kind_label, "gosi_no": d["gosi_no"], "issuer": d["issuer"],
-                           "published_at": d["published_at"], "title": it["title"], "summary": it["summary"],
+                           "published_at": d["published_at"], "title": it["title"],
+                           "display_title": display_title(it["item_key"], it["title"]),
+                           "display_basis": display_basis(it["item_key"]), "summary": it["summary"],
                            "scope_label": it["scope_label"], "target_note": it["target_note"],
                            "effective_from": it["effective_from"], "effective_to": it["effective_to"],
                            "effective_label": it["effective_label"], "effective_status": it["effective_status"],

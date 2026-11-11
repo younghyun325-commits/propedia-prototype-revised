@@ -87,7 +87,7 @@ function NoticeBody({ n, onOpen }: { n: Notice; onOpen: () => void }) {
   const src = n.source
   return (
     <div className="space-y-1" data-testid="notice-popover">
-      <p className="font-semibold">{n.short_title}</p>
+      <p className="font-semibold">{n.display_title}</p>
       <p>
         <span className="text-ink-muted">{UI.topbar.kind}</span> {n.kind_label}
       </p>
@@ -137,12 +137,12 @@ function NoticeChips() {
           key={n.item_key}
           type="button"
           data-testid="notice-chip"
-          title={n.short_title}
+          title={n.chip_label}
           aria-expanded={open?.key === n.item_key}
           onClick={(e) => setOpen(open?.key === n.item_key ? null : { key: n.item_key, el: e.currentTarget })}
           className={chip}
         >
-          {n.short_title}
+          {n.chip_label}
         </button>
       ))}
       {rest.length > 0 && (

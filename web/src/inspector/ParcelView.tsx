@@ -62,13 +62,13 @@ function LayerNotices({ d }: { d: ParcelAt }) {
           ) : (
             d.layer_items![open as (typeof LAYERS)[number]].map((it) => (
               <Card key={it.item_key} className="!p-2">
-                <p className="text-xs font-semibold">{it.title}</p>
+                <p className="text-xs font-semibold">{it.display_title}</p>
                 {it.effective_label && (
                   <p className="text-[11px] text-ink-muted">
                     {it.effective_label}{it.effective_status_label ? ` · ${it.effective_status_label}` : ''}
                   </p>
                 )}
-                <EvidenceLine source={it.source} evidence={it.evidence} items={d.evidence} label={it.title} />
+                <EvidenceLine source={it.source} evidence={it.evidence} items={d.evidence} label={it.display_title} />
               </Card>
             ))
           )}

@@ -87,6 +87,7 @@ export type LayerItemSource = {
 export type LayerItem = {
   item_key: string
   title: string
+  display_title: string
   summary: string | null
   scope_label: string | null
   effective_label: string | null
