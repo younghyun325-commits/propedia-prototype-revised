@@ -43,6 +43,15 @@
 - 점검: pytest 339·건너뜀 1 / web 156 (처음 2회 config 오류 뒤 통과) / check_secrets·sync_server_data·public_map_fresh 통과 / `ui_check_map` 8011 **188/188** / 기준 화면 `tmp/p22_baseline_keys/` 12장
 - 상세: `docs/map/P22_조사.md` §5·§6
 
+### P22-1 틀린 정보 바로잡기 — 완료 (2026-11-12, 커밋 e08a12e·1bbf3d9·5073f21)
+- 요청 13 문구 통일: 화면용 문구를 `core/regulation_display.py` 한 곳에 두고 상단 칩·필지 패널('걸린 고시')·규제 인스펙터가 모두 여기서 읽음. 칩 "조정대상지역 · 서울 25개 구 전체"·"투기과열지구 · 서울 25개 구 전체", 인스펙터·패널 "…서울 25개 구 전체 (기존 4개 구 + 21개 구 신규, 2025.10.16부터)". `extractions/*.json` 원문 제목·`documents.short_title`은 그대로 (출처 줄의 D7 짧은 제목 '서울 21개 구 신규'는 문서 이름이라 유지)
+- 요청 14 범례: `web/src/map/layers.ts` `SHAPE` 하나를 지도 스타일과 `panel/LayerSwatch.tsx`가 같이 씀. 포함(확정: included 또는 verified 1) = 실선 + 채움 20%(`propedia-parcel-fill` 새 레이어), 확인 전(possible·likely) = 점선 + 채움 없음(`propedia-parcel-line-likely` → `propedia-parcel-line-uncertain`), 영향권 = 채움 8%→5%·선 1.5→1px·투명도 0.7. 범례 줄마다 설명. 지금 데이터는 확정 0건·확인 전 19건
+- 요청 16 토지거래허가: `core/land_permit.py` `land_permit_status()`(순수 함수) → `/map/parcel-at`·`/map/feature/parcel` 응답 `land_permit`, 필지 인스펙터 '토지거래허가' 카드, D5·D6 규제 인스펙터 '필지마다 달라요' 안내. 판정 순서: ① 압구정동 + 토지이용계획 지역지구 '아파트지구' + D5 효력 중 → 허가 대상(구역 지정) ② 실거래 아파트 단지 신고 지번 / 건축물대장 아파트 / D6 붙임2 혼재 단지(강남구 0곳) → 허가 대상 ③ 건축물대장 단독·연립·다세대(단지 밖)·비주택 → 구역 안이지만 대상 아님 ④ 그 밖(건축물대장 없음, 요약이 '공동주택'뿐, 압구정동인데 토지이용계획 없음, 효력 전·후) → 확인 필요. 지정 기한: D5 2027.04.26까지 / 아파트 2026.12.31까지 (연장 여부 확인 필요). 서울시 제2025-2774호는 문서 DB에 없어 근거 줄에 게시물 링크로 표시
+- 건축HUB 승인 뒤 자동 판정: `pipeline/fetch_buildings.py` 요약에 `detail_purposes`(주용도 + 기타용도) 추가 → `python -m pipeline.fetch_buildings --refresh` 뒤 연립·다세대 구분. 지금 `seed/buildings.json`에는 이 칸이 없어 '공동주택'만 있는 필지는 확인 필요
+- '모든 필지가 대상'처럼 읽히던 문구: `web/src/copy/ui.ts:297` scopeBjd, `:298` scopeCity, `core/regulation_display.py:16` D5-01 제목(아파트지구 안 필지만), `:20` D6-01 요약(연립·다세대는 붙임2 단지만, 강남구 없음)
+- 점검: pytest 362 통과·1 건너뜀 / vitest 157 (PowerShell, Git Bash의 `npm --prefix`는 config 오류 — 환경 현상) / check_secrets·sync_server_data·public_map_fresh 통과 / `ui_check_map` 8011 **197/197** (P22-1 9개 추가, 영향권·범위 문구 기대값 갱신) / `ui_check.py --strict` PASS 50·FAIL 0·SKIP 0 / 캡처 `tmp/p22_1/` 14장
+- 로컬 점검·캡처는 모두 프로세스 환경변수 `VWORLD_DOMAIN=http://localhost:3000` (HUMAN_TODO 68)
+
 현재 단계(이전): **P20 완료 (2026-11-11)** — 강남구 지도 콘솔 첫 운영 배포 https://propedia-prototype.vercel.app (`main` = 9470f88, 태그 `v0.2-map`). P11~P20 끝. 성능 기준(Lighthouse 데스크톱 80)은 중앙값 79로 **미달 → P21** (docs/map/PLAN.md 'P21 성능', HUMAN_TODO 60)
 
 ## P20 운영 점검 — 완료 (2026-11-11)
