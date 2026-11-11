@@ -16,6 +16,8 @@ import time
 import urllib.request
 from pathlib import Path
 
+import _target  # tests/_target.py: 원격 판정·키 가림·prod_ 스크린샷
+
 ROOT = Path(__file__).resolve().parents[1]
 SHOTS = ROOT / "docs" / "screens"
 
@@ -46,6 +48,8 @@ def main() -> int:
         proc = subprocess.Popen([sys.executable, "-m", "uvicorn", "api.index:app", "--port", "8765"], cwd=ROOT,
                                 env=dict(os.environ, PYTHONUTF8="1"), stdout=subprocess.DEVNULL,
                                 stderr=subprocess.DEVNULL)
+    base = base.rstrip("/")
+    remote = _target.is_remote(base)        # 원격이면 스크린샷 prod_ 접두 (로컬 스크린샷을 덮어쓰지 않음)
     results: list[tuple[str, bool, str]] = []
 
     def check(name, ok, detail=""):
@@ -67,7 +71,7 @@ def main() -> int:
                 if not args.no_shots:
                     # 전체 캡처에서 고정 머리글이 가운데 찍히지 않도록 캡처할 때만 풀어 둔다
                     page.add_style_tag(content=".site-header{position:static !important}")
-                    page.screenshot(path=str(SHOTS / name), full_page=True)
+                    page.screenshot(path=str(SHOTS / _target.shot_name(name, remote)), full_page=True)
 
             # ① 시작 화면
             page.goto(f"{base}/index.html")
@@ -231,7 +235,7 @@ def main() -> int:
             sw = m.evaluate("document.documentElement.scrollWidth")
             check("모바일 390px 가로 넘침 없음", sw <= 392, f"scrollWidth {sw}")
             if not args.no_shots:
-                m.screenshot(path=str(SHOTS / "08_lookup_mobile.png"), full_page=False)
+                m.screenshot(path=str(SHOTS / _target.shot_name("08_lookup_mobile.png", remote)), full_page=False)
             check("콘솔 오류 없음", not errors, "; ".join(errors[:3]))
             browser.close()
     finally:
@@ -240,7 +244,7 @@ def main() -> int:
             proc.wait(5)
     w = max(len(n) for n, _, _ in results)
     for n, ok, d in results:
-        print(f"{'통과' if ok else '실패'} | {n.ljust(w)} | {d}")
+        print(f"{'통과' if ok else '실패'} | {n.ljust(w)} | {_target.mask_text(str(d))}")
     bad = sum(1 for _, ok, _ in results if not ok)
     print(f"→ {len(results) - bad}/{len(results)} 통과")
     return 1 if bad else 0

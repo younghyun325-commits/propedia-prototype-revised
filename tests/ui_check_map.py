@@ -16,7 +16,9 @@
 - P18: 생활 인프라(학교·역 기본 켜짐, 정류장 줌 15 안내, 클러스터·이름, 편의시설 분류 행), 역·정류장 인스펙터, 노선 선택 모드,
   반경 보기, 겹침 보기, Ctrl+K 역·정류장 번호·노선, 스크린샷 5장(map_06a~e), --perf로 프레임 시간
 
-사용: python tests/ui_check_map.py [--built] [--shot]
+사용: python tests/ui_check_map.py [--built | --base URL] [--shot]
+  --base: 그 주소의 빌드본(/map/?debug=1). 로컬 주소면 --built와 같은 판정, 원격(운영)이면 배경 타일·WMS 200과
+  콘솔 오류 0을 요구하고, 스크린샷은 prod_ 접두, --perf는 숫자만 남김('운영에서 건너뜀', 실패로 세지 않음).
 """
 import argparse
 import re
@@ -25,6 +27,8 @@ import time
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
+
+import _target  # tests/_target.py (스크립트로 실행하면 tests/가 sys.path에 들어감)
 
 ROOT = Path(__file__).resolve().parents[1]
 SCREENS = ROOT / "docs" / "screens"
@@ -49,13 +53,24 @@ FIT_JS = """async (key) => { const m = window.__propediaMap;
   m.fitBounds([[w, s], [e, n]], {padding: %s, duration: 0});
   await new Promise(r => m.once('idle', r));
   return m.getZoom() }""" % PADDING
-KEY_RE = re.compile(r"(/req/wmts/1\.0\.0/)[^/]+/")
-WMS_KEY_RE = re.compile(r"(KEY=)[^&]+", re.I)
 WORKER_RE = re.compile(r"worker", re.I)
 
 
 def mask(url: str) -> str:
-    return WMS_KEY_RE.sub(r"\1***", KEY_RE.sub(r"\1***/", url))
+    """타일 주소의 키 자리 + 로컬 .env 값 가림 (tests/_target.py, pipeline.peek 규칙)"""
+    return _target.mask_text(url)
+
+
+def _prod_shots() -> None:
+    """원격 점검: SHOT* 스크린샷 경로에 prod_ 접두 (로컬 스크린샷을 덮어쓰지 않게)"""
+    g = globals()
+    for k, v in list(g.items()):
+        if not k.startswith("SHOT"):
+            continue
+        if isinstance(v, Path):
+            g[k] = v.with_name(_target.shot_name(v.name, True))
+        elif isinstance(v, dict):
+            g[k] = {kk: vv.with_name(_target.shot_name(vv.name, True)) for kk, vv in v.items()}
 
 
 SHOT_LAYERS = SCREENS / "map_02_layers.png"
@@ -1930,12 +1945,13 @@ def _open_any(page, url: str) -> None:
     page.wait_for_timeout(800)
 
 
-def p20_root_redirect(pw, check) -> None:
-    """첫 화면 / → /map/ (307) — 로컬 FastAPI. Vercel은 vercel.json redirects (Preview 확인 목록)"""
+def p20_root_redirect(pw, check, base: str = "http://127.0.0.1:8000") -> None:
+    """첫 화면 / → /map/ (307) — 로컬 FastAPI, Vercel은 vercel.json redirects"""
     ctx = pw.request.new_context()
-    r = ctx.get("http://127.0.0.1:8000/", max_redirects=0)
-    check("P20 / → /map/ 307", r.status == 307 and r.headers.get("location") == "/map/", f"{r.status} {r.headers.get('location')}")
-    r2 = ctx.get("http://127.0.0.1:8000/index.html")
+    r = ctx.get(f"{base}/", max_redirects=0)
+    loc = r.headers.get("location") or ""
+    check("P20 / → /map/ 307", r.status == 307 and loc in ("/map/", f"{base}/map/"), f"{r.status} {loc}")
+    r2 = ctx.get(f"{base}/index.html")
     check("P20 기존 화면 /index.html 200", r2.status == 200, str(r2.status))
     ctx.dispose()
 
@@ -1947,13 +1963,27 @@ def main() -> int:
     ap.add_argument("--shot", action="store_true", help=f"스크린샷 저장 {SHOT.relative_to(ROOT)}")
     ap.add_argument("--perf", action="store_true", help="P18 프레임 시간 측정")
     ap.add_argument("--only", choices=["p19", "p19-1", "p20"], help="기본 점검 + 이 단계만 (반복 확인용)")
+    ap.add_argument("--base", help="빌드본을 이 주소로 점검 (예: http://localhost:8000, https://….vercel.app). "
+                                   "로컬 주소면 --built와 같은 판정, 원격이면 배경 타일·WMS 200과 콘솔 오류 0을 요구")
     a = ap.parse_args()
-    url = "http://127.0.0.1:8000/map/?debug=1" if a.built else "http://localhost:3000/map/"
+    base = (a.base or "http://127.0.0.1:8000").rstrip("/")
+    remote = bool(a.base) and _target.is_remote(base)
+    if a.base:
+        a.built = True                      # 배포본·로컬 빌드본 모두 빌드 결과 (?debug=1로 지도 객체 노출)
+    if remote:
+        _prod_shots()
+    loose_tiles = a.built and not remote    # 로컬 빌드본: 배경 키의 서비스 URL이 3000이라 타일이 막힐 수 있음
+    url = f"{base}/map/?debug=1" if a.built else "http://localhost:3000/map/"
 
-    results: list[tuple[str, bool, str]] = []
+    results: list[tuple[str, bool | None, str]] = []
 
-    def check(name: str, ok: bool, detail: str = "") -> None:
+    def check(name: str, ok: bool | None, detail: str = "") -> None:
+        """ok=None: 운영에서 건너뜀 (통과·실패 어느 쪽에도 세지 않음)"""
         results.append((name, ok, detail))
+
+    def check_record_only(name: str, ok: bool | None, detail: str = "") -> None:
+        """원격에서 성능 판정은 네트워크 영향을 받으므로 숫자만 남긴다"""
+        results.append((name, None, f"원격은 판정 안 함 ({'기준 통과' if ok else '기준 미달'}) {detail}".strip()))
 
     console_errors: list[str] = []
     tiles: dict[str, list[int]] = {}
@@ -2076,7 +2106,7 @@ def main() -> int:
             page.wait_for_timeout(500)
             st = tiles.get(layer, [])
             on = page.get_attribute("[data-testid=map]", "data-basemap") == bid
-            if a.built:
+            if loose_tiles:
                 check(f"배경 '{bid}' 전환", on, f"타일 {layer}: 200 {st.count(200)} / 기타 {sorted(set(s for s in st if s != 200))}")
             else:
                 check(f"배경 '{bid}' 전환·타일 200", on and st.count(200) > 0 and all(s == 200 for s in st),
@@ -2123,7 +2153,7 @@ def main() -> int:
 
         if not a.only:
             p14_checks(page, url, check, a.shot)
-            p15_checks(page, url, check, a.shot, tiles, a.built)
+            p15_checks(page, url, check, a.shot, tiles, loose_tiles)
             p16_checks(page, url, check, a.shot)
             p17_fit_checks(page, url, check)
             p17_checks(page, url, check, a.shot)
@@ -2136,32 +2166,35 @@ def main() -> int:
             p20_checks(page, url, check, a.shot, a.built)
             p20_motion_check(p, url, check)
             p20_responsive(p, url, check, a.shot)
-            p20_root_redirect(p, check)
+            p20_root_redirect(p, check, base)
         if a.perf:
+            pcheck = check_record_only if remote else check
             if not a.only:
-                perf = perf_check(p, url, check)
+                perf = perf_check(p, url, pcheck)
                 print(f"성능(P18): {perf}")
-            print(f"성능(P19-1): {poi_filter_perf(p, url, check)}")
+            print(f"성능(P19-1): {poi_filter_perf(p, url, pcheck)}")
 
-        if a.built:
+        if loose_tiles:
             other = [e for e in console_errors if "api.vworld.kr" not in e and "Failed to load resource" not in e]
             check("콘솔 오류 0 (타일 차단 제외)", not other, "; ".join(other)[:400])
         else:
             check("콘솔 오류 0", not console_errors, "; ".join(console_errors)[:400])
         b.close()
 
-    print(f"점검 대상: {url}")
+    print(f"점검 대상: {url}" + (" (원격)" if remote else ""))
     for name, ok, detail in results:
-        print(f"[{'통과' if ok else '실패'}] {name}" + (f" — {detail}" if detail else ""))
+        tag = "운영에서 건너뜀" if ok is None else ("통과" if ok else "실패")
+        print(f"[{tag}] {name}" + (f" — {mask(detail)}" if detail else ""))
     print(f"취소된 요청(ERR_ABORTED, 정상): {len(aborted)}건")
     print("타일 응답:", {k: f"200×{v.count(200)}, 기타 {sorted(set(s for s in v if s != 200))}" for k, v in tiles.items()})
     if console_errors:
         print("콘솔 오류(키 가림):")
         for e in console_errors[:10]:
             print("  ", e[:300])
-    n_ok = sum(ok for _, ok, _ in results)
-    print(f"{n_ok}/{len(results)} 통과")
-    return 0 if n_ok == len(results) else 1
+    judged = [ok for _, ok, _ in results if ok is not None]
+    n_ok, n_skip = sum(judged), len(results) - len(judged)
+    print(f"{n_ok}/{len(judged)} 통과" + (f" · 운영에서 건너뜀 {n_skip}" if n_skip else ""))
+    return 0 if n_ok == len(judged) else 1
 
 
 if __name__ == "__main__":

@@ -14,6 +14,8 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
+import _target  # tests/_target.py: 원격 판정·키 가림·prod_ 스크린샷
+
 ROOT = Path(__file__).resolve().parents[1]
 SCREENS = ROOT / "docs" / "screens"
 # 대치동 학원가 (대치역~은마아파트 사거리 사이) 500m
@@ -31,6 +33,11 @@ def main() -> int:
     else:
         home = "http://localhost:3000/map/" if a.dev else "http://127.0.0.1:8000/map/?debug=1"
     q = home + ("&" if "?" in home else "?")
+    remote = bool(a.base) and _target.is_remote(a.base)
+
+    def shot(name: str) -> str:
+        """원격이면 prod_ 접두 (로컬 스크린샷을 덮어쓰지 않음)"""
+        return str(SCREENS / _target.shot_name(name, remote))
 
     results: list[tuple[str, float, bool, str]] = []
     errors: list[str] = []
@@ -61,7 +68,7 @@ def main() -> int:
                 ok, detail = False, f"{type(e).__name__}: {str(e).splitlines()[0][:160]}"
             dt = time.perf_counter() - t0
             SCREENS.mkdir(parents=True, exist_ok=True)
-            page.screenshot(path=str(SCREENS / f"demo_{n:02d}_{slug}.png"))
+            page.screenshot(path=shot(f"demo_{n:02d}_{slug}.png"))
             results.append((f"{n}. {name}", dt, ok, detail))
 
         # 1. 강남구 전체와 상단 고시 칩
@@ -90,7 +97,7 @@ def main() -> int:
             badge = text("[data-testid=layer-row-ref-seoulplan]")
             attr = text("[data-testid=attribution]")
             ok = all(on) and "참고·비상업" in badge and "서울" in attr
-            page.screenshot(path=str(SCREENS / "demo_02_layers.png"))
+            page.screenshot(path=shot("demo_02_layers.png"))
             page.click("[data-testid=layer-toggle-ref-seoulplan]")
             return ok, f"켜짐 {on}, 배지 {'참고·비상업' in badge}, 출처 '{attr[:40]}'"
         scene(2, "레이어 패널 (사업 구역·영향권·참고 레이어)", "layers", s2)
@@ -107,7 +114,7 @@ def main() -> int:
             page.wait_for_selector("[data-testid=evidence-modal] img", timeout=10000)
             src = page.get_attribute("[data-testid=evidence-modal] img", "src") or ""
             page.wait_for_timeout(400)
-            page.screenshot(path=str(SCREENS / "demo_03_daecheong.png"))
+            page.screenshot(path=shot("demo_03_daecheong.png"))
             page.keyboard.press("Escape")
             return "8단계 중 1번째" in body and "/D9/p012" in src, f"단계 문구 {'8단계 중 1번째' in body}, 원문 {src}"
         scene(3, "대청마을 북측 모아타운 (원문 D9 p12)", "daecheong_evidence", s3)
@@ -170,7 +177,7 @@ def main() -> int:
             page.click("[data-testid=left-tab-projects]")
             page.wait_for_selector("[data-testid=project-list]", timeout=8000)
             hanyang = page.locator("[data-testid=project-card-1]").count()
-            page.screenshot(path=str(SCREENS / "demo_07_timeline_0501.png"))
+            page.screenshot(path=shot("demo_07_timeline_0501.png"))
             page.click("[data-testid=as-of-today]")
             page.wait_for_timeout(600)
             t_after = page.evaluate("() => new URLSearchParams(location.search).get('t')")
@@ -198,10 +205,10 @@ def main() -> int:
     print("| 장면 | 화면 동작 시간 | 결과 | 확인 |")
     print("|---|---:|---|---|")
     for name, dt, ok, detail in results:
-        print(f"| {name} | {dt:.1f}초 | {'통과' if ok else '실패'} | {detail} |")
+        print(f"| {name} | {dt:.1f}초 | {'통과' if ok else '실패'} | {_target.mask_text(str(detail))} |")
     print(f"전체 화면 동작 시간 {total:.1f}초 · 페이지 오류 {len(errors)}건")
     for e in errors[:5]:
-        print("  ", e)
+        print("  ", _target.mask_text(e))
     return 0 if all(r[2] for r in results) and not errors else 1
 
 
