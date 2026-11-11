@@ -1,7 +1,7 @@
 # 진행 기록
 
 ## 작업 규칙
-- 작업 폴더: `~/OneDrive/Desktop/Anti Gravity/propedia-pretotype-main`. `C:\dev\propedia-pretotype`는 옛 저장소 복제본이라 쓰지 않는다.
+- 작업 폴더: Windows `~/OneDrive/Desktop/Anti Gravity/propedia-pretotype-main` · macOS `~/dev/propedia-prototype` (노트북, Intel Mac — Homebrew 지원이 끝나 conda base 3.11.4 기반 venv를 그대로 쓴다). `C:\dev\propedia-pretotype`는 옛 저장소 복제본이라 쓰지 않는다.
 - 원격: `origin` = younghyun325-commits/propedia-prototype (비공개, 2026-11-11 전환). 옛 저장소(greekyogurt02/propedia-pretotype) 원격은 없음.
 - 작업은 `feat/map-console`, `main` 반영은 사람이 (빨리감기, force push 금지).
 - 새 커밋 작성자는 `git config --local user.email` (새 계정 noreply). 지난 커밋 작성자는 바꾸지 않음.
@@ -167,6 +167,26 @@ README(지도 화면·로컬 실행 2터미널·지도 빌드 순서·market.db 
 | 톱니 → 투명도 줄이기 → 새로고침 | 유지 |
 
 남은 문제: 줌 범위 제안(아파트 `fill_min_zoom`) 결정 필요, 브라우저 키 분리(51), Preview 확인(52), 도로명주소 키(39), 기본 정보 API(28).
+
+## P20-B `main` 반영·운영 확인 → Vercel 함수가 `public/`을 읽지 못하는 문제 (2026-11-11)
+
+- **`main` 반영 완료**: `origin/main` = `8ae7582` (2026-11-11, 데스크톱에서 사람이 빨리감기). 되돌리지 않고 고쳐서 다시 배포하기로 결정.
+- 노트북(macOS)에서 작업 시작. `.env`는 `~/dev/propedia-prototype/`에 없어 `pipeline.check_keys`를 실행하지 못했다(HUMAN_TODO 56 — Desktop 쪽 `.env`는 변수 이름 11개만 있고 키 값이 비어 있음, 값은 보지 않고 이름별 있음/없음만 확인). `pipeline.check_secrets`는 통과했지만 **찾을 값이 없어서** 통과한 것이라 실질 점검이 아니다.
+- **운영 확인 (사람: 레이어 목록 오류 있음 / 배경지도 뜸 / '강남구 밖입니다'는 Preview에서만 봤음)** + 운영 주소에 읽기 전용 GET으로 직접 확인한 결과 (`pipeline.peek` 경유):
+
+| 요청 | 결과 | 뜻 |
+|---|---|---|
+| `/api/v1/health` | 200 (schema_version 3, patched_at 07:45:12) | `db/propedia.db`는 함수에서 읽힌다 |
+| `/api/v1/apartments/apt:11680-218`·`/map/projects`·`/notices`·`/feed` | 200 | `db/market.db`(14.5MB)도 읽힌다 |
+| `/api/v1/map/manifest` | **503** "…`public/data/layers/manifest.json`을 읽지 못했습니다" | 함수가 `public/`을 못 읽는다 |
+| `/data/layers/manifest.json` (CDN) | 200, 11,409B | 같은 파일이 CDN에는 있다 |
+| `/api/v1/map/wms/lt_c_uq111/14/13974/6348.png` | **400** "강남구 주변(경계 + 2km) 타일만 받습니다" | `base/gangnam.geojson`을 못 읽어 bbox가 `None` → 참고 WMS(용도지역·지구단위계획·지적도) 타일이 전부 막힌다 |
+| `/api/v1/map/parcel?pnu=1168010100108230000` | 200, 그러나 `ref_zones` 0건 | `ref_*.geojson`을 못 읽는다. 같은 좌표가 로컬에서는 `영동1토지구획정리사업` 1건 → 인스펙터 '참고 구역'이 운영에서 늘 비어 있다 |
+| `/api/v1/map/parcel-at` (역삼동 823 `37.498701, 127.031577`) | 200, status ok, 지번 `서울특별시 강남구 역삼동 823` | 운영에서는 '강남구 밖입니다'가 **재현되지 않음** → Preview 한정 현상으로 봄 (브이월드 키의 서비스 URL이 운영 주소라 Preview에서는 실시간 조회가 막힌다) |
+
+- 증상 4개(레이어 탭 503, 참고 WMS 400, 참고 구역 0건, 타임라인 `data_as_of`에 레이어 기준일 누락)가 **한 원인**이다.
+- 원인: Vercel FastAPI 프리셋은 프로젝트 루트 `public/`을 CDN이 플랫폼 수준에서 서빙하고 **Python 함수 묶음에는 넣지 않는다.** 문서는 `public/` 절에서 CDN 서빙만 설명하고("Do not mount the `public/` directory with `app.mount()`. Vercel handles it at the platform level."), '묶음에 남겨 실행 중에 읽을 수 있다'는 보장은 `app.mount()`·`app.frontend()`로 승격된 디렉터리에만 적는다("Promoted source directories are kept in the function bundle by default so the app can read from them at runtime"). 우리 `api/index.py`의 mount는 `VERCEL != "1"`일 때만 실행되므로 배포본에는 승격도 묶음 포함도 없다. P20의 `/map/` 404(빌드 중 만든 `public/map/`이 서빙되지 않음)와는 **다른 문제**다.
+- 고친 방법은 아래 'P20-B 수정' 절에 적는다.
 
 ## P19 하단 타임라인·고시 피드 (+ 편의시설 선택 수정) — 완료 (2026-11-11)
 

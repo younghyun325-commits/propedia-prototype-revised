@@ -1,7 +1,9 @@
 """화면 점검 + 스크린샷 (agents.md §18 P5). pytest 수집 대상이 아니다. 빌드 PC에서 수동 실행:
 
-  python tests/ui_check.py            # 로컬 서버를 띄워 점검 (Playwright + 설치된 Edge 사용)
+  python tests/ui_check.py            # 로컬 서버를 띄워 점검 (Playwright + 설치된 브라우저)
   python tests/ui_check.py --base https://xxx.vercel.app   # 배포 주소 점검
+
+`--channel` 기본값은 OS별로 다르다: Windows는 Edge(`msedge`), 그 밖에는 Chrome(`chrome`) — macOS에는 Edge가 없는 경우가 많다.
 
 점검: ① 시작 화면 링크 3개 ②-0 대청마을 B1·B2 ② A1 조회 4개 층·사업 카드·D-day·원문 보기 모달·API 응답 보기
      ·효력 기간 배지·참고 접기 상자·건축물 요약 ③ A8·A10 안내 ④ 문서 DB D1 1쪽 근거 하이라이트·투입 순서 1~10
@@ -36,7 +38,7 @@ def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--base", default=None)
-    ap.add_argument("--channel", default="msedge")
+    ap.add_argument("--channel", default="msedge" if sys.platform == "win32" else "chrome")
     ap.add_argument("--no-shots", action="store_true")
     args = ap.parse_args()
     from playwright.sync_api import sync_playwright

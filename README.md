@@ -25,7 +25,8 @@
 
 ```bash
 # 터미널 1 — API (8000번). 새 경로가 404면 남은 uvicorn worker 프로세스부터 확인
-.venv/Scripts/python.exe -m uvicorn api.index:app --port 8000 --reload
+.venv/Scripts/python.exe -m uvicorn api.index:app --port 8000 --reload   # Windows
+.venv/bin/python -m uvicorn api.index:app --port 8000 --reload           # macOS·Linux
 # 터미널 2 — 지도 화면 개발 서버 (3000번 고정: 브이월드 개발 키 서비스 URL이 localhost:3000)
 npm --prefix web run dev            # http://localhost:3000/map/  (/api는 8000으로 프록시)
 ```
@@ -35,6 +36,7 @@ npm --prefix web run dev            # http://localhost:3000/map/  (/api는 8000�
 - 멈추는 곳은 재시작입니다. uvicorn 0.54는 Windows에서 worker에 `CTRL_C_EVENT`를 보내 끄는데(`uvicorn/supervisors/basereload.py`), 이 신호는 **같은 콘솔 창**의 프로세스에만 전달됩니다. 콘솔 없이 띄운 서버(Claude Code 백그라운드 셸, 일부 작업 실행기)는 `Reloading...` 뒤 옛 worker가 그대로 남아 옛 코드로 응답합니다.
 - 해결: VS Code 터미널(또는 cmd·PowerShell 창)에서 직접 띄웁니다. 콘솔 없이 띄웠다면 바꾼 뒤 서버를 직접 끄고 다시 띄웁니다. 8000번을 쥔 프로세스는 `Get-NetTCPConnection -LocalPort 8000 -State Listen`으로 찾고, 자식 worker(`multiprocessing.spawn`)까지 끕니다.
 - 감시 범위를 줄이려면 `--reload-dir api --reload-dir core`(여러 번 지정 가능, [uvicorn 설정 문서](https://www.uvicorn.org/settings/#development)). `--reload-include`·`--reload-exclude`는 watchfiles가 있어야 동작합니다.
+- macOS·Linux에서 8000번을 쥔 프로세스는 `lsof -nP -iTCP:8000 -sTCP:LISTEN`으로 찾아 `kill <PID>`로 끕니다.
 
 빌드본 확인: `npm --prefix web run build` → `public/map/` → `http://127.0.0.1:8000/map/` (점검 스크립트는 `?debug=1`).
 
@@ -95,14 +97,16 @@ docs/screens/       화면 캡처
 Python 3.11 이상 (Vercel은 3.12).
 
 ```bash
-python -m venv .venv
-source .venv/Scripts/activate        # PowerShell: .venv\Scripts\Activate.ps1
+python -m venv .venv                 # 3.11+ 인터프리터로 (python3.11·py -3.11 등)
+source .venv/bin/activate            # macOS·Linux
+source .venv/Scripts/activate        # Windows Git Bash  (PowerShell: .venv\Scripts\Activate.ps1)
 export PYTHONUTF8=1
 pip install -r requirements.txt -r requirements-build.txt
 ```
 
 - 런타임 의존성은 `fastapi`, `uvicorn`뿐입니다. `requirements-build.txt`는 빌드·테스트용입니다.
-- 화면 점검(`tests/ui_check.py`)을 쓰려면 `pip install playwright` (설치된 Edge를 쓰므로 브라우저 내려받기는 필요 없음).
+- 화면 점검(`tests/ui_check.py`)을 쓰려면 `pip install playwright`. 브라우저는 설치된 것을 그대로 씁니다 — Windows는 Edge(`--channel msedge`), macOS는 Chrome(`--channel chrome`)이 기본값입니다(`sys.platform`으로 정합니다).
+- 지도 화면 점검(`tests/ui_check_map.py`)은 playwright가 내려받는 chromium을 쓰므로 `playwright install chromium`이 한 번 필요합니다.
 
 ## 빌드 순서
 
