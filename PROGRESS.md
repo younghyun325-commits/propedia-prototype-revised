@@ -9,7 +9,7 @@
 - 작업은 `feat/map-console`에서만 한다. `main` 병합은 P20에서 사람이 한다. (로컬 `.git/hooks/pre-commit`·`pre-push`가 main 커밋·push를 막음, 커밋되지 않는 로컬 훅)
 - `origin/main`에는 2026-11-10까지 P13~P15가 실수로 먼저 올라가 있다(`c79cac0`). 되돌리지 않기로 결정. 운영 배포 영향은 HUMAN_TODO 45에서 확인.
 
-현재 단계: **P22-0 진행 (2026-11-12, 복제본 `propedia-prototype-revised`, 브랜치 `feat/easy-map`)** — 아래 'P22 쉬운 지도'. 이전: P20 완료
+현재 단계: **P22-2 완료 (2026-11-12, 복제본 `propedia-prototype-revised`, 브랜치 `feat/easy-map`)** — 다음 P22-3. 아래 'P22 쉬운 지도'. 이전: P20 완료
 
 ## P22 쉬운 지도 (복제본 `propedia-prototype-revised`)
 
@@ -51,6 +51,21 @@
 - '모든 필지가 대상'처럼 읽히던 문구: `web/src/copy/ui.ts:297` scopeBjd, `:298` scopeCity, `core/regulation_display.py:16` D5-01 제목(아파트지구 안 필지만), `:20` D6-01 요약(연립·다세대는 붙임2 단지만, 강남구 없음)
 - 점검: pytest 362 통과·1 건너뜀 / vitest 157 (PowerShell, Git Bash의 `npm --prefix`는 config 오류 — 환경 현상) / check_secrets·sync_server_data·public_map_fresh 통과 / `ui_check_map` 8011 **197/197** (P22-1 9개 추가, 영향권·범위 문구 기대값 갱신) / `ui_check.py --strict` PASS 50·FAIL 0·SKIP 0 / 캡처 `tmp/p22_1/` 14장
 - 로컬 점검·캡처는 모두 프로세스 환경변수 `VWORLD_DOMAIN=http://localhost:3000` (HUMAN_TODO 68)
+
+### P22-2 글씨·탭·사이드바 — 완료 (2026-11-12, 커밋 c72c317·08fbf93·11ddf10·111db41)
+- 시작 확인: `.env` `VWORLD_DOMAIN=http://localhost:3000`, 덮어쓰기 없이 `check_keys` 토지 3종(527·619 × 3) 모두 OK. 결정 1 → CLAUDE.md 'PC별 .env 구성' 표, HUMAN_TODO 51(데스크톱 완료·Mac은 같은 개발키로)·68(닫힘, 운영 필지 클릭 정상은 사람 확인)
+- 결정 2: `core/`·`api/`가 실행 중 `data_raw`를 읽는 곳 없음(`core/land_permit.py`의 언급은 문자열뿐) → `vercel.json` `excludeFiles`에 `data_raw/**` 추가 (`.vercelignore`에도 이미 있음)
+- 결정 3: vitest 실패 원인 = **현재 폴더의 소문자 드라이브(`c:\`)**. VS Code 터미널이 `c:\dev\…`를 넘겨 주고 `npm --prefix web`이 그 아래 `web`을 그대로 쓰면 vitest가 모듈을 두 경로로 읽어 13개 파일 모두 `reading 'config'`로 실패 (각 3회 재현, `--prefix C:/…`·`cd web`은 통과). 설정의 `test.root`·`process.chdir`로는 안 고쳐짐 → 명령을 **`cd web && npm test`**(저장소 루트에서)로 통일: README·CLAUDE.md·PLAN·P22_PLAN, HUMAN_TODO 74. 같은 셸이 이미 소문자 경로로 `web` 안에 있으면 같은 폴더로 `cd` 해도 대소문자가 안 바뀌어 실패한다
+- B-1 글씨: `web/src/styles/tokens.css` `@theme`에 `--text-caption` 12px(줄 1.4) · `--text-meta` 14px(1.45) · `--text-body` 16px(1.5) · `--text-title` 18px(1.4). 바꾼 클래스 203곳: `text-[10px]`·`text-[11px]` → caption, `text-xs`·`text-[13px]` → meta, `text-sm` → body, `text-base` → title. 지도 HTML 라벨 CSS 변수 `--map-label-dong` 12→13, `--map-label-area`·`-infra`·`-count` 11→12 (MapLibre symbol은 아이콘만, 글자 라벨은 HTML 마커). 한글 단어 중간 줄바꿈을 막으려고 `body { word-break: keep-all; overflow-wrap: anywhere }`. `tests/test_web_tokens.py`가 토큰 값과 고정 px 크기 0건을 검사
+  - 바꾸기 전 고정 크기 76곳: `web/src/app/TopBar.tsx`:69,71,274; `infra/RadiusPanel.tsx`:28,147,148; `infra/RouteChip.tsx`:28; `inspector/ApartmentView.tsx`:44,68,134,144,153; `inspector/AptChart.tsx`:60,92,109,110; `inspector/HistoryList.tsx`:14,16; `inspector/Inspector.tsx`:67,86,93,145,238,282; `inspector/ParcelView.tsx`:28,51,53,105,137,158,171,211,218; `inspector/parts.tsx`:14; `inspector/PoiView.tsx`:24,61,79,127,159; `inspector/ProjectView.tsx`:43,45,50,81,85,107,127,128,154,176,177,180; `inspector/RegulationView.tsx`:38,41; `panel/FeedTab.tsx`:18,22,26,30,31,33,42,47,76; `panel/InfraRows.tsx`:83; `panel/LayersTab.tsx`:37; `panel/LeftPanel.tsx`:57; `panel/ProjectsTab.tsx`:31; `styles/index.css`:46,60,93,109; `timeline/Timeline.tsx`:403,417; `ui/EvidenceLine.tsx`:58; `ui/EvidenceModal.tsx`:216,263; `ui/ShortcutsModal.tsx`:81 (text-[11px] 59 · [10px] 10 · [13px] 3 · CSS 11px 3 · 12px 1)
+- B-2 탭·칩: 왼쪽 탭 `whitespace-nowrap`, 넘치면 아이콘 + `aria-label`·`title`(`ui/useOverflow.ts` `useOverflowCompact`, 필요 폭을 기억해 깜빡이지 않음). 인스펙터·하단 시트 탭도 한 줄(좁음 구간은 여백 축소, 포커스 링 안쪽). 상단 칩: 최소 112px까지 줄이며 말줄임 + `title`, 그보다 좁으면 '+N'으로 접고 그 버튼에도 `title`·`aria-label` (`chipsThatFit`). 1024px: 칩 1 + '+2', 1280·1440px: 칩 3(말줄임), 1920px: 칩 3(전체)
+- B-3 너비 조절: `ui/panelSize.ts`(범위·저장·키보드, 순수 함수) + `ui/ResizeHandle.tsx`(`role=separator`, 포인터 캡처라 마우스·터치 같이, rAF로 묶음, ←/→ 16px·Shift 64px, Enter·더블클릭 기본값). 왼쪽 260~560(기본 **320→340**), 오른쪽 320~720(기본 400). 지도 보이는 영역 ≥ 화면 40%: 드래그 중에는 그쪽 최대값을 반대쪽 너비로 제한, 창이 줄면 왼쪽부터 줄임. localStorage `propedia.map.panelWidths.v1`(try/catch, 원하는 너비를 저장해 창을 다시 키우면 돌아옴). 1024px 미만(하단 시트)은 손잡이 없음
+  - `map.resize()`는 부르지 않음: 지도 캔버스는 화면 전체이고 패널은 그 위에 뜬다. 너비가 바뀌면 지도 여백(insets)만 바뀌고, MapView에는 `useDeferredValue`로 넘겨 드래그 중 렌더를 미룸
+  - 너비별 배치: 구간을 `tokens.css` `--container-panel-md` 380px·`--container-panel-lg` 520px와 `ui/panelLayout.ts`(같은 값, pytest가 일치 확인) 한 곳에 둠. 패널 셋(왼쪽·인스펙터·하단 시트)에 `@container`. 좁음: 라벨·값 위아래(`KV_GRID`), 영향권 단지 카드 목록, 레이어 줄은 개수·배지·아이콘이 다음 줄로. 보통: 라벨·값 2열, 영향권 단지 표 3열. 넓음: 표에 준공 연차·거리(250m 안/500m 안)·실거래 요약 열(준공 연차·실거래 요약은 '—' 자리, 안내 줄 있음), 고시 피드는 제목 옆 게시일, 사업 목록은 이름 옆 기한
+- 점검: pytest **365 통과·1 건너뜀** / `cd web && npm test` **172**(15파일) / check_secrets 통과 / sync_server_data --check 같음 / test_public_map_fresh 통과 / `ui_check_map --base http://127.0.0.1:8011` **211/211**(P22-2 14개 추가, 라벨 충돌 점검 통과 → 지도 라벨 +1px 유지) / `ui_check.py --strict` PASS 50·FAIL 0·SKIP 0 / oxlint 경고 2(기존 CommandPalette)
+- Lighthouse 12.8.2 로컬 8011 `/map/` 각 1회(Chrome headless, JSON `tmp/lighthouse_p22_2/`): 데스크톱 성능 94·접근성 100·권장 100·SEO 54(LCP 1.5초·TBT 50ms·CLS 0.003) / 모바일 성능 49·접근성 100·권장 100·SEO 54(LCP 8.8초·TBT 660ms), **모바일 '읽기 쉬운 글자 크기' 100%**(P21 기준 58%). SEO 54는 `noindex`(의도)와 meta description 없음. P21 기준값(데스크톱 79·모바일 41)은 운영 측정이라 로컬 값과 직접 비교하지 않는다
+- 캡처 `tmp/p22_2/` 22장(1440×900·390×844): `{desktop,mobile}_01~06`은 `tmp/p22_baseline_keys/`와 같은 장면·같은 이름, 07 상단 칩, 08 탭, 09 영향권 단지, desktop 10 왼쪽 최대(1440에서 416px), 11 오른쪽 최대(왼쪽 260일 때 556px), 12 오른쪽 좁음 카드, 13 오른쪽 넓음 표. 콘솔 오류 0, 12px 미만 글자 0
+- [C] 복제본 Preview 준비: `docs/map/P22_PREVIEW.md` (코드 변경 없음)
 
 현재 단계(이전): **P20 완료 (2026-11-11)** — 강남구 지도 콘솔 첫 운영 배포 https://propedia-prototype.vercel.app (`main` = 9470f88, 태그 `v0.2-map`). P11~P20 끝. 성능 기준(Lighthouse 데스크톱 80)은 중앙값 79로 **미달 → P21** (docs/map/PLAN.md 'P21 성능', HUMAN_TODO 60)
 
