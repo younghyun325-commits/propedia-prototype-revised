@@ -7,11 +7,11 @@
 ### 닫힌 것 (15)
 4 Vercel 배포 · 6 도로명주소 키 재발급 · 7 한양7차 중심 좌표 · 11 D2·D4 쪽 이미지 이용 조건 · 12 규제 고시 공고문 · 14 공공데이터포털 키 · 15 D6 종료일 · 18 브이월드 활용 API · 19 Vercel 실시간 키 · 26 Vercel 브이월드 키 교체 · 27 로고 원본 · 29 브이월드 개발 키 · 30 공간정보 SHP · 36 압구정동 528 반영 · 49 학교 이용허락범위
 
-### 남은 것 — 운영 배포(main) 전에 필요 (9)
+### 남은 것 — 운영 배포(main) 전에 필요 (10)
 | # | 할 일 (짧게) |
 |---|---|
 | 52 | **P20-A Preview 확인 목록** (PROGRESS.md P20-A 표: `/`→`/map/` 307, noindex 헤더, CDN 압축, D5·D6 선택, 390px 시트 등) |
-| 51 | **브라우저용 브이월드 키 분리**: 지금 `.env`의 `VITE_VWORLD_KEY`·`VWORLD_API_KEY`·`VWORLD_API_KEY_DEV`가 같은 값 → 서버 키도 번들에 드러남 |
+| 51 | **개발키 재발급**: 로컬 `.env`의 브이월드 개발키 3변수(같은 값) — 출력·채팅 노출. 운영 키는 별도 유지 |
 | 34 | Vercel `VITE_VWORLD_KEY` 등록(Preview·Production) — 서비스 URL 제한 키로 (P20부터 서버가 실행 중에 읽음, 바꾸면 Redeploy만) |
 | 32 | Preview `/map/`·`/api/v1/health` 200 (로그인한 브라우저로) |
 | 48 | Preview `/api/v1/apartments/apt:11680-218` 200, 함수 크기, 원문 이미지 200 |
@@ -19,6 +19,7 @@
 | 45 | 운영 주소 기존 화면(/index.html·lookup·docs) 정상 — main 배포 뒤 `/`가 `/map/`으로 바뀜 |
 | 5 | 시연 리허설 (DEMO_MAP.md 5분, `tests/demo_map_run.py`로 화면 동작 먼저 확인) |
 | 42 | 참고 레이어 2종 공공누리 4유형(비상업) — Hobby 비상업 시연 범위인지 확인 |
+| 56 | 공공데이터포털 일반 인증키 재발급 권장 (채팅 노출, Vercel에는 넣지 않음) |
 
 ### 남은 것 — 배포 후에 해도 됨 (26)
 1 정답셋 확정 · 2 재건축 단계 템플릿 문구 · 3 D1 게시물 URL · 8 일원동 생활권 · 9 D2 공고일 · 10 D4 공고일 · 13 투기과열지구 공고문 · 16 D5~D8 게시처 URL · 17 압구정동 527 건축물대장 · 20 대청마을 후보 16필지 확인 · 21 대청마을 승인 고시 여부 · 22 land.yaml 대조 · 23 live_addresses.yaml 확인 · 24 D11~D13 원문(선택) · 25 D9·D10 게시물 URL · 28 공동주택 기본 정보 API 활용신청(2026-11-11 다시 확인: 미등록) · 31 `.env` 도로명주소 키(아직 비어 있음) · 33 정사각 로고 · 35 도면 정합 경계 확인 · 37 D5 경계 확보 · 38 원본 PC 재빌드 확인 · 39 양재대로55길 14 PNU(도로명주소 키 없음으로 미확인) · 40 참고 레이어 코드 이름표 · 41 서울플랜+ 새 판(폴더 없음, 2026-11-11 건너뜀) · 44 git 이력 지오코더 정리(저장소 공개 전) · 46 실거래 대조 · 47 위치 못 찾은 단지 12개 · 50 버스정류장 좌표
@@ -76,11 +77,12 @@
 | 48 | `db/market.db`(14.5MB) **커밋함**(3c8fc3a, 2026-11-11). Preview에서 `/api/v1/apartments/apt:11680-218`(은마) 200 확인 필요. 함수 크기도 함께 보려면 Preview 환경변수 `VERCEL_ANALYZE_BUILD_OUTPUT=1`로 배포해 빌드 로그의 함수 크기(한도 500MB)를 확인. **P18-0**: Preview 배포 때 환경변수 VERCEL_ANALYZE_BUILD_OUTPUT=1로 함수 크기 확인. web/ 제외(`vercel.json` `functions["api/index.py"].excludeFiles = "web/**"`) 후 크기 기록. 크기가 크면 `public/pages/**`·`public/map/**`도 빼는 안(런타임이 파일로 읽지 않음) 검토 **P19-0**: `excludeFiles`에 `public/pages/**` 추가(`"{web/**,public/pages/**}"`) — Preview에서 원문 보기 이미지(`/pages/D1/p001.jpg` 등) 200, 함수 크기 기록 | 배포본 실거래 API | 다음 Preview | 열림 |
 | 49 | 학교 원천 이용허락범위 확인: 공공데이터포털 `전국초중등학교위치표준데이터`(15021148) — **확인 완료(제한 없음, 2026-11-11, 영현)**. manifest·PLAN.md 반영(P19-0) | 생활 인프라 학교 레이어 라이선스 (P18 D6) | 배포 전 | 닫힘 |
 | 50 | 버스정류장 좌표 검증(D2, P19-0 규칙): 이름이 '{역}역'으로 시작하고 바로 뒤가 끝·공백·'.'·'·'·'('·숫자인 강남구 정류장만 그 역과 짝지음(부분 문자열 일치 안 씀). 150곳 중 21곳이 역 좌표에서 300m 초과 — 신논현 6(304~448m)·삼성 4(376~405m)·양재 3(312~449m)·청담 3(307~398m)·논현 2(453·564m)·강남 1(강남역5번출구 376m)·신사 1(376m)·학여울 1(307m). 목록 `build/pois_report.json` bus.station_check. 좌표는 원자료 그대로 둠 — 지도에서 논현 564m·453m, 신논현 448m 등 몇 곳 대조 | 정류장 위치 확인 | 시연 전 | 열림 |
-| 51 | 브라우저용 브이월드 키 분리 발급 (P20-A 키 점검) | `python -m pipeline.check_secrets` 결과: 로컬 `.env`의 `VITE_VWORLD_KEY` = `VWORLD_API_KEY` = `VWORLD_API_KEY_DEV` (같은 값). `VITE_VWORLD_KEY`는 브라우저에 내려가므로(P20부터 `/api/v1/map/config`, 정상) 지금은 서버용 키도 함께 드러남. 서비스 URL 제한을 건 브라우저 전용 키를 따로 받아 `VITE_VWORLD_KEY`에만 쓰기 (README 환경변수 표) | 운영 배포 전 | 열림 |
+| 51 | **개발키 재발급 필요** (2026-11-11, Claude Code 출력에 앞부분 노출 + 채팅에 붙여 넣은 적 있음). 재발급 후 로컬 `.env`의 `VWORLD_API_KEY`·`VWORLD_API_KEY_DEV`·`VITE_VWORLD_KEY` 교체, 서비스 URL `localhost:3000`. 운영 키(Vercel, 새 주소용)는 노출되지 않았음 — 별도 키 유지 | 개발 서버(Vite 3000) 모듈 응답에 `.env`의 `VITE_*` 값이 그대로 들어 있고, 그 내용을 잘라 출력해 키 앞부분이 대화에 남음. 로컬 세 변수가 같은 값이라 서버용 개발키도 함께 노출. 재발 방지: 출력은 `python -m pipeline.peek`을 거침(CLAUDE.md 절대 규칙). 브라우저용 키를 서버 키와 다른 값으로 받는 것은 그대로 권장 | 바로 | 열림 |
 | 52 | P20-A Preview 확인 목록 (PROGRESS.md 'P20-A' 표) | `feat/map-console` push 뒤 Preview에서 사람이 확인: `/` → `/map/` 307, `X-Robots-Tag: noindex`, CDN 압축(`content-encoding`), D5·D6 선택, 390px 하단 시트, `/index.html`·`/docs.html` 200 등 | 운영 배포 전 | 열림 |
 | 53 | 옛 주소 `propedia-pretotype.vercel.app` 은 옛 Vercel 계정의 프로젝트에 있어 새 프로젝트 Domains로 넘길 수 없음. 넘기려면 옛 프로젝트 주인이 그쪽에서 리디렉트를 걸어야 함 — 할지 결정 필요 | 운영 저장소·Vercel 프로젝트 전환 (2026-11-11). 새 운영 주소 `propedia-prototype.vercel.app`은 새 프로젝트(klowyh, `propedia-prototype`) 기본 주소 | 운영 배포 전 | 열림 |
 | 54 | 새 Vercel 프로젝트(klowyh/`propedia-prototype`) 환경변수 확인: `VWORLD_API_KEY`·`VITE_VWORLD_KEY` = 서비스 URL `https://propedia-prototype.vercel.app`로 받은 새 주소용 키, `VWORLD_DOMAIN` = `https://propedia-prototype.vercel.app`, `JUSO_CONFM_KEY` 있으면 등록, `DATA_GO_KR_SERVICE_KEY`는 넣지 않음, Preview에만 `VERCEL_ANALYZE_BUILD_OUTPUT=1`. `VITE_VWORLD_KEY`는 P20부터 빌드가 아니라 서버 실행 중에 읽힘(`/api/v1/map/config`) — 등록·변경 뒤 Redeploy. 로컬 `.env`의 `VWORLD_DOMAIN`은 `http://localhost:3000` 그대로 | 코드 기본 domain이 새 주소. 옛 키는 옛 주소만 허용 | 운영 배포 전 | 열림 |
 | 55 | 확인: 옛 주소 접속 시 새 주소로 이동, 새 주소에서 배경지도·필지 클릭 조회·WMS 타일 동작 | 53·54 결과 확인 | 53·54 뒤 | 열림 |
+| 56 | **공공데이터포털 일반 인증키 재발급 권장** (채팅에 붙여 넣은 적 있음). 재발급 후 로컬 `.env` `DATA_GO_KR_SERVICE_KEY` 교체, `python -m pipeline.check_keys`로 확인. Vercel에는 넣지 않음 | 빌드용 키(실거래·단지 목록·상가·건축물대장). 런타임은 쓰지 않음 | 다음 데이터 갱신 전 | 열림 |
 
 ## 실거래 대조표 (HUMAN_TODO 46)
 
