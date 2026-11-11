@@ -39,7 +39,7 @@ export function StatusTab({ manifest, health }: { manifest: Manifest; health: He
   const rows = manifest.layers.filter((l) => l.group !== 'basemap' || l.id === 'basemap-gray')
   const memo = [...manifest.notes, ...(health?.key_notes ?? [])]
   return (
-    <div className="space-y-4 text-xs">
+    <div className="space-y-4 text-meta">
       <table className="w-full border-collapse" aria-label={UI.status.tableLabel} data-testid="status-table">
         <thead className="text-left whitespace-nowrap text-ink-muted">
           <tr>

@@ -351,7 +351,7 @@ export default function Timeline() {
     e.preventDefault()
     setAsOf(n)
   }
-  const btn = 'inline-flex h-7 items-center gap-1 rounded-lg px-1.5 text-xs hover:bg-white/80 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-brand-indigo'
+  const btn = 'inline-flex h-7 items-center gap-1 rounded-lg px-1.5 text-meta hover:bg-white/80 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-brand-indigo'
   return (
     <div className="flex h-full flex-col" data-testid="tl-root" data-as-of={cur}>
       <div className="flex h-[44px] shrink-0 items-center gap-2">
@@ -360,7 +360,7 @@ export default function Timeline() {
           {open ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronUp size={16} aria-hidden="true" />}
           {UI.time.title}
         </button>
-        <span className="text-xs tabular-nums" data-testid="tl-current">
+        <span className="text-meta tabular-nums" data-testid="tl-current">
           <span className="text-ink-muted">{UI.time.asOf}</span>{' '}
           <span className={asOf ? 'font-semibold text-brand-indigo' : ''}>{cur}</span>
           {!asOf && <span className="text-ink-muted"> ({UI.time.today})</span>}
@@ -400,7 +400,7 @@ export default function Timeline() {
             </button>
           </>
         )}
-        <span className="ml-auto truncate text-[11px] text-ink-muted">
+        <span className="ml-auto truncate text-caption text-ink-muted">
           {open ? UI.time.keysHelp : UI.time.expand}
           {q.isError ? ` · ${UI.time.error}` : ''}
         </span>
@@ -411,10 +411,10 @@ export default function Timeline() {
           {q.data ? (
             <Chart domain={domain} setDomain={setDomain} cur={cur} today={today} setTip={setTip} />
           ) : (
-            <p role="status" className="pt-4 text-xs text-ink-muted">{q.isError ? UI.time.error : UI.time.loading}</p>
+            <p role="status" className="pt-4 text-meta text-ink-muted">{q.isError ? UI.time.error : UI.time.loading}</p>
           )}
           {tip && (
-            <div className="pointer-events-none absolute z-10 max-w-[260px] rounded-lg bg-white/95 px-2 py-1 text-[11px] shadow"
+            <div className="pointer-events-none absolute z-10 max-w-[260px] rounded-lg bg-white/95 px-2 py-1 text-caption shadow"
               style={{ left: tip.x > 600 ? undefined : tip.x + 12, right: tip.x > 600 ? `calc(100% - ${tip.x - 12}px)` : undefined,
                 top: tip.y < 64 ? tip.y + 14 : tip.y - 58 }} data-testid="tl-tip" role="tooltip">
               <p className="font-semibold">{tip.title}</p>

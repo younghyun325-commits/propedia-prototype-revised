@@ -56,7 +56,7 @@ export default function ShortcutsModal() {
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={titleId} data-testid="shortcuts-modal" className="w-full max-w-md">
         <GlassPanel className="p-4" style={{ borderRadius: 16 }}>
           <div className="mb-3 flex items-center">
-            <h2 id={titleId} className="text-sm font-semibold">{UI.shortcuts.title}</h2>
+            <h2 id={titleId} className="text-body font-semibold">{UI.shortcuts.title}</h2>
             <button
               type="button"
               data-autofocus
@@ -70,15 +70,15 @@ export default function ShortcutsModal() {
           </div>
           {UI.shortcuts.groups.map((g) => (
             <section key={g.title} className="mb-3 last:mb-0">
-              <h3 className="mb-1 text-xs text-ink-muted">{g.title}</h3>
-              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+              <h3 className="mb-1 text-meta text-ink-muted">{g.title}</h3>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
                 {g.rows.map(([keys, label]) => (
                   <div key={label} className="contents" data-testid="shortcut-row">
                     <dt className="whitespace-nowrap">
                       {keys.map((k, i) => (
                         <span key={k}>
                           {i > 0 && <span className="px-0.5 text-ink-muted">/</span>}
-                          <kbd className="rounded bg-ink/8 px-1.5 py-0.5 font-mono text-[11px]">{k}</kbd>
+                          <kbd className="rounded bg-ink/8 px-1.5 py-0.5 font-mono text-caption">{k}</kbd>
                         </span>
                       ))}
                     </dt>

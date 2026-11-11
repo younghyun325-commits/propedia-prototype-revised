@@ -25,7 +25,7 @@ function PoiLine({ r, sel }: { r: PoiRow; sel: PoiSel }) {
   const setPoi = useMapStore((s) => s.setPoi)
   const catOn = r.key in sel
   const slugOf = (label: string) => poiNode(r.key)?.subs.find((s) => s.label === label)?.slug
-  const off = <span className="ml-1 text-[10px]" data-testid="radius-poi-off">{UI.infra.offOnMap}</span>
+  const off = <span className="ml-1 text-caption" data-testid="radius-poi-off">{UI.infra.offOnMap}</span>
   return (
     <li data-cat={r.key} data-on={catOn ? '1' : '0'} className={catOn ? '' : 'opacity-50'}>
       <button type="button" className="underline-offset-2 hover:underline" data-testid="radius-poi-cat"
@@ -97,11 +97,11 @@ export function RadiusPanel({ insets, infra, apartments, projects }: {
       aria-label={UI.radius.title(radius.m)}
       data-testid="radius-panel"
       data-m={radius.m}
-      className="absolute overflow-y-auto p-3 text-xs"
+      className="absolute overflow-y-auto p-3 text-meta"
       style={{ left: insets.left, bottom: insets.bottom + 40, width: 340, maxHeight: `calc(100% - ${insets.top + insets.bottom + 60}px)`, borderRadius: 14 }}
     >
       <div className="mb-2 flex items-center gap-2">
-        <h3 className="flex-1 text-sm font-semibold">{UI.radius.title(radius.m)}</h3>
+        <h3 className="flex-1 text-body font-semibold">{UI.radius.title(radius.m)}</h3>
         <div className="flex rounded-full bg-white/60 p-0.5" role="radiogroup" aria-label={UI.radius.tool}>
           {RADII.map((m) => (
             <button
@@ -144,8 +144,8 @@ export function RadiusPanel({ insets, infra, apartments, projects }: {
           </tr>
         </tbody>
       </table>
-      <p className="mt-2 text-[11px] text-ink-muted">{UI.radius.center(radius.lon, radius.lat)}</p>
-      <p className="text-[11px] text-ink-muted">{UI.radius.rule}</p>
+      <p className="mt-2 text-caption text-ink-muted">{UI.radius.center(radius.lon, radius.lat)}</p>
+      <p className="text-caption text-ink-muted">{UI.radius.rule}</p>
     </GlassPanel>
   )
 }

@@ -55,7 +55,7 @@ export function EvidenceLine({ source, evidence, items, label = '', className = 
       data-page={source.pdf_page ?? ''}
       title={`${UI.source.open}: ${source.short_title}`}
       aria-label={`${UI.source.open}: ${source.short_title} ${text}`}
-      className={`inline-flex items-center gap-1 rounded-md px-1 py-px text-[11px] text-ink-muted tabular-nums underline-offset-2 hover:bg-brand-indigo/8 hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-brand-indigo ${className}`}
+      className={`inline-flex items-center gap-1 rounded-md px-1 py-px text-caption text-ink-muted tabular-nums underline-offset-2 hover:bg-brand-indigo/8 hover:text-ink hover:underline focus-visible:outline-2 focus-visible:outline-brand-indigo ${className}`}
     >
       <FileText size={11} aria-hidden="true" />
       {text}

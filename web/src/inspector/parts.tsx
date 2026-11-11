@@ -11,7 +11,7 @@ const TONE: Record<BadgeT['tone'], string> = {
 
 export function Badge({ text, tone = 'muted', testId }: { text: string; tone?: BadgeT['tone']; testId?: string }) {
   return (
-    <span data-testid={testId} className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${TONE[tone]}`}>
+    <span data-testid={testId} className={`inline-flex items-center rounded-full px-2 py-0.5 text-caption font-semibold ${TONE[tone]}`}>
       {text}
     </span>
   )
@@ -21,7 +21,7 @@ export function Section({ title, children, testId, aside }: { title: string; chi
   return (
     <section className="space-y-1.5" data-testid={testId}>
       <div className="flex items-center gap-2">
-        <h3 className="text-xs font-semibold text-ink-muted">{title}</h3>
+        <h3 className="text-meta font-semibold text-ink-muted">{title}</h3>
         {aside && <div className="ml-auto">{aside}</div>}
       </div>
       {children}

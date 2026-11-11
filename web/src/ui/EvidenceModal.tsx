@@ -168,7 +168,7 @@ export default function EvidenceModal() {
         aria-modal="true"
         aria-labelledby={titleId}
         data-testid="evidence-modal"
-        className="flex max-h-[92vh] w-[min(1080px,96vw)] flex-col gap-3 p-4 text-sm md:flex-row"
+        className="flex max-h-[92vh] w-[min(1080px,96vw)] flex-col gap-3 p-4 text-body md:flex-row"
       >
         {/* 왼쪽: 쪽 이미지 (확대·이동) */}
         <div className="flex min-h-0 flex-1 flex-col gap-2">
@@ -204,7 +204,7 @@ export default function EvidenceModal() {
             <button type="button" className={iconBtn} onClick={() => zoomBy(1 / STEP)} aria-label={UI.evidenceModal.zoomOut} data-testid="evidence-zoom-out">
               <Minus size={16} aria-hidden="true" />
             </button>
-            <span className="w-12 text-center text-xs tabular-nums" aria-live="polite" data-testid="evidence-zoom">
+            <span className="w-12 text-center text-meta tabular-nums" aria-live="polite" data-testid="evidence-zoom">
               {Math.round(view.scale * 100)}%
             </span>
             <button type="button" className={iconBtn} onClick={() => zoomBy(STEP)} aria-label={UI.evidenceModal.zoomIn} data-testid="evidence-zoom-in">
@@ -213,7 +213,7 @@ export default function EvidenceModal() {
             <button type="button" className={iconBtn} onClick={() => setView(IDENTITY)} aria-label={UI.evidenceModal.zoomReset}>
               <RotateCcw size={15} aria-hidden="true" />
             </button>
-            <span className="ml-auto hidden text-[11px] text-ink-muted lg:inline">{UI.evidenceModal.keys}</span>
+            <span className="ml-auto hidden text-caption text-ink-muted lg:inline">{UI.evidenceModal.keys}</span>
           </div>
         </div>
 
@@ -221,7 +221,7 @@ export default function EvidenceModal() {
         <div className="flex w-full shrink-0 flex-col gap-3 overflow-y-auto md:w-[320px]">
           <div className="flex items-start gap-2">
             <div className="min-w-0 flex-1">
-              <p className="text-xs text-ink-muted">{item.label}</p>
+              <p className="text-meta text-ink-muted">{item.label}</p>
               <h2 id={titleId} className="font-semibold leading-snug" data-testid="evidence-title">
                 {item.short_title}
               </h2>
@@ -231,7 +231,7 @@ export default function EvidenceModal() {
             </button>
           </div>
 
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
             {item.title && item.title !== item.short_title && (
               <>
                 <dt className="text-ink-muted">{UI.evidenceModal.document}</dt>
@@ -259,8 +259,8 @@ export default function EvidenceModal() {
           </dl>
 
           <section>
-            <h3 className="text-xs font-semibold text-ink-muted">{UI.evidenceModal.evidence}</h3>
-            <blockquote className="mt-1 rounded-lg bg-white/70 p-2 text-[13px] leading-relaxed" data-testid="evidence-text">
+            <h3 className="text-meta font-semibold text-ink-muted">{UI.evidenceModal.evidence}</h3>
+            <blockquote className="mt-1 rounded-lg bg-white/70 p-2 text-meta leading-relaxed" data-testid="evidence-text">
               {item.evidence ?? UI.evidenceModal.noEvidence}
             </blockquote>
           </section>
@@ -270,7 +270,7 @@ export default function EvidenceModal() {
             target="_blank"
             rel="noreferrer"
             data-testid="evidence-docs-link"
-            className="inline-flex items-center gap-1 self-start rounded-lg px-1 text-xs text-brand-indigo underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-brand-indigo"
+            className="inline-flex items-center gap-1 self-start rounded-lg px-1 text-meta text-brand-indigo underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-brand-indigo"
           >
             {UI.evidenceModal.docsLink}
             <ExternalLink size={12} aria-hidden="true" />
@@ -281,7 +281,7 @@ export default function EvidenceModal() {
               <button type="button" className={iconBtn} onClick={() => go(-1)} disabled={i === 0} aria-label={UI.evidenceModal.prev} data-testid="evidence-prev">
                 <ChevronLeft size={16} aria-hidden="true" />
               </button>
-              <span className="text-xs tabular-nums text-ink-muted" data-testid="evidence-position">
+              <span className="text-meta tabular-nums text-ink-muted" data-testid="evidence-position">
                 {UI.evidenceModal.position(i + 1, n)}
               </span>
               <button type="button" className={iconBtn} onClick={() => go(1)} disabled={i === n - 1} aria-label={UI.evidenceModal.next} data-testid="evidence-next">

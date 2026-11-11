@@ -22,16 +22,16 @@ export function RouteChip({ insets, routes }: { insets: Insets; routes: Map<stri
         data-testid="route-chip"
         data-route={r.route_id}
         title={UI.route.note}
-        className="glass flex items-center gap-2 px-3 py-1 text-sm"
+        className="glass flex items-center gap-2 px-3 py-1 text-body"
         style={{ borderRadius: 999, pointerEvents: 'auto' }}
       >
-        <span className="rounded-full bg-ink/8 px-1.5 py-px text-[10px] font-semibold text-ink-muted">{UI.poi.routeType(r.route_type)}</span>
+        <span className="rounded-full bg-ink/8 px-1.5 py-px text-caption font-semibold text-ink-muted">{UI.poi.routeType(r.route_type)}</span>
         <span className="tabular-nums">{UI.route.chip(r.route_no, n)}</span>
         <button
           type="button"
           onClick={() => setRoute(null)}
           data-testid="route-clear"
-          className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-xs hover:bg-white/80"
+          className="flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-meta hover:bg-white/80"
         >
           <X size={12} aria-hidden="true" />
           {UI.route.clear}

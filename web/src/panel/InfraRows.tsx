@@ -80,7 +80,7 @@ function OnlyButton({ name, onClick, testId }: { name: string; onClick: () => vo
       aria-label={UI.infra.onlyLabel(name)}
       title={UI.infra.onlyHelp}
       data-testid={testId}
-      className="rounded px-1 text-[11px] text-ink-muted opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 hover:text-ink focus:opacity-100"
+      className="rounded px-1 text-caption text-ink-muted opacity-0 group-focus-within:opacity-100 group-hover:opacity-100 hover:text-ink focus:opacity-100"
     >
       {UI.infra.only}
     </button>
@@ -163,7 +163,7 @@ function CategoryRow({ c }: { c: PoiCategory }) {
 export function PoiCategoryRows({ l }: { l: InfraLayer }) {
   if (!l.categories?.length) return null
   return (
-    <div className="mt-1 ml-6 text-xs text-ink-muted">
+    <div className="mt-1 ml-6 text-meta text-ink-muted">
       <ul className="space-y-0.5" data-testid="poi-categories" aria-label={UI.infra.poiCats}>
         {l.categories.map((c) => <CategoryRow key={c.key} c={c} />)}
       </ul>
@@ -178,7 +178,7 @@ export function InfraZoomHint({ l }: { l: InfraLayer }) {
   const visible = useMapStore((s) => (l.id === 'bus_stops' ? s.layers.bus_stops.visible : false))
   if (!l.min_zoom || !visible || zoom === null || zoom >= l.min_zoom) return null
   return (
-    <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid={`layer-zoomhint-${l.id}`}>
+    <p className="mt-1 ml-6 text-meta text-ink-muted" data-testid={`layer-zoomhint-${l.id}`}>
       {UI.infra.zoomHint(l.min_zoom)}
     </p>
   )

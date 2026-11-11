@@ -67,7 +67,7 @@ export function BottomSheet({ style, snap, tab, onSnap, onTab }: {
   }
   return (
     <GlassPanel as="section" data-testid="bottom-sheet" data-snap={snap} data-tab={tab} aria-label={UI.sheet.label}
-      className="absolute flex flex-col overflow-hidden text-sm" style={{ ...style, borderRadius: '16px 16px 0 0' }}>
+      className="absolute flex flex-col overflow-hidden text-body" style={{ ...style, borderRadius: '16px 16px 0 0' }}>
       <button
         type="button"
         data-testid="sheet-handle"
@@ -87,7 +87,7 @@ export function BottomSheet({ style, snap, tab, onSnap, onTab }: {
             aria-selected={tab === t}
             data-testid={`sheet-tab-${t}`}
             onClick={() => pick(t)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-xs focus-visible:outline-2 focus-visible:outline-brand-indigo ${tab === t ? 'bg-white/80 font-semibold' : 'text-ink-muted'}`}
+            className={`shrink-0 rounded-full px-3 py-1.5 text-meta focus-visible:outline-2 focus-visible:outline-brand-indigo ${tab === t ? 'bg-white/80 font-semibold' : 'text-ink-muted'}`}
           >
             {label(t)}
           </button>

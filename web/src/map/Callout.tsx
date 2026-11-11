@@ -77,7 +77,7 @@ export function Callout({ getMap, loaded, insets }: { getMap: () => MlMap | unde
         role="note"
         aria-label={UI.callout.label}
       >
-        <GlassPanel liquid className="max-w-[240px] px-3 py-2 text-xs leading-snug" style={{ borderRadius: 12 }}>
+        <GlassPanel liquid className="max-w-[240px] px-3 py-2 text-meta leading-snug" style={{ borderRadius: 12 }}>
           <p className="font-semibold">{f.title}</p>
           {line2 && <p className="text-ink-muted">{line2}</p>}
           {line3 && <p className="tabular-nums">{line3}</p>}

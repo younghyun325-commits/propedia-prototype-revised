@@ -97,7 +97,7 @@ export default function App() {
 
       {/* 1024px 미만: 보기 전용 안내 (P20) */}
       {narrow && (
-        <GlassPanel as="aside" aria-label={UI.shell.noticeLabel} data-testid="narrow-notice" className="absolute flex items-center justify-center px-3 text-xs"
+        <GlassPanel as="aside" aria-label={UI.shell.noticeLabel} data-testid="narrow-notice" className="absolute flex items-center justify-center px-3 text-meta"
           style={{ top: GAP + TOP_H + 4, left: GAP, right: GAP, height: NOTICE_H - 6, borderRadius: 999 }}>
           {UI.shell.narrowNotice}
         </GlassPanel>
@@ -143,7 +143,7 @@ export default function App() {
         data-testid="timeline"
         data-open={s.timelineOpen}
         aria-label={UI.time.title}
-        className="absolute px-4 pb-1 text-sm"
+        className="absolute px-4 pb-1 text-body"
         style={{ bottom: GAP, left: GAP, right: GAP, height: tlH }}
       >
         <Suspense

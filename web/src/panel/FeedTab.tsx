@@ -15,22 +15,22 @@ function Card({ it, selected }: { it: FeedItem; selected: boolean }) {
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-1">
-        <span className="rounded-full bg-brand-indigo/10 px-2 py-0.5 text-[11px] font-semibold text-brand-indigo" data-testid="feed-kind">
+        <span className="rounded-full bg-brand-indigo/10 px-2 py-0.5 text-caption font-semibold text-brand-indigo" data-testid="feed-kind">
           {it.kind_label}
         </span>
         {it.recent_30d && (
-          <span className="rounded-full bg-brand-sky/20 px-2 py-0.5 text-[11px] font-semibold text-ink" data-testid="feed-recent">
+          <span className="rounded-full bg-brand-sky/20 px-2 py-0.5 text-caption font-semibold text-ink" data-testid="feed-recent">
             {UI.feed.recent}
           </span>
         )}
-        <span className="ml-auto text-[11px] tabular-nums text-ink-muted">
+        <span className="ml-auto text-caption tabular-nums text-ink-muted">
           {UI.feed.published} {dot(it.published_at)}
         </span>
       </div>
-      <p className="mt-1 text-[13px] leading-snug font-semibold" data-testid="feed-title">{it.short_title}</p>
-      {it.gosi_no && <p className="text-[11px] text-ink-muted">{it.gosi_no}</p>}
+      <p className="mt-1 text-meta leading-snug font-semibold" data-testid="feed-title">{it.short_title}</p>
+      {it.gosi_no && <p className="text-caption text-ink-muted">{it.gosi_no}</p>}
       {it.related.length > 0 && (
-        <p className="mt-1 text-[11px]">
+        <p className="mt-1 text-caption">
           <span className="text-ink-muted">{UI.feed.related}</span>{' '}
           {it.related
             .map((r) => (r.kind === 'regulation' ? [r.label, r.effective_label].filter(Boolean).join(' · ') : r.label))
@@ -39,12 +39,12 @@ function Card({ it, selected }: { it: FeedItem; selected: boolean }) {
         </p>
       )}
       {it.deadline && (
-        <p className="text-[11px]" data-testid="feed-deadline" data-status={it.deadline.status}>
+        <p className="text-caption" data-testid="feed-deadline" data-status={it.deadline.status}>
           <span className="text-ink-muted">{UI.feed.deadline}</span>{' '}
           {UI.feed.deadlineLine(it.deadline.title, dot(it.deadline.due_on), it.deadline.d_day_label)}
         </p>
       )}
-      <p className="mt-1 text-[10px] text-ink-muted">
+      <p className="mt-1 text-caption text-ink-muted">
         {src ? [src.doc_id, src.pdf_page ? UI.source.page(src.pdf_page) : null, dot(it.published_at)].filter(Boolean).join(' · ') : it.doc_id}
         {!it.sel && ` · ${UI.feed.noTarget}`}
       </p>
@@ -73,7 +73,7 @@ export function FeedTab() {
   const d = q.data
   return (
     <div className="space-y-2" data-testid="feed" data-as-of={d.as_of} aria-busy={q.isFetching}>
-      <p className="text-[11px] text-ink-muted" data-testid="feed-count">{UI.feed.count(d.total, dot(d.as_of))}</p>
+      <p className="text-caption text-ink-muted" data-testid="feed-count">{UI.feed.count(d.total, dot(d.as_of))}</p>
       {d.items.length ? (
         <ol className="space-y-2">
           {d.items.map((it) => (

@@ -31,7 +31,7 @@ function Overview({ f }: { f: ProjectFeature }) {
               <Badge key={b} text={b} tone={b === UI.project.statusOpen ? 'info' : 'warn'} />
             ))}
           </div>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
             {p.sub_status && <KV k={UI.project.subStatus} testId="project-sub-status">{p.sub_status}</KV>}
             {p.stage_note && <KV k={UI.project.stageNote} testId="project-stage-note">{p.stage_note}</KV>}
           </dl>
@@ -40,16 +40,16 @@ function Overview({ f }: { f: ProjectFeature }) {
 
       <div className="grid grid-cols-2 gap-2">
         <Card>
-          <p className="text-[11px] text-ink-muted">{UI.project.current}</p>
+          <p className="text-caption text-ink-muted">{UI.project.current}</p>
           <p className="font-semibold" data-testid="project-current">{p.current.title}</p>
-          {p.current.issuer && <p className="text-[11px] text-ink-muted">{UI.project.issuer} {p.current.issuer}</p>}
-          <p className="mt-1 text-xs">{p.current.owner_actions ?? p.current.owner_actions_note}</p>
+          {p.current.issuer && <p className="text-caption text-ink-muted">{UI.project.issuer} {p.current.issuer}</p>}
+          <p className="mt-1 text-meta">{p.current.owner_actions ?? p.current.owner_actions_note}</p>
           <p className="mt-1"><Badge text={p.current.template_status} tone="warn" /></p>
         </Card>
         <Card>
-          <p className="text-[11px] text-ink-muted">{UI.project.next}</p>
+          <p className="text-caption text-ink-muted">{UI.project.next}</p>
           <p className="font-semibold" data-testid="project-next">{p.next?.title ?? '—'}</p>
-          {p.next && <p className="mt-1 text-xs">{p.next.owner_actions ?? p.next.owner_actions_note}</p>}
+          {p.next && <p className="mt-1 text-meta">{p.next.owner_actions ?? p.next.owner_actions_note}</p>}
         </Card>
       </div>
 
@@ -63,7 +63,7 @@ function Overview({ f }: { f: ProjectFeature }) {
                   <Badge text={d.d_day_label} tone={d.status === 'open' ? 'info' : 'muted'} />
                 </span>
               </div>
-              <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-xs">
+              <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
                 <KV k={UI.project.period}><span className="tabular-nums">{dot(d.starts_on)} ~ {dot(d.due_on)}</span></KV>
                 {d.how_to_submit && <KV k={UI.project.howToSubmit}>{d.how_to_submit}</KV>}
                 {d.places.length > 0 && <KV k={UI.project.places}>{d.places.join(', ')}</KV>}
@@ -72,22 +72,22 @@ function Overview({ f }: { f: ProjectFeature }) {
             </Card>
           ))
         ) : (
-          <p className="text-xs text-ink-muted">{UI.project.deadlineNone}</p>
+          <p className="text-meta text-ink-muted">{UI.project.deadlineNone}</p>
         )}
       </Section>
 
       <Section title={UI.project.remaining}>
-        <p className="text-sm" data-testid="project-remaining">{p.remaining.note}</p>
-        <button type="button" className="text-[11px] text-ink-muted underline underline-offset-2" aria-expanded={methodOpen}
+        <p className="text-body" data-testid="project-remaining">{p.remaining.note}</p>
+        <button type="button" className="text-caption text-ink-muted underline underline-offset-2" aria-expanded={methodOpen}
           onClick={() => setMethodOpen(!methodOpen)}>
           {UI.project.method}
         </button>
-        {methodOpen && <p className="text-[11px] text-ink-muted">{p.remaining.method_note}</p>}
+        {methodOpen && <p className="text-caption text-ink-muted">{p.remaining.method_note}</p>}
       </Section>
 
       <Section title={UI.project.facts}>
         {p.facts.length ? (
-          <table className="w-full text-xs" data-testid="project-facts">
+          <table className="w-full text-meta" data-testid="project-facts">
             <thead className="sr-only">
               <tr><th>{UI.project.factLabel}</th><th>{UI.project.factValue}</th><th>{UI.project.factSource}</th></tr>
             </thead>
@@ -102,14 +102,14 @@ function Overview({ f }: { f: ProjectFeature }) {
             </tbody>
           </table>
         ) : (
-          <p className="text-xs text-ink-muted">{UI.project.factsEmpty}</p>
+          <p className="text-meta text-ink-muted">{UI.project.factsEmpty}</p>
         )}
-        <p className="text-[11px] text-ink-muted">{p.facts_note}</p>
+        <p className="text-caption text-ink-muted">{p.facts_note}</p>
       </Section>
 
       {boundary && (
         <Section title={UI.project.boundary}>
-          <p className="text-xs">{boundary.label}</p>
+          <p className="text-meta">{boundary.label}</p>
           <EvidenceLine source={boundary.source} items={ev} label={boundary.label} testId="boundary-evidence" />
         </Section>
       )}
@@ -121,11 +121,11 @@ function Parcels({ f }: { f: ProjectFeature }) {
   const setSearchHit = useMapStore((s) => s.setSearchHit)
   const focused = useMapStore((s) => s.searchHit?.pnu ?? null)
   const rows = f.sections.parcels
-  if (!rows.length) return <p className="text-xs text-ink-muted">{UI.project.parcelsEmpty}</p>
+  if (!rows.length) return <p className="text-meta text-ink-muted">{UI.project.parcelsEmpty}</p>
   return (
     <div className="space-y-2">
-      <p className="text-[11px] text-ink-muted">{UI.project.parcelsHint}</p>
-      <p className="flex gap-3 text-[11px] text-ink-muted">
+      <p className="text-caption text-ink-muted">{UI.project.parcelsHint}</p>
+      <p className="flex gap-3 text-caption text-ink-muted">
         <span className="flex items-center gap-1"><LayerSwatch kind="parcel" />{UI.project.legendSolid}</span>
         <span className="flex items-center gap-1"><LayerSwatch kind="parcel-uncertain" />{UI.project.legendDashed}</span>
       </p>
@@ -143,7 +143,7 @@ function Parcels({ f }: { f: ProjectFeature }) {
                 data-pnu={r.pnu}
                 aria-pressed={focused === r.pnu}
                 onClick={() => setSearchHit({ label: r.name, pnu: r.pnu, point: null })}
-                className="min-w-0 flex-1 text-left text-xs focus-visible:outline-2 focus-visible:outline-brand-indigo"
+                className="min-w-0 flex-1 text-left text-meta focus-visible:outline-2 focus-visible:outline-brand-indigo"
               >
                 <span className="font-semibold">{r.name}</span> · {r.inclusion_label}
                 {!r.verified && (
@@ -151,7 +151,7 @@ function Parcels({ f }: { f: ProjectFeature }) {
                     {UI.project.humanUnchecked}{r.review_id ? ` (${UI.project.review(r.review_id)})` : ''}
                   </span>
                 )}
-                <span className="block text-[11px] text-ink-muted">{r.basis_label}</span>
+                <span className="block text-caption text-ink-muted">{r.basis_label}</span>
               </button>
               <EvidenceLine source={r.source} items={f.evidence} label={r.basis_label} />
             </div>
@@ -173,13 +173,13 @@ function Nearby({ f }: { f: ProjectFeature }) {
   }
   return (
     <div className="space-y-4" data-testid="project-nearby">
-      <p className="text-[11px] text-ink-muted">{UI.nearbyApartments.note}</p>
-      {!layerOn && <p className="text-[11px] text-ink-muted">{UI.nearbyApartments.layerOff}</p>}
+      <p className="text-caption text-ink-muted">{UI.nearbyApartments.note}</p>
+      {!layerOn && <p className="text-caption text-ink-muted">{UI.nearbyApartments.layerOff}</p>}
       {(['250', '500'] as const).map((m) => (
         <Section key={m} title={UI.nearbyApartments.title(Number(m))} testId={`project-nearby-${m}`}
-          aside={<span className="text-[11px] text-ink-muted tabular-nums">{n[m].length}</span>}>
+          aside={<span className="text-caption text-ink-muted tabular-nums">{n[m].length}</span>}>
           {n[m].length ? (
-            <table className="w-full border-collapse text-xs">
+            <table className="w-full border-collapse text-meta">
               <thead className="text-left text-ink-muted">
                 <tr>
                   <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.name}</th>
@@ -203,7 +203,7 @@ function Nearby({ f }: { f: ProjectFeature }) {
               </tbody>
             </table>
           ) : (
-            <p className="text-xs text-ink-muted">{UI.nearbyApartments.none}</p>
+            <p className="text-meta text-ink-muted">{UI.nearbyApartments.none}</p>
           )}
         </Section>
       ))}

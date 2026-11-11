@@ -91,7 +91,7 @@ export function Stepper({ stages, currentSeq, positionLabel, remaining, nextTitl
           )
         })}
       </ol>
-      <p className="mt-2 text-xs" data-testid="stepper-line">
+      <p className="mt-2 text-meta" data-testid="stepper-line">
         {UI.stepper.line(positionLabel, remaining, nextTitle)}
       </p>
     </div>

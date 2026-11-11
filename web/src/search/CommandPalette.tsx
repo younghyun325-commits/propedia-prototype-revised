@@ -247,7 +247,7 @@ export default function CommandPalette() {
         aria-modal="true"
         aria-label={UI.palette.label}
         data-testid="palette"
-        className="w-[560px] max-w-[calc(100vw-32px)] overflow-hidden text-sm"
+        className="w-[560px] max-w-[calc(100vw-32px)] overflow-hidden text-body"
         onKeyDown={onKey}
       >
         <div className="flex items-center gap-2 border-b border-ink/10 px-4 py-3">
@@ -263,15 +263,15 @@ export default function CommandPalette() {
             placeholder={UI.palette.placeholder}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="flex-1 bg-transparent text-base outline-none placeholder:text-ink-muted"
+            className="flex-1 bg-transparent text-title outline-none placeholder:text-ink-muted"
           />
-          {loading && <span className="text-xs text-ink-muted">{UI.palette.searching}</span>}
+          {loading && <span className="text-meta text-ink-muted">{UI.palette.searching}</span>}
         </div>
         <ul id="palette-list" role="listbox" aria-label={UI.palette.label} className="max-h-[50vh] overflow-y-auto overscroll-contain py-2">
           {groups.map(([title, list]) =>
             list.length === 0 ? null : (
               <li key={title} role="presentation">
-                <div className="px-4 pt-2 pb-1 text-xs font-semibold text-ink-muted" data-testid="palette-group">
+                <div className="px-4 pt-2 pb-1 text-meta font-semibold text-ink-muted" data-testid="palette-group">
                   {title}
                 </div>
                 <ul role="group" aria-label={title}>
@@ -297,7 +297,7 @@ export default function CommandPalette() {
                         <Icon size={16} aria-hidden="true" className="shrink-0 text-ink-muted" />
                         <span className="min-w-0 flex-1">
                           <span className="block truncate">{it.label}</span>
-                          {it.sub && <span className="block truncate text-xs text-ink-muted">{it.sub}</span>}
+                          {it.sub && <span className="block truncate text-meta text-ink-muted">{it.sub}</span>}
                         </span>
                       </li>
                     )
@@ -312,12 +312,12 @@ export default function CommandPalette() {
             </li>
           )}
           {debounced && message && items.length > 0 && (
-            <li role="presentation" className="px-4 py-2 text-xs text-ink-muted" data-testid="palette-message">
+            <li role="presentation" className="px-4 py-2 text-meta text-ink-muted" data-testid="palette-message">
               {message}
             </li>
           )}
         </ul>
-        <div className="border-t border-ink/10 px-4 py-2 text-xs text-ink-muted">{UI.palette.hint}</div>
+        <div className="border-t border-ink/10 px-4 py-2 text-meta text-ink-muted">{UI.palette.hint}</div>
       </GlassPanel>
     </div>,
     document.getElementById('portal-root') ?? document.body,

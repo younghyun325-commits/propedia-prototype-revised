@@ -1061,7 +1061,7 @@ export default function MapView({ insets }: { insets: Insets }) {
           role="status"
           data-testid="scope-label"
           data-level={scope.level}
-          className="pointer-events-none absolute -translate-x-1/2 px-3 py-1.5 text-xs font-semibold"
+          className="pointer-events-none absolute -translate-x-1/2 px-3 py-1.5 text-meta font-semibold"
           style={{ top: insets.top + 8, left: `calc(${insets.left}px + (100% - ${insets.left + insets.right}px) / 2)`, borderRadius: 999 }}
         >
           {scope.label}
@@ -1073,7 +1073,7 @@ export default function MapView({ insets }: { insets: Insets }) {
         <GlassPanel
           role="tooltip"
           data-testid="map-tooltip"
-          className="map-tooltip pointer-events-none absolute px-3 py-1.5 text-xs"
+          className="map-tooltip pointer-events-none absolute px-3 py-1.5 text-meta"
           style={{ left: hover.x + 14, top: hover.y + 14, borderRadius: 10, maxWidth: 360 }}
         >
           {hover.text}
@@ -1086,10 +1086,10 @@ export default function MapView({ insets }: { insets: Insets }) {
           role="menu"
           aria-label={UI.map.pickTitle}
           data-testid="pick-list"
-          className="absolute p-1.5 text-sm"
+          className="absolute p-1.5 text-body"
           style={{ left: pick.x + 8, top: pick.y + 8, borderRadius: 12, minWidth: 220 }}
         >
-          <p className="px-2 py-1 text-xs text-ink-muted">{UI.map.pickTitle}</p>
+          <p className="px-2 py-1 text-meta text-ink-muted">{UI.map.pickTitle}</p>
           {pick.items.map((it) => (
             <button
               key={it.id}
@@ -1102,7 +1102,7 @@ export default function MapView({ insets }: { insets: Insets }) {
               }}
               className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-brand-indigo/10"
             >
-              <span className="text-xs text-ink-muted">{UI.map.pickKind[it.kind]}</span>
+              <span className="text-meta text-ink-muted">{UI.map.pickKind[it.kind]}</span>
               <span className="truncate">{it.name}</span>
             </button>
           ))}
@@ -1112,7 +1112,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       {/* 커서 위치 표시줄 */}
       <div
         data-testid="cursor-bar"
-        className="glass pointer-events-none absolute px-3 py-1 text-xs"
+        className="glass pointer-events-none absolute px-3 py-1 text-meta"
         style={{ left: insets.left, bottom: insets.bottom, borderRadius: 999 }}
       >
         {cursor
@@ -1123,7 +1123,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       {/* 출처 (우하단) */}
       <div
         data-testid="attribution"
-        className="glass pointer-events-none absolute px-3 py-1 text-right text-xs"
+        className="glass pointer-events-none absolute px-3 py-1 text-right text-meta"
         // 참고 레이어 출처가 붙으면 길어진다: 왼쪽 커서 표시줄(약 280px)과 패널을 피해 줄을 바꾼다
         // 1024px 미만(P20)은 커서 표시줄이 없으므로 화면 폭 안에서만 줄을 바꾼다
         style={{ right: insets.right, bottom: insets.bottom, borderRadius: 12,
@@ -1133,7 +1133,7 @@ export default function MapView({ insets }: { insets: Insets }) {
       </div>
 
       {loadError && (
-        <div role="alert" className="glass absolute px-4 py-2 text-sm" style={{ left: insets.left, top: insets.top }}>
+        <div role="alert" className="glass absolute px-4 py-2 text-body" style={{ left: insets.left, top: insets.top }}>
           {loadError}
         </div>
       )}

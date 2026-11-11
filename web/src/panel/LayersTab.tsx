@@ -34,7 +34,7 @@ function swatchOf(l: ManifestLayer): SwatchKind {
 function Badge({ children, tone = 'muted' }: { children: React.ReactNode; tone?: 'warn' | 'muted' }) {
   return (
     <span
-      className={`rounded-full px-1.5 py-px text-[10px] font-semibold whitespace-nowrap ${
+      className={`rounded-full px-1.5 py-px text-caption font-semibold whitespace-nowrap ${
         tone === 'warn' ? 'bg-layer-regulation/15 text-warn' : 'bg-ink/8 text-ink-muted'
       }`}
     >
@@ -137,7 +137,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
           <span className="leading-tight break-keep">{l.name}</span>
         </label>
         {l.status === 'ready' && l.count !== null && (
-          <span className="text-xs text-ink-muted tabular-nums" data-testid={`layer-count-${l.id}`}>
+          <span className="text-meta text-ink-muted tabular-nums" data-testid={`layer-count-${l.id}`}>
             {UI.layers.count(l.count)}
           </span>
         )}
@@ -165,7 +165,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
         )}
       </div>
       {enabled && open && state && panelId && (
-        <label className="mt-1 ml-6 flex items-center gap-2 text-xs text-ink-muted">
+        <label className="mt-1 ml-6 flex items-center gap-2 text-meta text-ink-muted">
           {UI.layers.opacity}
           <input
             type="range"
@@ -181,29 +181,29 @@ function LayerRow({ l }: { l: ManifestLayer }) {
         </label>
       )}
       {l.id === 'impact500' && (
-        <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid="impact-legend">
+        <p className="mt-1 ml-6 text-meta text-ink-muted" data-testid="impact-legend">
           {UI.layers.legendImpact}
           <span className="block">{UI.layers.impactNote}</span>
         </p>
       )}
       {l.id === 'apartments' && l.status === 'ready' && (
-        <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid="apartment-legend-note">
+        <p className="mt-1 ml-6 text-meta text-ink-muted" data-testid="apartment-legend-note">
           {l.note ?? UI.apartment.layerNote}
           {l.boundary_note ? ` · ${l.boundary_note}` : ''}
         </p>
       )}
       {enabled && blockedAt !== null && (
-        <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid={`layer-zoomhint-${l.id}`}>
+        <p className="mt-1 ml-6 text-meta text-ink-muted" data-testid={`layer-zoomhint-${l.id}`}>
           {UI.reference.zoomHint(blockedAt)}
         </p>
       )}
       {asOf && l.status === 'ready' && (STATIC_GROUPS as readonly string[]).includes(l.group) && (
-        <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid={`layer-static-${l.id}`}>{UI.time.staticNote(ymLabel(l.as_of))}</p>
+        <p className="mt-1 ml-6 text-meta text-ink-muted" data-testid={`layer-static-${l.id}`}>{UI.time.staticNote(ymLabel(l.as_of))}</p>
       )}
       {l.group === 'infra' && l.status === 'ready' && <InfraZoomHint l={l as InfraLayer} />}
       {l.id === 'pois' && l.status === 'ready' && <PoiCategoryRows l={l as InfraLayer} />}
       {l.id === 'parcels' && l.count_by_judgment && (
-        <ul className="mt-1 ml-6 space-y-0.5 text-xs text-ink-muted" data-testid="parcel-legend">
+        <ul className="mt-1 ml-6 space-y-0.5 text-meta text-ink-muted" data-testid="parcel-legend">
           <li data-testid="parcel-legend-confirmed">
             <span className="flex items-center gap-1.5">
               <LayerSwatch kind="parcel" />

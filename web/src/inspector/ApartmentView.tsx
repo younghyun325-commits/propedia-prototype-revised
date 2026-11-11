@@ -20,7 +20,7 @@ function Basis({ a }: { a: ApartmentFeature['sections']['apartment'] }) {
   const b = a.basis
   return (
     <Card testId="apt-basis">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
         {missing ? (
           <KV k={UI.apartment.households} testId="apt-basis-missing">{missing}</KV>
         ) : (
@@ -41,7 +41,7 @@ function Basis({ a }: { a: ApartmentFeature['sections']['apartment'] }) {
 
 function Sources({ a }: { a: ApartmentFeature['sections']['apartment'] }) {
   return (
-    <ul className="space-y-0.5 text-[11px] text-ink-muted" data-testid="apt-sources">
+    <ul className="space-y-0.5 text-caption text-ink-muted" data-testid="apt-sources">
       {a.sources.map((s) => (
         <li key={s.kind}>
           {s.label}
@@ -56,16 +56,16 @@ function Trades({ id, band, until }: { id: string; band: string; until: string |
   const q = useApartmentTrades(id, band)
   const asOf = useMapStore((st) => st.asOf)
   if (q.isPending) return <Skeleton />
-  if (q.isError) return <p role="alert" className="text-xs">{UI.apartment.unavailable}</p>
+  if (q.isError) return <p role="alert" className="text-meta">{UI.apartment.unavailable}</p>
   const t = q.data
   return (
     <div className="space-y-3">
-      <Suspense fallback={<p className="text-xs text-ink-muted" role="status">{UI.apartment.chartLoading}</p>}>
+      <Suspense fallback={<p className="text-meta text-ink-muted" role="status">{UI.apartment.chartLoading}</p>}>
         <AptChart data={t} until={until} asOf={asOf} />
       </Suspense>
       <Section title={UI.apartment.recent(t.recent.length)} testId="apt-recent">
         <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-[11px]" data-testid="apt-recent-table">
+          <table className="w-full border-collapse text-caption" data-testid="apt-recent-table">
             <thead className="text-left whitespace-nowrap text-ink-muted">
               <tr>
                 {Object.values(UI.apartment.cols).map((c) => (
@@ -100,7 +100,7 @@ function Impacts({ a }: { a: ApartmentFeature['sections']['apartment'] }) {
   return (
     <Section title={UI.apartment.impacts} testId="apt-impacts">
       {a.impacts.length ? (
-        <ul className="space-y-1 text-xs">
+        <ul className="space-y-1 text-meta">
           {a.impacts.map((i) => {
             const p = projects.find((x) => x.id === i.project_id)
             return (
@@ -117,7 +117,7 @@ function Impacts({ a }: { a: ApartmentFeature['sections']['apartment'] }) {
           })}
         </ul>
       ) : (
-        <p className="text-xs text-ink-muted">{UI.apartment.impactsNone}</p>
+        <p className="text-meta text-ink-muted">{UI.apartment.impactsNone}</p>
       )}
     </Section>
   )
@@ -131,7 +131,7 @@ export function ApartmentView({ f }: { f: ApartmentFeature }) {
     <div className="space-y-4" data-testid="apartment-view">
       <Basis a={a} />
       <Sources a={a} />
-      <Section title={UI.apartment.bands} aside={<span className="text-[11px] text-ink-muted">{UI.apartment.summary(s.count, s.last_trade_date ? dot(s.last_trade_date) : null)}</span>}>
+      <Section title={UI.apartment.bands} aside={<span className="text-caption text-ink-muted">{UI.apartment.summary(s.count, s.last_trade_date ? dot(s.last_trade_date) : null)}</span>}>
         <div className="flex flex-wrap gap-1" role="group" aria-label={UI.apartment.bands}>
           {s.bands.map((b) => (
             <button
@@ -141,16 +141,16 @@ export function ApartmentView({ f }: { f: ApartmentFeature }) {
               data-testid={`apt-band-${b.band}`}
               onClick={() => setBand(b.band)}
               title={UI.apartment.bandCount(b.count_3y)}
-              className={`rounded-full px-2 py-0.5 text-[11px] ${band === b.band ? 'bg-brand-indigo text-white' : 'bg-white/70 hover:bg-white'}`}
+              className={`rounded-full px-2 py-0.5 text-caption ${band === b.band ? 'bg-brand-indigo text-white' : 'bg-white/70 hover:bg-white'}`}
             >
               {UI.apartment.bandLabel(b.band)}
             </button>
           ))}
         </div>
       </Section>
-      {band ? <Trades id={a.id} band={band} until={s.to} /> : <p className="text-xs text-ink-muted">{UI.apartment.noTrades}</p>}
+      {band ? <Trades id={a.id} band={band} until={s.to} /> : <p className="text-meta text-ink-muted">{UI.apartment.noTrades}</p>}
       <Impacts a={a} />
-      <p className="text-[10px] text-ink-muted">{a.disclaimer}</p>
+      <p className="text-caption text-ink-muted">{a.disclaimer}</p>
     </div>
   )
 }

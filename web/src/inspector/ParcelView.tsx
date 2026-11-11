@@ -21,11 +21,11 @@ function Banner({ d }: { d: ParcelAt }) {
   return (
     <div className="space-y-1" data-testid="parcel-banner">
       {d.project_banner.map((b) => (
-        <div key={b.project_id} className={`rounded-xl px-3 py-2 text-xs ${b.verified ? 'bg-brand-indigo/10' : 'bg-layer-regulation/12'}`}>
+        <div key={b.project_id} className={`rounded-xl px-3 py-2 text-meta ${b.verified ? 'bg-brand-indigo/10' : 'bg-layer-regulation/12'}`}>
           <p className="font-semibold" data-testid="parcel-banner-text">
             {UI.parcelView.banner(b.short_name, b.inclusion_label, !b.verified, b.review_id)}
           </p>
-          <p className="text-[11px] text-ink-muted">{b.basis_label}</p>
+          <p className="text-caption text-ink-muted">{b.basis_label}</p>
           <EvidenceLine source={b.source} items={d.evidence} label={b.basis_label} />
         </div>
       ))}
@@ -41,16 +41,16 @@ function LandPermitCard({ p, items }: { p: LandPermit; items: ParcelAt['evidence
       <Card>
         <div data-testid="parcel-permit-status" data-status={p.status}>
           <Badge text={UI.permit.status[p.status]} tone={PERMIT_TONE[p.status]} />
-          <p className="mt-1 text-sm font-semibold" data-testid="parcel-permit-message">{UI.permit.message[p.status]}</p>
+          <p className="mt-1 text-body font-semibold" data-testid="parcel-permit-message">{UI.permit.message[p.status]}</p>
         </div>
-        <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+        <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
           <KV k={UI.permit.why}>{UI.permit.reason[p.reason_code] ?? p.reason}</KV>
           {p.deadline_label && <KV k={UI.permit.deadline} testId="parcel-permit-deadline">{p.deadline_label}</KV>}
         </dl>
         <div className="mt-1.5 space-y-1" data-testid="parcel-permit-basis">
-          <p className="text-[11px] font-semibold text-ink-muted">{UI.permit.basis}</p>
+          <p className="text-caption font-semibold text-ink-muted">{UI.permit.basis}</p>
           {p.basis.map((b) => (
-            <div key={b.label} className="text-[11px]">
+            <div key={b.label} className="text-caption">
               <p>{b.label}{b.effective_to ? ` · ~${dot(b.effective_to)}` : ''}</p>
               {b.source ? (
                 <EvidenceLine source={b.source} evidence={b.evidence} items={items} label={b.label} />
@@ -76,7 +76,7 @@ function LayerNotices({ d }: { d: ParcelAt }) {
   if (!counts) return null
   return (
     <Section title={UI.parcelView.notices} testId="parcel-notices">
-      <ul className="grid grid-cols-4 gap-1 text-center text-xs" data-testid="parcel-counts">
+      <ul className="grid grid-cols-4 gap-1 text-center text-meta" data-testid="parcel-counts">
         {LAYERS.map((k) => (
           <li key={k}>
             <button
@@ -96,13 +96,13 @@ function LayerNotices({ d }: { d: ParcelAt }) {
       {open && (
         <div id={`parcel-layer-${open}`} className="space-y-1.5" data-testid="parcel-layer-items">
           {(d.layer_items?.[open as (typeof LAYERS)[number]] ?? []).length === 0 ? (
-            <p className="text-xs text-ink-muted">{UI.parcelView.itemsNone}</p>
+            <p className="text-meta text-ink-muted">{UI.parcelView.itemsNone}</p>
           ) : (
             d.layer_items![open as (typeof LAYERS)[number]].map((it) => (
               <Card key={it.item_key} className="!p-2">
-                <p className="text-xs font-semibold">{it.display_title}</p>
+                <p className="text-meta font-semibold">{it.display_title}</p>
                 {it.effective_label && (
-                  <p className="text-[11px] text-ink-muted">
+                  <p className="text-caption text-ink-muted">
                     {it.effective_label}{it.effective_status_label ? ` · ${it.effective_status_label}` : ''}
                   </p>
                 )}
@@ -130,16 +130,16 @@ export function ParcelView({ d, boundaryNote }: { d: ParcelAt; boundaryNote?: st
   return (
     <div className="space-y-4" data-testid="parcel-card-body">
       <Banner d={d} />
-      <p className="text-xs text-ink-muted">
+      <p className="text-meta text-ink-muted">
         {UI.parcel.pnu} <code className="font-mono" data-testid="parcel-pnu">{d.pnu}</code>
         <span className="sr-only" data-testid="parcel-address">{d.jibun_address}</span>
       </p>
-      {boundaryNote && <p className="text-[11px] text-warn">{boundaryNote}</p>}
+      {boundaryNote && <p className="text-caption text-warn">{boundaryNote}</p>}
 
       <Section title={UI.parcel.land} testId="parcel-land-card">
         <Card>
           {land && land.status !== 'unavailable' ? (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs" data-testid="parcel-land">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta" data-testid="parcel-land">
               <KV k={UI.parcel.jimok} testId="parcel-jimok">{land.jimok ?? '—'}</KV>
               <KV k={UI.parcel.area}><span className="tabular-nums">{land.area_m2 !== null ? `${fmt(land.area_m2)}㎡` : '—'}</span></KV>
               <KV k={UI.parcel.zone}>{[land.land_use_zone, land.land_use_zone2].filter(Boolean).join(' · ') || '—'}</KV>
@@ -153,9 +153,9 @@ export function ParcelView({ d, boundaryNote }: { d: ParcelAt; boundaryNote?: st
               </KV>
             </dl>
           ) : (
-            <p className="text-xs text-ink-muted">{land?.note ?? UI.parcel.landNone}</p>
+            <p className="text-meta text-ink-muted">{land?.note ?? UI.parcel.landNone}</p>
           )}
-          <p className="mt-1 text-[11px] text-ink-muted" data-testid="parcel-land-source">
+          <p className="mt-1 text-caption text-ink-muted" data-testid="parcel-land-source">
             {UI.parcel.source}: {UI.parcelView.landSource(land?.source ?? null, dot(land?.fetched_at ?? null) || null)}
           </p>
         </Card>
@@ -164,14 +164,14 @@ export function ParcelView({ d, boundaryNote }: { d: ParcelAt; boundaryNote?: st
       <Section title={UI.parcelView.building}>
         {b && b.found !== false ? (
           <Card>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs" data-testid="parcel-building">
+            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta" data-testid="parcel-building">
               <KV k={UI.parcelView.mainPurpose}>{b.main_purpose ?? '—'}</KV>
               {b.bld_names && b.bld_names.length > 0 && <KV k={UI.parcelView.names}>{b.bld_names.join(', ')}</KV>}
             </dl>
-            {b.source && <p className="mt-1 text-[11px] text-ink-muted">{UI.parcel.source}: {b.source}{b.fetched_label ? ` · ${b.fetched_label}` : ''}</p>}
+            {b.source && <p className="mt-1 text-caption text-ink-muted">{UI.parcel.source}: {b.source}{b.fetched_label ? ` · ${b.fetched_label}` : ''}</p>}
           </Card>
         ) : (
-          <p className="text-xs text-ink-muted">{d.building_note ?? UI.parcelView.buildingNone}</p>
+          <p className="text-meta text-ink-muted">{d.building_note ?? UI.parcelView.buildingNone}</p>
         )}
       </Section>
 
@@ -181,7 +181,7 @@ export function ParcelView({ d, boundaryNote }: { d: ParcelAt; boundaryNote?: st
 
       <Section title={UI.parcel.nearby}>
         {d.nearby_projects.length ? (
-          <ul className="space-y-1 text-xs" data-testid="parcel-nearby">
+          <ul className="space-y-1 text-meta" data-testid="parcel-nearby">
             {d.nearby_projects.map((p) => (
               <li key={p.project_id}>
                 <button
@@ -198,24 +198,24 @@ export function ParcelView({ d, boundaryNote }: { d: ParcelAt; boundaryNote?: st
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-ink-muted">{d.nearby_note ?? UI.parcel.nearbyNone}</p>
+          <p className="text-meta text-ink-muted">{d.nearby_note ?? UI.parcel.nearbyNone}</p>
         )}
       </Section>
 
       <Section title={UI.parcel.refZones}>
         {d.ref_zones.length ? (
-          <ul className="space-y-1 text-xs" data-testid="parcel-ref-zones">
+          <ul className="space-y-1 text-meta" data-testid="parcel-ref-zones">
             {d.ref_zones.map((z, i) => (
               <li key={`${z.layer}-${i}`} data-testid="parcel-ref-zone" className="rounded-lg bg-white/60 px-2 py-1.5">
                 <Badge text={z.badge || UI.parcelView.refBadge} tone="muted" /> <span>{z.name}</span>
-                <span className="block text-[11px] text-ink-muted">{z.layer_title} · {z.source} · {z.license}</span>
+                <span className="block text-caption text-ink-muted">{z.layer_title} · {z.source} · {z.license}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-xs text-ink-muted">{UI.parcel.refNone}</p>
+          <p className="text-meta text-ink-muted">{UI.parcel.refNone}</p>
         )}
-        <p className="text-[11px] text-ink-muted">{UI.parcel.refNote}</p>
+        <p className="text-caption text-ink-muted">{UI.parcel.refNote}</p>
       </Section>
     </div>
   )

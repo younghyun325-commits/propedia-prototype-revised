@@ -12,7 +12,7 @@ export function MapControls({ insets, hasKey }: { insets: Insets; hasKey: boolea
 
   return (
     <div className="absolute flex flex-col items-end gap-2" style={{ top: insets.top, right: insets.right }}>
-      <div className="glass flex items-center gap-1 p-1 text-xs" style={{ borderRadius: 999 }}>
+      <div className="glass flex items-center gap-1 p-1 text-meta" style={{ borderRadius: 999 }}>
         <button
           onClick={toggleTilt3d}
           aria-pressed={tilt3d}
@@ -35,12 +35,12 @@ export function MapControls({ insets, hasKey }: { insets: Insets; hasKey: boolea
         </button>
       </div>
       {radiusTool && (
-        <p className="glass px-3 py-1 text-xs" style={{ borderRadius: 999 }} role="status" data-testid="radius-help">
+        <p className="glass px-3 py-1 text-meta" style={{ borderRadius: 999 }} role="status" data-testid="radius-help">
           {UI.radius.help}
         </p>
       )}
       {!hasKey && (
-        <p className="glass px-3 py-1 text-xs" style={{ borderRadius: 999 }} role="status">
+        <p className="glass px-3 py-1 text-meta" style={{ borderRadius: 999 }} role="status">
           배경지도 키가 설정되지 않아 경계만 표시합니다
         </p>
       )}

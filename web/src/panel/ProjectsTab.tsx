@@ -28,16 +28,16 @@ export function ProjectsTab({ projects }: { projects: MapProject[] }) {
               <div className="flex items-start gap-2">
                 <span className="flex-1 font-semibold leading-snug">{p.short_name}</span>
                 {p.unverified && (
-                  <span className="rounded-full bg-layer-regulation/15 px-1.5 py-px text-[10px] font-semibold text-warn">
+                  <span className="rounded-full bg-layer-regulation/15 px-1.5 py-px text-caption font-semibold text-warn">
                     {UI.projects.unverified}
                   </span>
                 )}
               </div>
-              <div className="text-xs text-ink-muted">
+              <div className="text-meta text-ink-muted">
                 {p.project_type_label} · {p.position_label}
               </div>
               <MiniStepper seq={p.stage_seq} total={p.stage_total} />
-              <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 text-meta">
                 {p.status_badges.map((b) => (
                   <span
                     key={b}
@@ -53,7 +53,7 @@ export function ProjectsTab({ projects }: { projects: MapProject[] }) {
                   </span>
                 )}
               </div>
-              <div className="text-xs text-ink-muted">
+              <div className="text-meta text-ink-muted">
                 {UI.projects.parcels}: {counts.map(([k, n]) => `${k} ${n}`).join(' · ')}
               </div>
             </button>

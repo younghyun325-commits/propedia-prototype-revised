@@ -21,7 +21,7 @@ function PeriodBar({ from, to, today, status, statusLabel }: {
   const bar = periodBar(from, to, today)
   // P19: 기준일이 오늘이 아니면 선 이름을 '기준일'로
   const mark = today === todayIso() ? UI.regulation.today : UI.time.asOf
-  if (!bar) return <p className="text-xs text-ink-muted">{UI.regulation.noPeriod}</p>
+  if (!bar) return <p className="text-meta text-ink-muted">{UI.regulation.noPeriod}</p>
   const fill = status === 'in_force' ? 'bg-layer-regulation/70' : 'bg-ink/25'
   return (
     <div data-testid="period-bar" data-status={status ?? ''}>
@@ -35,10 +35,10 @@ function PeriodBar({ from, to, today, status, statusLabel }: {
             ...(bar.openEnd ? { maskImage: 'linear-gradient(90deg, black 80%, transparent)' } : {}) }}
         />
         <div data-testid="period-today" className="absolute top-0 h-8 w-0.5 bg-brand-indigo" style={{ left: `${bar.today}%` }}>
-          <span className="absolute -top-0.5 left-1 whitespace-nowrap text-[10px] font-semibold text-brand-indigo">{mark}</span>
+          <span className="absolute -top-0.5 left-1 whitespace-nowrap text-caption font-semibold text-brand-indigo">{mark}</span>
         </div>
       </div>
-      <div className="flex justify-between text-[11px] tabular-nums text-ink-muted">
+      <div className="flex justify-between text-caption tabular-nums text-ink-muted">
         <span>{UI.regulation.start} {dot(from) || '—'}</span>
         <span>{mark} {dot(today)}</span>
         <span>{UI.regulation.end} {to ? dot(to) : UI.regulation.openEnd}</span>
@@ -64,12 +64,12 @@ function Overview({ f }: { f: RegulationFeature }) {
         <Card>
           <PeriodBar from={r.effective_from} to={r.effective_to} today={f.as_of} status={r.effective_status}
             statusLabel={r.effective_status_label} />
-          {r.effective_label && <p className="mt-1 text-xs" data-testid="period-label">{r.effective_label}</p>}
+          {r.effective_label && <p className="mt-1 text-meta" data-testid="period-label">{r.effective_label}</p>}
           <EvidenceLine source={r.source} evidence={r.evidence} items={ev} label={UI.regulation.evidence} className="mt-1" />
         </Card>
       </Section>
 
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
         <KV k={UI.regulation.kind}>{r.doc_kind_label}</KV>
         {r.gosi_no && <KV k={UI.regulation.gosiNo}>{r.gosi_no}</KV>}
         {r.issuer && <KV k={UI.regulation.issuer}>{r.issuer} · <span className="tabular-nums">{dot(r.published_at)}</span></KV>}
@@ -78,20 +78,20 @@ function Overview({ f }: { f: RegulationFeature }) {
       </dl>
 
       <Section title={UI.regulation.summary}>
-        <p className="text-xs leading-relaxed" data-testid="regulation-summary">{r.display_summary}</p>
+        <p className="text-meta leading-relaxed" data-testid="regulation-summary">{r.display_summary}</p>
         {PERMIT_DOCS.includes(r.doc_id) && (
-          <p className="text-xs text-ink-muted" data-testid="regulation-permit-note">{UI.regulation.permitPerParcel}</p>
+          <p className="text-meta text-ink-muted" data-testid="regulation-permit-note">{UI.regulation.permitPerParcel}</p>
         )}
       </Section>
 
       <Section title={UI.regulation.evidence}>
-        <blockquote className="rounded-lg bg-white/65 p-2 text-xs leading-relaxed" data-testid="regulation-evidence">{r.evidence}</blockquote>
+        <blockquote className="rounded-lg bg-white/65 p-2 text-meta leading-relaxed" data-testid="regulation-evidence">{r.evidence}</blockquote>
         <EvidenceLine source={r.source} evidence={r.evidence} items={ev} label={UI.regulation.evidence} />
       </Section>
 
       {boundary ? (
         <Section title={UI.project.boundary}>
-          <p className="text-xs">{boundary.label}</p>
+          <p className="text-meta">{boundary.label}</p>
           <div className="flex items-center gap-2">
             <EvidenceLine source={boundary.source} items={ev} label={boundary.label} testId="boundary-evidence" />
             {boundary.bbox && (
@@ -99,7 +99,7 @@ function Overview({ f }: { f: RegulationFeature }) {
                 type="button"
                 data-testid="regulation-show-on-map"
                 onClick={() => requestView({ type: 'bbox', bbox: boundary.bbox! })}
-                className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white/70 px-2 py-1 text-xs hover:bg-white focus-visible:outline-2 focus-visible:outline-brand-indigo"
+                className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white/70 px-2 py-1 text-meta hover:bg-white focus-visible:outline-2 focus-visible:outline-brand-indigo"
               >
                 <MapPin size={13} aria-hidden="true" />
                 {UI.regulation.showOnMap}
@@ -109,15 +109,15 @@ function Overview({ f }: { f: RegulationFeature }) {
         </Section>
       ) : boundary_note || scopeText ? (
         <div className="space-y-1">
-          {boundary_note && <p className="text-xs text-warn" data-testid="regulation-boundary-note">{boundary_note}</p>}
+          {boundary_note && <p className="text-meta text-warn" data-testid="regulation-boundary-note">{boundary_note}</p>}
           {scopeText && (
             <div className="flex items-center gap-2">
-              <p className="text-xs" data-testid="regulation-scope-note">{scopeText}</p>
+              <p className="text-meta" data-testid="regulation-scope-note">{scopeText}</p>
               <button
                 type="button"
                 data-testid="regulation-show-on-map"
                 onClick={() => requestView({ type: 'feature', id: `regulation:${f.id}` })}
-                className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white/70 px-2 py-1 text-xs hover:bg-white focus-visible:outline-2 focus-visible:outline-brand-indigo"
+                className="ml-auto inline-flex items-center gap-1 rounded-lg bg-white/70 px-2 py-1 text-meta hover:bg-white focus-visible:outline-2 focus-visible:outline-brand-indigo"
               >
                 <MapPin size={13} aria-hidden="true" />
                 {UI.regulation.showOnMap}

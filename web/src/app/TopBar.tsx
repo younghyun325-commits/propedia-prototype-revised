@@ -22,7 +22,7 @@ function SettingsMenu() {
     setOpen(false)
     btn.current?.focus()
   }
-  const row = 'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs hover:bg-white/80 focus-visible:outline-2 focus-visible:outline-brand-indigo'
+  const row = 'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-meta hover:bg-white/80 focus-visible:outline-2 focus-visible:outline-brand-indigo'
   return (
     <>
       <button
@@ -66,9 +66,9 @@ function SettingsMenu() {
           >
             <Keyboard size={14} aria-hidden="true" />
             <span className="flex-1">{UI.topbar.shortcuts}</span>
-            <kbd className="rounded bg-ink/8 px-1.5 text-[11px]">?</kbd>
+            <kbd className="rounded bg-ink/8 px-1.5 text-caption">?</kbd>
           </button>
-          <p className="px-2 pt-1.5 text-[11px] text-ink-muted">{UI.topbar.otherScreens}</p>
+          <p className="px-2 pt-1.5 text-caption text-ink-muted">{UI.topbar.otherScreens}</p>
           <a href="/index.html" data-testid="legacy-lookup" className={row}>
             <ExternalLink size={14} aria-hidden="true" />
             {UI.topbar.legacyLookup}
@@ -129,7 +129,7 @@ function NoticeChips() {
   const items = data?.items ?? []
   const shown = items.slice(0, MAX_CHIPS)
   const rest = items.slice(MAX_CHIPS)
-  const chip = 'glass-liquid max-w-[11rem] truncate rounded-full bg-white/70 px-2.5 py-1 text-xs'
+  const chip = 'glass-liquid max-w-[11rem] truncate rounded-full bg-white/70 px-2.5 py-1 text-meta'
   return (
     <div className="flex min-w-0 items-center gap-1" role="group" aria-label={UI.topbar.noticesLabel} data-testid="notice-chips">
       {shown.map((n) => (
@@ -252,7 +252,7 @@ export function TopBar({ style, compact = false }: { style: CSSProperties; compa
               title={disabled ? UI.topbar.projectDisabled : undefined}
               data-testid={`work-tab-${id}`}
               onClick={onClick}
-              className={`work-tab glass glass-liquid rounded-full px-3 py-1 text-sm ${on ? 'font-semibold' : ''} disabled:text-ink-muted`}
+              className={`work-tab glass glass-liquid rounded-full px-3 py-1 text-body ${on ? 'font-semibold' : ''} disabled:text-ink-muted`}
               style={{ borderRadius: 999 }}
             >
               {label}
@@ -265,16 +265,16 @@ export function TopBar({ style, compact = false }: { style: CSSProperties; compa
         type="button"
         data-testid="search-open"
         onClick={() => useMapStore.getState().setPaletteOpen(true)}
-        className={`flex h-9 shrink-0 items-center gap-2 rounded-full bg-white/60 text-sm text-ink-muted ${compact ? 'w-9 justify-center' : 'w-56 px-3'}`}
+        className={`flex h-9 shrink-0 items-center gap-2 rounded-full bg-white/60 text-body text-ink-muted ${compact ? 'w-9 justify-center' : 'w-56 px-3'}`}
         aria-keyshortcuts="Control+K Meta+K"
         aria-label={compact ? UI.topbar.search : undefined}
       >
         <Search size={16} aria-hidden="true" />
         {!compact && <span className="flex-1 truncate text-left">{UI.topbar.search}</span>}
-        {!compact && <kbd className="rounded bg-ink/8 px-1.5 text-[11px]">{UI.topbar.searchKey}</kbd>}
+        {!compact && <kbd className="rounded bg-ink/8 px-1.5 text-caption">{UI.topbar.searchKey}</kbd>}
       </button>
       {!compact && <NoticeChips />}
-      <div className="ml-auto flex shrink-0 items-center gap-3 text-xs">
+      <div className="ml-auto flex shrink-0 items-center gap-3 text-meta">
         <AsOf dbAsOf={health?.as_of ?? null} />
         <SettingsMenu />
       </div>

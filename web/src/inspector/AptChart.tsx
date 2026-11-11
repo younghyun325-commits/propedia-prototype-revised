@@ -23,7 +23,7 @@ const COLOR = 'var(--color-layer-apartment)'
 export default function AptChart({ data, until, asOf }: { data: Trades; until?: string | null; asOf?: string | null }) {
   const s = makeScales(data.monthly, data.points, { width: W, priceHeight: PRICE_H, countHeight: COUNT_H, left: LEFT, right: RIGHT },
     asOf ? until : null)
-  if (!s) return <p className="text-xs text-ink-muted" data-testid="apt-chart-empty">{UI.apartment.noTrades}</p>
+  if (!s) return <p className="text-meta text-ink-muted" data-testid="apt-chart-empty">{UI.apartment.noTrades}</p>
   const bw = s.x.bandwidth()
   const cx = (ym: string) => (s.x(ym) ?? LEFT) + bw / 2
   const path = line<{ ym: string; median_amount: number | null }>()
@@ -57,7 +57,7 @@ export default function AptChart({ data, until, asOf }: { data: Trades; until?: 
   return (
     <div className="space-y-1" data-testid="apt-chart">
       <figure className="space-y-0.5">
-        <figcaption className="text-[11px] font-semibold text-ink-muted">{UI.apartment.priceChart}</figcaption>
+        <figcaption className="text-caption font-semibold text-ink-muted">{UI.apartment.priceChart}</figcaption>
         <svg viewBox={`0 0 ${W} ${PRICE_H + AXIS_H}`} width="100%" role="img" aria-label={UI.apartment.priceChart} data-testid="price-chart">
           <g aria-hidden="true">
             {priceTicks.map((t) => (
@@ -89,7 +89,7 @@ export default function AptChart({ data, until, asOf }: { data: Trades; until?: 
         </svg>
       </figure>
       <figure className="space-y-0.5">
-        <figcaption className="text-[11px] font-semibold text-ink-muted">{UI.apartment.countChart}</figcaption>
+        <figcaption className="text-caption font-semibold text-ink-muted">{UI.apartment.countChart}</figcaption>
         <svg viewBox={`0 0 ${W} ${COUNT_H + AXIS_H}`} width="100%" role="img" aria-label={UI.apartment.countChart} data-testid="count-chart">
           <g aria-hidden="true">
             {countTicks.map((t) => (
@@ -106,8 +106,8 @@ export default function AptChart({ data, until, asOf }: { data: Trades; until?: 
           {xAxis(COUNT_H)}
         </svg>
       </figure>
-      <p className="text-[10px] text-ink-muted">{UI.apartment.chartNote}</p>
-      {asOf && <p className="text-[10px] text-ink-muted" data-testid="chart-cut-note">{UI.time.chartCut}</p>}
+      <p className="text-caption text-ink-muted">{UI.apartment.chartNote}</p>
+      {asOf && <p className="text-caption text-ink-muted" data-testid="chart-cut-note">{UI.time.chartCut}</p>}
     </div>
   )
 }

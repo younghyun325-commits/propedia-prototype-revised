@@ -49,7 +49,7 @@ function Floating({ anchor, children, id, role, testId, width }: {
       className="pointer-events-auto fixed"
       style={{ left: pos?.left ?? -9999, top: pos?.top ?? -9999, width, zIndex: 60 }}
     >
-      <GlassPanel className="px-3 py-2 text-xs leading-relaxed" style={{ borderRadius: 12 }}>
+      <GlassPanel className="px-3 py-2 text-meta leading-relaxed" style={{ borderRadius: 12 }}>
         {children}
       </GlassPanel>
     </div>,

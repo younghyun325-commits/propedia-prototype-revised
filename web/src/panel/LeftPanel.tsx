@@ -41,7 +41,7 @@ export function LeftPanel({ style, collapsible = false }: { style: CSSProperties
       as="aside"
       data-testid="left-panel"
       aria-label={UI.left.panelLabel}
-      className="absolute flex flex-col text-sm"
+      className="absolute flex flex-col text-body"
       style={style}
     >
       <div role="tablist" aria-label={UI.left.panelLabel} className="flex gap-1 border-b border-ink/10 px-3 pt-3">
@@ -54,7 +54,7 @@ export function LeftPanel({ style, collapsible = false }: { style: CSSProperties
             aria-controls="left-tabpanel"
             data-testid={`left-tab-${t}`}
             onClick={() => setTab(t)}
-            className={`left-tab rounded-t-lg px-2 pb-2 text-[13px] ${tab === t ? 'font-semibold' : 'text-ink-muted'}`}
+            className={`left-tab rounded-t-lg px-2 pb-2 text-meta ${tab === t ? 'font-semibold' : 'text-ink-muted'}`}
           >
             {UI.left.tabs[t]}
           </button>
