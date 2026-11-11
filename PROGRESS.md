@@ -9,7 +9,32 @@
 - 작업은 `feat/map-console`에서만 한다. `main` 병합은 P20에서 사람이 한다. (로컬 `.git/hooks/pre-commit`·`pre-push`가 main 커밋·push를 막음, 커밋되지 않는 로컬 훅)
 - `origin/main`에는 2026-11-10까지 P13~P15가 실수로 먼저 올라가 있다(`c79cac0`). 되돌리지 않기로 결정. 운영 배포 영향은 HUMAN_TODO 45에서 확인.
 
-현재 단계: **P20 완료 (2026-11-11)** — 강남구 지도 콘솔 첫 운영 배포 https://propedia-prototype.vercel.app (`main` = 9470f88, 태그 `v0.2-map`). P11~P20 끝. 성능 기준(Lighthouse 데스크톱 80)은 중앙값 79로 **미달 → P21** (docs/map/PLAN.md 'P21 성능', HUMAN_TODO 60)
+현재 단계: **P22-0 진행 (2026-11-12, 복제본 `propedia-prototype-revised`, 브랜치 `feat/easy-map`)** — 아래 'P22 쉬운 지도'. 이전: P20 완료
+
+## P22 쉬운 지도 (복제본 `propedia-prototype-revised`)
+
+### 폴더·저장소 (2026-11-12 정리, CLAUDE.md 첫 절과 같음)
+| 구분 | 경로 | 이번 작업에서 |
+|---|---|---|
+| 작업 폴더(복제본) | `C:\dev\propedia-prototype-revised` (`/c/dev/propedia-prototype-revised`) · macOS `~/dev/propedia-prototype-revised`(아직 없음) | 여기서만 작업 |
+| 복제본 GitHub | younghyun325-commits/propedia-prototype-revised (비공개) | `origin`, push 대상 |
+| 원본 GitHub | younghyun325-commits/propedia-prototype (운영 https://propedia-prototype.vercel.app) | `upstream`, fetch 전용 (push URL `PUSH_DISABLED_original_repo`) |
+| 데스크톱 옛 원본 폴더 | `C:\dev\propedia-pretotype` (feat/map-console, c19bb4e P10.5, `.env` 11월 9일 버전) | 읽기 전용. git에 없는 파일의 출처로만 |
+| OneDrive 옛 복사본 | `C:\Users\young\OneDrive\Desktop\Anti Gravity\propedia-prototype-main(revised)` | 손대지 않음. origin 원격은 사람이 제거, P22-0 뒤 사람이 삭제 |
+
+### P22-0 복제본 보호·로컬 환경·조사 — 진행 (2026-11-12)
+- 사람이 한 일: 원본 main(0036bec) clone, 원격 origin/upstream 설정, 복제본 GitHub의 웹 업로드 커밋(bfec84f, 0036bec와 내용 차이 0)을 원본 기록으로 덮어씀(force-with-lease, 태그 v0.2-map 포함), `git push upstream main` 실패 확인, local user.email = 저장소 주인 noreply, `.env`를 옛 원본 폴더에서 복사·정리(`VITE_VWORLD_KEY` = `VWORLD_API_KEY`, `VWORLD_DOMAIN` = 운영 주소)
+- 시작 확인 (Claude Code): pwd·`git remote -v`·HEAD = origin/main = 0036bec·local user.email noreply — 모두 일치
+- 보호: `scripts/install_hooks.sh` → `.git/hooks/pre-push`. 검사 순서 ① 원격 이름 `upstream` 거부 ② push URL의 저장소 이름(끝 `/`·`.git` 제거) **전체 일치**로 `propedia-prototype`이면 "원본 저장소로 push 금지" 종료 1 ③ 이름이 `propedia-prototype-revised`가 아니면 거부 ④ (원본 작업 때 로컬 훅에 있던 검사를 이어 받음) `refs/heads/main` push 거부, `PROPEDIA_ALLOW_MAIN_PUSH=1`로만 건너뜀 ⑤ push 범위에 작성자 이메일이 `@users.noreply.github.com`이 아닌 커밋이 있으면 거부·목록 출력. `.gitattributes`에 `*.sh text eol=lf`
+- 훅 검사 (실제 push 없음, 모두 `--dry-run`): 임시 원격 `test-original`(…/propedia-prototype.git) 거부 rc=1 · `test-original-git`(…/propedia-prototype, .git 없음) 거부 rc=1 · `upstream`은 push URL이 막혀 훅 전에 rc=128 · `origin HEAD`(feat/easy-map) 통과 rc=0 · 작성자 someone@example.com 임시 커밋(commit-tree, 브랜치 없음) 거부 · main 대상 임시 커밋 거부. 임시 원격 삭제 후 `git remote -v` 처음과 같음
+- 조사 결과·로컬 환경 표: `docs/map/P22_조사.md`
+- 로컬 환경: `.venv`(Python **3.14.3** — 이 PC에 3.11/3.12 없음, 결정 필요), `web/` `npm ci`. `core.autocrlf` 복제본·옛 폴더 모두 true(시스템 설정)
+- **`.env`가 옛 폴더 11월 9일 파일과 바이트가 같음** — 사람이 한 정리가 저장되지 않음 (`VWORLD_API_KEY` 빈 값, `VITE_VWORLD_KEY`·`VWORLD_DOMAIN` 없음). 고치지 않음
+- 점검: pytest 338 통과·2 건너뜀(SHP·생활인프라 CSV 없음 → 복사 후 재확인) / web vitest 156 통과(npm ci 직후 첫 실행 1회만 실패, 재현 안 됨) / `check_keys` 실패(키 없음 → `.env` 정리 후) / `check_secrets` 통과 / `sync_server_data --check` 통과 / `test_public_map_fresh` 통과
+- 기준 화면: msedge, `tmp/p22_baseline/` 12장(데스크톱·모바일 × 첫 화면·레이어 탭·사업 필지 528·실시간 필지 역삼동 823·한양7차·노선 402). 배경지도 키 없음으로 경계만 표시, 823 카드 unavailable
+- 외부 확인: 건축HUB HTTP 403, 브이월드 개발 키 INCORRECT_KEY, WMS GetLegendGraphic 미지원(INVALID_RANGE), 리모델링·재건축 연한 조문·국토부 토허구역 연장 여부 확인 불가
+
+현재 단계(이전): **P20 완료 (2026-11-11)** — 강남구 지도 콘솔 첫 운영 배포 https://propedia-prototype.vercel.app (`main` = 9470f88, 태그 `v0.2-map`). P11~P20 끝. 성능 기준(Lighthouse 데스크톱 80)은 중앙값 79로 **미달 → P21** (docs/map/PLAN.md 'P21 성능', HUMAN_TODO 60)
 
 ## P20 운영 점검 — 완료 (2026-11-11)
 - 배포: 사람이 73eafbf·be7b048·9470f88 push → Preview 확인 → `main`을 9470f88로 빨리감기(운영). 사람이 운영에서 manifest 200·레이어 목록·영향권 안 단지 14/33·필지 클릭·배경 지도 직접 확인, pre-push 훅 되돌림

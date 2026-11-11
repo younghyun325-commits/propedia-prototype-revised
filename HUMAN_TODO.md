@@ -105,6 +105,10 @@
 | 61 | **브이월드 운영 키와 공공데이터포털 키 재발급** → 로컬 `.env`와 Vercel Production 환경변수 교체 → 재배포 → `/api/v1/map/config`와 `python -m pipeline.check_keys`로 확인 | 값이 채팅에 노출됨 (2026-11-11). 56을 합침 | 2026-11-11 작업 끝난 뒤 바로 | 열림 |
 | 62 | 바탕화면 `propedia-prototype-main` 폴더 삭제와 휴지통 비우기(키가 든 `.env` 사본), `~/propedia-env-backup.txt` 삭제 | 저장소 밖에 키 사본이 남아 있음 | 61과 함께 | 열림 |
 | 63 | **기록: `.env` 읽기 방식 차이** — `core/live/http.py` `_load_dotenv`는 같은 이름이 있으면 앞쪽 값을, python-dotenv와 Vite는 뒤쪽 값을 쓴다. 지금 코드는 고치지 않음(현재 `.env`에 중복 없음). `check_keys`에 중복 이름 경고를 넣는 일은 P21 후보 | 2026-11-11 `.env` 중복 때문에 로컬과 빌드가 다른 값을 읽을 수 있었음 | — | 기록 |
+| 64 | `C:\dev\propedia-pretotype`의 origin 원격 주소가 마크다운 링크 모양으로 깨져 있음 — **그대로 둔다** (원본으로 push가 안 되므로 안전). 이 폴더는 읽기 전용 | P22-0 정리 중 발견 (2026-11-12) | — | 기록 |
+| 65 | OneDrive 옛 복사본 `C:\Users\young\OneDrive\Desktop\Anti Gravity\propedia-prototype-main(revised)` 삭제 (키가 든 `.env`가 있으면 휴지통도 비우기) | 잘못 연 옛 세션의 폴더. origin 원격은 사람이 이미 제거 | P22-0 커밋·push 뒤 | 열림 |
+| 66 | Mac에서 이어 할 때: `~/dev/propedia-prototype-revised`로 **새로 clone** → upstream 원격 추가 + push URL `PUSH_DISABLED_original_repo` → `git config --local user.email` 저장소 주인 noreply → `sh scripts/install_hooks.sh` → `.env`·gitignore 데이터 복사 (docs/map/P22_조사.md §1) | 훅은 커밋되지 않는 로컬 파일이라 clone마다 설치해야 함 | Mac 작업 시작 전 | 열림 |
+| 67 | **복제본 Preview 배포 준비** (원본 Vercel 프로젝트는 건드리지 않음): ① 새 Vercel 프로젝트를 `propedia-prototype-revised`에 연결 (Root `./`) ② 환경변수 `VWORLD_API_KEY`·`VITE_VWORLD_KEY`·`JUSO_CONFM_KEY`·`VWORLD_DOMAIN`(= 새 주소) 등록 ③ 브이월드 인증키 서비스 URL에 새 주소 등록 또는 새 키 발급 (지금 키의 서비스 URL은 원본 운영 주소) ④ `vercel.json` `regions: icn1` 유지. 원본 주소가 하드코딩된 곳은 docs/map/P22_조사.md §0 (바꾸지 않음) | 복제본을 Preview로 확인하려면 계정 작업이 필요 | Preview가 필요할 때 (영현 결정) | 열림 |
 
 ## 실거래 대조표 (HUMAN_TODO 46)
 
