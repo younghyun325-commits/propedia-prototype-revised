@@ -84,7 +84,7 @@ def main() -> int:
             page.wait_for_selector("[data-testid=scope-label]", timeout=8000)
             idle()
             title, lab = text("[data-testid=inspector-title]"), text("[data-testid=scope-label]")
-            return dongs == 14 and "토지거래허가" in title and lab == "서울 전역 적용 · 지도 경계 없음", f"법정동 {dongs}, {title} / {lab}"
+            return dongs == 14 and "토지거래허가" in title and lab == "서울 전역 범위 · 대상은 대상 기준 참고 · 지도 경계 없음", f"법정동 {dongs}, {title} / {lab}"
         scene(1, "강남구 전체와 상단 고시 칩", "gangnam_chips", s1)
 
         # 2. 레이어 패널: 사업 구역·영향권·참고 레이어(참고·비상업 배지)

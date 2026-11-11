@@ -75,6 +75,29 @@ export type ParcelAt = {
   /** P16: 원문 모달용 근거 목록 */
   evidence: import('./feature').EvidenceItem[]
   disclaimer: string
+  /** P22-1: 토지거래허가 필지별 판정 (core/land_permit.py) */
+  land_permit?: LandPermit | null
+}
+export type LandPermitStatus = 'required' | 'required_zone' | 'not_target' | 'unknown'
+export type LandPermit = {
+  pnu: string
+  status: LandPermitStatus
+  status_label: string
+  message: string
+  reason: string
+  reason_code: string
+  effective_to: string | null
+  deadline_label: string | null
+  building_kind: string | null
+  basis: {
+    label: string
+    effective_from: string | null
+    effective_to: string | null
+    evidence: string | null
+    source: LayerItemSource | null
+    source_note: string | null
+    source_url: string | null
+  }[]
 }
 export type LayerItemSource = {
   doc_id: string

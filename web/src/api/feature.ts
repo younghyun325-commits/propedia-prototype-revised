@@ -127,6 +127,7 @@ export type RegulationSections = {
     display_title: string
     display_basis: string | null
     summary: string
+    display_summary: string
     scope_label: string
     target_note: string | null
     effective_from: string | null

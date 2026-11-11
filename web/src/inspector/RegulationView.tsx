@@ -13,6 +13,8 @@ import { Badge, Card, KV, Section, dot } from './parts'
 import { periodBar } from './period'
 import { todayIso } from '../state/dates'
 
+const PERMIT_DOCS = ['D5', 'D6']
+
 function PeriodBar({ from, to, today, status, statusLabel }: {
   from: string | null; to: string | null; today: string; status: string | null; statusLabel: string | null
 }) {
@@ -76,7 +78,10 @@ function Overview({ f }: { f: RegulationFeature }) {
       </dl>
 
       <Section title={UI.regulation.summary}>
-        <p className="text-xs leading-relaxed">{r.summary}</p>
+        <p className="text-xs leading-relaxed" data-testid="regulation-summary">{r.display_summary}</p>
+        {PERMIT_DOCS.includes(r.doc_id) && (
+          <p className="text-xs text-ink-muted" data-testid="regulation-permit-note">{UI.regulation.permitPerParcel}</p>
+        )}
       </Section>
 
       <Section title={UI.regulation.evidence}>

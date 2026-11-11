@@ -242,7 +242,7 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     page.wait_for_timeout(100)
     op = page.evaluate(JS_PAINT, ["propedia-impact250-fill", "fill-opacity"])
     ok_op = _wait_url(page, lambda u: "impact250:50" in (_q(page, "op") or ""))
-    check("[P14] 투명도 50% → fill-opacity 0.04 (= 8% × 50%)·URL op", op == 0.04 and ok_op, f"{op}, op={_q(page, 'op')}")
+    check("[P14·P22-1] 투명도 50% → fill-opacity 0.025 (= 5% × 50%)·URL op", op == 0.025 and ok_op, f"{op}, op={_q(page, 'op')}")
     _wait_url(page, lambda u: _q(page, "c") is not None)
     before = page.evaluate(JS_CENTER)
     page.wait_for_timeout(400)
@@ -251,7 +251,7 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     after = page.evaluate(JS_CENTER)
     restored = (not page.is_checked("[data-testid=layer-toggle-projects]")
                 and page.evaluate(JS_VIS, "propedia-project-fill") == "none"
-                and page.evaluate(JS_PAINT, ["propedia-impact250-fill", "fill-opacity"]) == 0.04)
+                and page.evaluate(JS_PAINT, ["propedia-impact250-fill", "fill-opacity"]) == 0.025)
     near = abs(before[0] - after[0]) < 1e-4 and abs(before[1] - after[1]) < 1e-4 and abs(before[2] - after[2]) < 0.02
     check("[P14] 새로고침 후 같은 화면 (레이어·투명도·카메라)", restored and near,
           f"{[round(x, 5) for x in before]} → {[round(x, 5) for x in after]}")
@@ -1715,8 +1715,8 @@ def perf_check(pw, url: str, check) -> dict:
 SHOT_D5 = SCREENS / "map_08a_d5_bjd.png"
 SHOT_D6 = SCREENS / "map_08b_d6_gangnam.png"
 SHOT_W = {1440: SCREENS / "map_08c_1440.png", 1180: SCREENS / "map_08d_1180.png", 390: SCREENS / "map_08e_390.png"}
-SCOPE_BJD = "법정동 단위 표시 · 경계 확인 전"
-SCOPE_CITY = "서울 전역 적용 · 지도 경계 없음"
+SCOPE_BJD = "법정동 단위 표시 · 경계 확인 전 (동 전체가 대상이라는 뜻은 아니에요)"
+SCOPE_CITY = "서울 전역 범위 · 대상은 대상 기준 참고 · 지도 경계 없음"
 JS_SCOPE_N = "() => window.__propediaMap.querySourceFeatures('scope-highlight').length"
 JS_DASH = "() => window.__propediaMap.getPaintProperty('scope-highlight-line', 'line-dasharray')"
 JS_BJD_BBOX = """async (code) => { const fc = await (await fetch('/data/base/bjd.geojson')).json();
@@ -1961,6 +1961,65 @@ def p20_root_redirect(pw, check, base: str = "http://127.0.0.1:8000") -> None:
     ctx.dispose()
 
 
+P22_PERMIT_CASES = [("1168011000105270000", "required_zone", "압구정동 527 (압구정 아파트지구)"),
+                    ("1168010600103160000", "required", "대치동 316 (은마)"),
+                    ("1168011400106310006", "not_target", "일원동 631-6 (단독주택)"),
+                    ("1168010100108230000", "unknown", "역삼동 823 (건축물대장 없음)")]
+
+
+def p22_1_checks(page, url: str, check) -> None:
+    """P22-1: 조정대상지역·투기과열지구 문구, 범례 실선/점선, 토지거래허가 필지별 판정"""
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+    _open(page, home)
+    chips = page.locator("[data-testid=notice-chip]").all_inner_texts()
+    check("[P22-1] 상단 칩: '조정대상지역 · 서울 25개 구 전체'·'투기과열지구 · 서울 25개 구 전체', '21개 구' 없음",
+          "조정대상지역 · 서울 25개 구 전체" in chips and "투기과열지구 · 서울 25개 구 전체" in chips
+          and not any("21개 구" in c for c in chips), " | ".join(chips))
+    _open(page, with_q + "sel=regulation:D7")
+    ok = _inspector_ready(page)
+    title = _text(page, "[data-testid=inspector-title]") if ok else ""
+    head = _text(page, "[data-testid=inspector-header]") if ok else ""
+    check("[P22-1] 조정대상지역 인스펙터: 제목 = 칩 문구, 부제에 '기존 4개 구 + 21개 구 신규, 2025.10.16부터'",
+          title == "조정대상지역 · 서울 25개 구 전체" and "기존 4개 구 + 21개 구 신규, 2025.10.16부터" in head, title)
+
+    legend_u = _text(page, "[data-testid=parcel-legend-uncertain]") if page.locator("[data-testid=parcel-legend-uncertain]").count() else ""
+    if not legend_u:
+        _open(page, home)
+        legend_u = _text(page, "[data-testid=parcel-legend-uncertain]")
+    legend_c = _text(page, "[data-testid=parcel-legend-confirmed]")
+    dash_u = page.evaluate("() => document.querySelector('[data-testid=parcel-legend-uncertain] svg rect')?.getAttribute('stroke-dasharray')")
+    dash_c = page.evaluate("() => document.querySelector('[data-testid=parcel-legend-confirmed] svg rect')?.getAttribute('stroke-dasharray')")
+    fill_c = page.evaluate("() => Number(document.querySelector('[data-testid=parcel-legend-confirmed] svg rect')?.getAttribute('fill-opacity'))")
+    paint = page.evaluate("""() => { const m = window.__propediaMap; return {
+      u: m.getPaintProperty('propedia-parcel-line-uncertain', 'line-dasharray'),
+      c: m.getPaintProperty('propedia-parcel-line', 'line-dasharray') ?? null,
+      f: m.getPaintProperty('propedia-parcel-fill', 'fill-opacity') } }""")
+    check("[P22-1] 범례: 확인 전 = 점선(지도와 같은 굵기 배수)·채움 없음, 확정 = 실선·채움, 줄마다 설명",
+          "점선" in legend_u and "아직 정해지지 않았어요" in legend_u and "실선" in legend_c and "정해진 필지" in legend_c
+          and bool(dash_u) and dash_c is None and fill_c > 0 and bool(paint["u"]) and paint["c"] is None and bool(paint["f"]),
+          f"점선 범례 '{dash_u}', 확정 범례 dash={dash_c} fill={fill_c}, 지도 {paint}")
+    note = _text(page, "[data-testid=impact-legend]") if page.locator("[data-testid=impact-legend]").count() else ""
+    check("[P22-1] 영향권 범례 설명 줄", "옅은 면과 가는 점선" in note, note[:80])
+
+    for pnu, want, label in P22_PERMIT_CASES:
+        _open(page, with_q + f"sel=parcel:{pnu}")
+        try:
+            page.wait_for_selector("[data-testid=parcel-permit-status]", timeout=15000)
+            got = page.get_attribute("[data-testid=parcel-permit-status]", "data-status")
+            msg = _text(page, "[data-testid=parcel-permit-message]")
+            basis = _text(page, "[data-testid=parcel-permit-basis]")
+        except Exception as e:
+            got, msg, basis = None, str(e)[:80], ""
+        check(f"[P22-1] 토지거래허가 판정 {label} = {want} + 문장 + 근거 고시",
+              got == want and bool(msg) and ("공고" in basis), f"{got} '{msg}'")
+    _open(page, with_q + "sel=regulation:D6")
+    ok = _inspector_ready(page)
+    check("[P22-1] D6 인스펙터: 요약이 '아파트' 기준 + '필지마다 달라요' 안내",
+          ok and "연립·다세대주택은 공고 붙임2" in _text(page, "[data-testid=regulation-summary]")
+          and page.locator("[data-testid=regulation-permit-note]").count() == 1)
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
@@ -1969,7 +2028,7 @@ def main() -> int:
     ap.add_argument("--update-screens", action="store_true",
                     help="--shot 포함. 실패 0건일 때만 이번 캡처로 docs/screens/ 갱신")
     ap.add_argument("--perf", action="store_true", help="P18 프레임 시간 측정")
-    ap.add_argument("--only", choices=["p19", "p19-1", "p20"], help="기본 점검 + 이 단계만 (반복 확인용)")
+    ap.add_argument("--only", choices=["p19", "p19-1", "p20", "p22-1"], help="기본 점검 + 이 단계만 (반복 확인용)")
     ap.add_argument("--base", help="빌드본을 이 주소로 점검 (예: http://localhost:8000, https://….vercel.app). "
                                    "로컬 주소면 --built와 같은 판정, 원격이면 배경 타일·WMS 200과 콘솔 오류 0을 요구")
     a = ap.parse_args()
@@ -2172,6 +2231,8 @@ def main() -> int:
             p19_poi_checks(page, url, check, a.shot)
         if not a.only or a.only == "p19":
             p19_checks(page, url, check, a.shot)
+        if not a.only or a.only == "p22-1":
+            p22_1_checks(page, url, check)
         if not a.only or a.only == "p20":
             p20_checks(page, url, check, a.shot, a.built)
             p20_motion_check(p, url, check)

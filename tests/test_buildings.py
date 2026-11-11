@@ -9,7 +9,8 @@ from pipeline.fetch_buildings import NOT_FOUND, request_params, summarize
 
 ROOT = Path(__file__).resolve().parents[1]
 SUMMARY_KEYS = {"pnu", "found", "fetched_at", "source", "main_count", "bld_names", "main_purpose", "structure",
-                "use_apr_day", "max_grnd_flr", "max_ugrnd_flr", "total_hhld", "total_area", "zoning", "note"}
+                "use_apr_day", "max_grnd_flr", "max_ugrnd_flr", "total_hhld", "total_area", "zoning", "note",
+                "detail_purposes"}
 
 
 def test_request_params_general_and_san():
@@ -35,6 +36,7 @@ def test_summarize_main_buildings_only():
     assert s["use_apr_day"] == "1979-01-01" and s["max_grnd_flr"] == 13 and s["max_ugrnd_flr"] == 1
     assert s["total_hhld"] == 239 and s["total_area"] == 19000.5
     assert s["zoning"] == {"jiyuk": "제3종일반주거지역", "jigu": "아파트지구", "guyuk": None}
+    assert s["detail_purposes"] == ["공동주택"]
 
 
 def test_summarize_zoning_from_basis_when_title_has_none():
@@ -62,4 +64,4 @@ def test_seed_buildings_format():
     assert rows and len({r["pnu"] for r in rows}) == len(rows)
     for r in rows:
         assert r["fetched_at"] and len(r["pnu"]) == 19
-        assert set(r) == SUMMARY_KEYS if r["found"] else set(r) == {"pnu", "found", "note", "fetched_at"}
+        assert set(r) in (SUMMARY_KEYS, SUMMARY_KEYS - {"detail_purposes"}) if r["found"] else set(r) == {"pnu", "found", "note", "fetched_at"}

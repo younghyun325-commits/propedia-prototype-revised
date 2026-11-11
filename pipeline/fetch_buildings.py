@@ -106,6 +106,8 @@ def summarize(pnu: str, title: list[dict], basis: list[dict], fetched_at: str) -
         "main_count": len(main),
         "bld_names": names[:3],
         "main_purpose": _mode(it.get("mainPurpsCdNm") for it in main),
+        "detail_purposes": sorted({str(v).strip() for it in main for v in (it.get("mainPurpsCdNm"), it.get("etcPurps"))
+                                   if v and str(v).strip()}),
         "structure": _mode(it.get("strctCdNm") for it in main),
         "use_apr_day": days[0] if days else None,
         "max_grnd_flr": max((_num(it.get("grndFlrCnt")) or 0 for it in main), default=None),

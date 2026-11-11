@@ -1,10 +1,11 @@
 /**
  * 필지 보기 (P16, P15 간이 카드의 정식판). 지도 빈 곳 클릭(/map/parcel-at)과 사업 필지 선택(/map/feature/parcel)이
- * 같은 조립(core/map._assemble)을 쓰므로 같은 화면으로 보여 준다. 값은 응답 그대로 (해석·판단 문구 없음).
+ * 같은 조립(core/map._assemble)을 쓰므로 같은 화면으로 보여 준다. 값은 응답 그대로.
+ * P22-1: 토지거래허가 판정 문장은 copy/ui.ts의 permit (core/land_permit.py와 같은 문장).
  */
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
-import type { ParcelAt } from '../api/parcel'
+import type { LandPermit, ParcelAt } from '../api/parcel'
 import { useMapProjects } from '../api/map'
 import { UI } from '../copy/ui'
 import { selectProject } from '../state/actions'
@@ -29,6 +30,43 @@ function Banner({ d }: { d: ParcelAt }) {
         </div>
       ))}
     </div>
+  )
+}
+
+const PERMIT_TONE = { required: 'warn', required_zone: 'warn', not_target: 'info', unknown: 'muted' } as const
+
+function LandPermitCard({ p, items }: { p: LandPermit; items: ParcelAt['evidence'] }) {
+  return (
+    <Section title={UI.permit.title} testId="parcel-permit">
+      <Card>
+        <div data-testid="parcel-permit-status" data-status={p.status}>
+          <Badge text={UI.permit.status[p.status]} tone={PERMIT_TONE[p.status]} />
+          <p className="mt-1 text-sm font-semibold" data-testid="parcel-permit-message">{UI.permit.message[p.status]}</p>
+        </div>
+        <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
+          <KV k={UI.permit.why}>{UI.permit.reason[p.reason_code] ?? p.reason}</KV>
+          {p.deadline_label && <KV k={UI.permit.deadline} testId="parcel-permit-deadline">{p.deadline_label}</KV>}
+        </dl>
+        <div className="mt-1.5 space-y-1" data-testid="parcel-permit-basis">
+          <p className="text-[11px] font-semibold text-ink-muted">{UI.permit.basis}</p>
+          {p.basis.map((b) => (
+            <div key={b.label} className="text-[11px]">
+              <p>{b.label}{b.effective_to ? ` · ~${dot(b.effective_to)}` : ''}</p>
+              {b.source ? (
+                <EvidenceLine source={b.source} evidence={b.evidence} items={items} label={b.label} />
+              ) : (
+                <p className="text-ink-muted">
+                  {b.source_note}
+                  {b.source_url && (
+                    <> · <a className="underline" href={b.source_url} target="_blank" rel="noreferrer">{UI.permit.openPost}</a></>
+                  )}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </Card>
+    </Section>
   )
 }
 
@@ -136,6 +174,8 @@ export function ParcelView({ d, boundaryNote }: { d: ParcelAt; boundaryNote?: st
           <p className="text-xs text-ink-muted">{d.building_note ?? UI.parcelView.buildingNone}</p>
         )}
       </Section>
+
+      {d.land_permit && <LandPermitCard p={d.land_permit} items={d.evidence} />}
 
       <LayerNotices d={d} />
 

@@ -19,12 +19,13 @@ from core.catalog import DOC_KIND_LABELS
 from core.db import loads, meta, source
 from core import refzones
 from core.lookup import DISCLAIMER, load_items, lookup_pnu
+from core.land_permit import land_permit_status, permit_facts
 from core.progress import progress
-from core.regulation_display import chip_label, display_basis, display_title
+from core.regulation_display import chip_label, display_basis, display_summary, display_title
 from core.market import nearby_for_project
 from core.paths import base_dir as _base_dir, layers_dir as _layers_dir
 from core.review import Overrides
-from core.timeutil import EFFECTIVE_SHORT_LABELS, d_day, effective, parse_date
+from core.timeutil import EFFECTIVE_SHORT_LABELS, d_day, effective, parse_date, today_kst
 
 ROOT = Path(__file__).resolve().parents[1]
 SGG_GANGNAM = "11680"
@@ -531,7 +532,18 @@ def _assemble(con, parcel: dict, live, today, point: tuple | None) -> dict:
         "nearby_note": pc["nearby_note"],
         "ref_zones": refzones.zones_at(lat, lon) if lat is not None and lon is not None else [],
         "project_banner": banner, "evidence": evidence,
+        "land_permit": _land_permit(con, parcel["pnu"], land, pc["building"], today),
     }
+
+
+def _land_permit(con, pnu: str, land: dict, building: dict | None, today) -> dict:
+    """토지거래허가 대상 판정 (P22-1). 지역지구는 토지 정보가 있을 때만 (없으면 None)"""
+    today = today or today_kst()
+    regs, apt_pnus = permit_facts(con, load_items(con, Overrides(), today), _features("apartments"))
+    zones = [z.get("name") for z in land["zones"] if isinstance(z, dict)] if land.get("zones") is not None else None
+    if land.get("status") in (None, "unavailable", "timeout"):
+        zones = None
+    return land_permit_status(pnu, zones=zones, building=building, apartment_pnus=apt_pnus, regs=regs, today=today)
 
 
 def _parcel_banner_evidence(con, included: list, L: dict) -> tuple[list, list]:
@@ -807,6 +819,7 @@ def feature_regulation(con, rid: str, today) -> dict | None:
                            "published_at": d["published_at"], "title": it["title"],
                            "display_title": display_title(it["item_key"], it["title"]),
                            "display_basis": display_basis(it["item_key"]), "summary": it["summary"],
+                           "display_summary": display_summary(it["item_key"], it["summary"]),
                            "scope_label": it["scope_label"], "target_note": it["target_note"],
                            "effective_from": it["effective_from"], "effective_to": it["effective_to"],
                            "effective_label": it["effective_label"], "effective_status": it["effective_status"],

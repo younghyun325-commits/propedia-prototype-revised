@@ -294,9 +294,44 @@ export const UI = {
     gosiNo: '고시번호',
     issuer: '발행',
     // P20: 지도 도형이 없는 규제를 고를 때 지도 위 표시
-    scopeBjd: '법정동 단위 표시 · 경계 확인 전',
-    scopeCity: '서울 전역 적용 · 지도 경계 없음',
+    scopeBjd: '법정동 단위 표시 · 경계 확인 전 (동 전체가 대상이라는 뜻은 아니에요)',
+    scopeCity: '서울 전역 범위 · 대상은 대상 기준 참고 · 지도 경계 없음',
+    permitPerParcel: '토지거래허가 대상은 필지마다 달라요. 지도에서 필지를 누르면 그 필지의 판정을 보여줘요',
     scopeGu: '강남구 전체 적용 · 지도 경계 없음',
+  },
+  // 토지거래허가 필지별 판정 (P22-1). 문장은 core/land_permit.py와 같아야 한다 (tests/test_land_permit.py가 검사)
+  permit: {
+    title: '토지거래허가',
+    status: {
+      required: '허가 대상',
+      required_zone: '허가 대상 (구역 지정)',
+      not_target: '구역 안이지만 대상 아님',
+      unknown: '확인 필요',
+    } as Record<string, string>,
+    message: {
+      required: '이 땅의 집을 사려면 구청 허가가 필요해요',
+      required_zone: '이 땅은 구역 전체가 허가 대상이라 건물 종류와 관계없이 사고팔 때 구청 허가가 필요해요',
+      not_target: '구역 안이지만 이 건물 종류는 허가 없이 거래할 수 있어요',
+      unknown: '건물 종류를 확인하지 못해 허가 대상인지 아직 알 수 없어요',
+    } as Record<string, string>,
+    reason: {
+      apt_complex: '실거래 아파트 단지의 신고 지번이에요',
+      apt_building: '건축물대장 용도가 아파트예요',
+      mixed_complex: '공고 붙임2의 아파트·연립 혼재 단지예요',
+      apt_zone: "압구정 아파트지구 안이에요 (토지이용계획 지역지구 '아파트지구')",
+      multi: '건축물대장 용도가 연립·다세대주택이고 아파트 단지에 속하지 않아요',
+      detached: '건축물대장 용도가 단독주택이에요',
+      other: '건축물대장 용도가 주택이 아니에요',
+      no_building: '건축물대장 정보가 없어요',
+      group_only: '건축물대장 요약에 아파트·연립·다세대 구분이 없어요',
+      no_land: '토지이용계획을 불러오지 못해 압구정 아파트지구 안인지 알 수 없어요',
+      expired: '판정에 쓰는 고시의 지정 기간이 끝났고 연장 공고를 확인하지 못했어요',
+      before: '이 기준일에는 판정에 쓰는 고시가 아직 효력 전이에요',
+    } as Record<string, string>,
+    why: '판정 이유',
+    deadline: '지정 기한',
+    basis: '근거 고시',
+    openPost: '게시물 열기',
   },
   parcelView: {
     banner: (name: string, label: string, unchecked: boolean, review: number | null) =>
