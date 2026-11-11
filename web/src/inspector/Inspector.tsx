@@ -110,7 +110,7 @@ function Tabs({ tabs, active, onChange, idBase }: { tabs: string[]; active: stri
     refs.current[j]?.focus()
   }
   return (
-    <div role="tablist" aria-label={UI.inspector.tabsLabel} className="flex gap-1 px-4 pt-2" onKeyDown={onKey} data-testid="inspector-tabs">
+    <div role="tablist" aria-label={UI.inspector.tabsLabel} className="flex flex-nowrap gap-1 overflow-x-auto px-4 pt-2" onKeyDown={onKey} data-testid="inspector-tabs">
       {tabs.map((t, i) => (
         <button
           key={t}
@@ -125,7 +125,7 @@ function Tabs({ tabs, active, onChange, idBase }: { tabs: string[]; active: stri
           tabIndex={active === t ? 0 : -1}
           data-testid={`inspector-tab-${t}`}
           onClick={() => onChange(t)}
-          className={`relative px-2 pb-2 text-meta focus-visible:outline-2 focus-visible:outline-brand-indigo ${active === t ? 'font-semibold text-ink' : 'text-ink-muted hover:text-ink'}`}
+          className={`relative shrink-0 whitespace-nowrap px-2 pb-2 text-meta @max-panel-md:px-1.5 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-brand-indigo ${active === t ? 'font-semibold text-ink' : 'text-ink-muted hover:text-ink'}`}
         >
           {UI.inspector.tabs[t]}
           {active === t && <span aria-hidden="true" className="absolute inset-x-1 bottom-0 h-0.5 rounded-full bg-brand-indigo" />}
@@ -345,7 +345,7 @@ export default function Inspector({ style, bare = false }: { style: CSSPropertie
       data-selected={selected ? featureId(selected) : ''}
       aria-label={UI.inspector.title}
       // 하단 시트 안(bare)에서는 시트가 글래스이므로 글래스를 겹치지 않는다 (glass.css .glass-bare)
-      className={bare ? 'glass-bare flex h-full min-h-0 flex-col overflow-hidden text-body' : 'absolute flex flex-col overflow-hidden text-body'}
+      className={bare ? '@container glass-bare flex h-full min-h-0 flex-col overflow-hidden text-body' : '@container absolute flex flex-col overflow-hidden text-body'}
       style={style}
     >
       {clickMode ? (

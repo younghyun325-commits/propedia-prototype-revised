@@ -16,6 +16,7 @@ export const UI = {
     otherScreens: '다른 화면',
     noticesLabel: '서울 전역·강남구 단위 고시',
     moreNotices: (n: number) => `+${n}`,
+    moreNoticesLabel: (n: number) => `고시 ${n}건 더 보기`,
     today: '오늘',
     dbAsOf: 'DB 기준',
     noEffective: '원문에 효력 기간이 적혀 있지 않음',

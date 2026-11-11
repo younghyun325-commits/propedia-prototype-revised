@@ -10,6 +10,8 @@ import { FeedTab } from './FeedTab'
 import { LayersTab } from './LayersTab'
 import { ProjectsTab } from './ProjectsTab'
 import { StatusTab } from './StatusTab'
+import { TAB_ICONS } from './IconRail'
+import { useOverflowCompact } from '../ui/useOverflow'
 
 function Pending({ error }: { error?: unknown }) {
   return (
@@ -35,17 +37,21 @@ export function LeftPanelBody({ tab: t }: { tab: LeftTab }) {
 export function LeftPanel({ style, collapsible = false }: { style: CSSProperties; collapsible?: boolean }) {
   const tab = useMapStore((s) => s.leftTab)
   const setTab = useMapStore((s) => s.setLeftTab)
+  const [tabsRef, iconTabs] = useOverflowCompact<HTMLDivElement>()
 
   return (
     <GlassPanel
       as="aside"
       data-testid="left-panel"
       aria-label={UI.left.panelLabel}
-      className="absolute flex flex-col text-body"
+      className="@container absolute flex flex-col text-body"
       style={style}
     >
-      <div role="tablist" aria-label={UI.left.panelLabel} className="flex gap-1 border-b border-ink/10 px-3 pt-3">
-        {LEFT_TABS.map((t) => (
+      <div ref={tabsRef} role="tablist" aria-label={UI.left.panelLabel} data-icon-tabs={iconTabs ? '1' : '0'}
+        className="flex flex-nowrap gap-1 border-b border-ink/10 px-3 pt-3">
+        {LEFT_TABS.map((t) => {
+          const Icon = TAB_ICONS[t]
+          return (
           <button
             key={t}
             role="tab"
@@ -54,11 +60,14 @@ export function LeftPanel({ style, collapsible = false }: { style: CSSProperties
             aria-controls="left-tabpanel"
             data-testid={`left-tab-${t}`}
             onClick={() => setTab(t)}
-            className={`left-tab rounded-t-lg px-2 pb-2 text-meta ${tab === t ? 'font-semibold' : 'text-ink-muted'}`}
+            aria-label={iconTabs ? UI.left.tabs[t] : undefined}
+            title={iconTabs ? UI.left.tabs[t] : undefined}
+            className={`left-tab shrink-0 whitespace-nowrap rounded-t-lg px-2 pb-2 text-meta ${tab === t ? 'font-semibold text-ink' : 'text-ink-muted'}`}
           >
-            {UI.left.tabs[t]}
+            {iconTabs ? <Icon size={18} aria-hidden="true" className="mx-1" /> : UI.left.tabs[t]}
           </button>
-        ))}
+          )
+        })}
         {collapsible && (
           <button
             type="button"
@@ -66,7 +75,7 @@ export function LeftPanel({ style, collapsible = false }: { style: CSSProperties
             onClick={() => useMapStore.getState().toggleLeft()}
             aria-label={UI.left.closePanel}
             title={UI.left.closePanel}
-            className="ml-auto mb-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg text-ink-muted hover:bg-white/80 focus-visible:outline-2 focus-visible:outline-brand-indigo"
+            className="ml-auto mb-1.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-ink-muted hover:bg-white/80 focus-visible:outline-2 focus-visible:outline-brand-indigo"
           >
             <PanelLeftClose size={16} aria-hidden="true" />
           </button>

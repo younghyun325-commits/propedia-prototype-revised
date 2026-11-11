@@ -1,5 +1,5 @@
 /** 상단 바 56px (P14 4): 로고 · 작업 탭 · 검색(Ctrl+K) · 서울·구 고시 칩 · 기준일. */
-import { useRef, useState, type CSSProperties } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 import { ExternalLink, Keyboard, Search, Settings } from 'lucide-react'
 import { useHealth, useMapProjects, useNotices, type Notice } from '../api/map'
 import { BRAND } from '../copy/brand'
@@ -8,8 +8,12 @@ import { todayIso, todayKst } from '../state/dates'
 import { useMapStore } from '../state/useMapStore'
 import { GlassPanel } from '../ui/GlassPanel'
 import { Popover } from '../ui/Floating'
+import { chipsThatFit } from '../ui/useOverflow'
 
 const MAX_CHIPS = 3
+const CHIP_MIN = 112
+const CHIP_GAP = 4
+const MORE_W = 48
 
 /**
  * 설정 메뉴 (P20): P11 임시 토글 '투명도 줄이기'를 옮김(선택은 이 브라우저에 저장), 단축키 보기, 기존 화면 링크.
@@ -127,11 +131,24 @@ function NoticeChips() {
     select({ kind: 'regulation', id: n.doc_id })
   }
   const items = data?.items ?? []
-  const shown = items.slice(0, MAX_CHIPS)
-  const rest = items.slice(MAX_CHIPS)
-  const chip = 'glass-liquid max-w-[11rem] truncate rounded-full bg-white/70 px-2.5 py-1 text-meta'
+  const box = useRef<HTMLDivElement>(null)
+  const [fit, setFit] = useState(MAX_CHIPS)
+  useLayoutEffect(() => {
+    const el = box.current
+    if (!el) return
+    const measure = () => setFit(chipsThatFit(items.map(() => CHIP_MIN), el.clientWidth, MORE_W, CHIP_GAP, MAX_CHIPS))
+    measure()
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [items.length])
+  const shown = items.slice(0, fit)
+  const rest = items.slice(fit)
+  const chip = 'glass-liquid max-w-[16rem] truncate whitespace-nowrap rounded-full bg-white/70 px-2.5 py-1 text-meta'
   return (
-    <div className="flex min-w-0 items-center gap-1" role="group" aria-label={UI.topbar.noticesLabel} data-testid="notice-chips">
+    <div ref={box} className="flex min-w-0 flex-1 items-center gap-1" role="group" aria-label={UI.topbar.noticesLabel}
+      data-testid="notice-chips" data-fit={fit}>
       {shown.map((n) => (
         <button
           key={n.item_key}
@@ -141,6 +158,7 @@ function NoticeChips() {
           aria-expanded={open?.key === n.item_key}
           onClick={(e) => setOpen(open?.key === n.item_key ? null : { key: n.item_key, el: e.currentTarget })}
           className={chip}
+          style={{ minWidth: CHIP_MIN }}
         >
           {n.chip_label}
         </button>
@@ -150,8 +168,10 @@ function NoticeChips() {
           type="button"
           data-testid="notice-more"
           aria-expanded={open?.key === '+'}
+          aria-label={UI.topbar.moreNoticesLabel(rest.length)}
+          title={rest.map((n) => n.chip_label).join('\n')}
           onClick={(e) => setOpen(open?.key === '+' ? null : { key: '+', el: e.currentTarget })}
-          className={chip}
+          className={`${chip} shrink-0`}
         >
           {UI.topbar.moreNotices(rest.length)}
         </button>
