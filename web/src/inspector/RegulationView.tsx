@@ -12,6 +12,7 @@ import { HistoryList } from './HistoryList'
 import { Badge, Card, KV, Section, dot } from './parts'
 import { periodBar } from './period'
 import { todayIso } from '../state/dates'
+import { KV_GRID } from '../ui/panelLayout'
 
 const PERMIT_DOCS = ['D5', 'D6']
 
@@ -69,7 +70,7 @@ function Overview({ f }: { f: RegulationFeature }) {
         </Card>
       </Section>
 
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
+      <dl className={`${KV_GRID} text-meta`}>
         <KV k={UI.regulation.kind}>{r.doc_kind_label}</KV>
         {r.gosi_no && <KV k={UI.regulation.gosiNo}>{r.gosi_no}</KV>}
         {r.issuer && <KV k={UI.regulation.issuer}>{r.issuer} · <span className="tabular-nums">{dot(r.published_at)}</span></KV>}

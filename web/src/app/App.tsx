@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useDeferredValue, useEffect, useMemo, useState } from 'react'
 import { UI } from '../copy/ui'
 import { IconRail } from '../panel/IconRail'
 import { LeftPanel } from '../panel/LeftPanel'
@@ -7,6 +7,8 @@ import { useViewport } from '../ui/useViewport'
 import { useMapStore } from '../state/useMapStore'
 import { useUrlSync } from '../state/useUrlSync'
 import { GlassPanel } from '../ui/GlassPanel'
+import { ResizeHandle } from '../ui/ResizeHandle'
+import { DEFAULT_WIDTHS, fitWidths, LEFT_RANGE, maxWidth, readWidths, RIGHT_RANGE, writeWidths, type Side, type Widths } from '../ui/panelSize'
 import { LiquidGlassFilter } from '../ui/LiquidGlassFilter'
 import { useLiquidGlass } from '../ui/useLiquidGlass'
 import { TopBar } from './TopBar'
@@ -27,8 +29,7 @@ const ShortcutsModal = lazy(() => import('../ui/ShortcutsModal'))
 
 const GAP = 12 // 패널과 화면 가장자리 사이
 const TOP_H = 56
-const LEFT_W = 320
-const RIGHT_W = 400
+const HANDLE_W = 12
 const TL_CLOSED = 44
 const TL_OPEN = 200
 const RAIL_W = 52 // 접힌 좌측 패널 아이콘 줄 (P20, 1024~1279px)
@@ -58,8 +59,12 @@ export default function App() {
     if (narrow && selKey) setSheet((v) => ({ tab: 'info', snap: v.snap === 'collapsed' ? 'half' : v.snap }))
   }, [narrow, selKey])
   const [vh, setVh] = useState(() => window.innerHeight)
+  const [vw, setVw] = useState(() => window.innerWidth)
   useEffect(() => {
-    const on = () => setVh(window.innerHeight)
+    const on = () => {
+      setVh(window.innerHeight)
+      setVw(window.innerWidth)
+    }
     window.addEventListener('resize', on)
     return () => window.removeEventListener('resize', on)
   }, [])
@@ -71,6 +76,23 @@ export default function App() {
   // mid: 인스펙터는 고른 것이 있을 때만, 지도 위에 겹쳐 뜬다 (지도 영역을 줄이지 않음)
   const hasSelection = !!selKey
   const showInspector = !narrow && s.rightOpen && (!mid || hasSelection)
+  const shown = { left: !narrow && s.leftOpen, right: showInspector }
+  const [want, setWant] = useState<Widths>(() => readWidths())
+  useEffect(() => {
+    const t = window.setTimeout(() => writeWidths(want), 250)
+    return () => window.clearTimeout(t)
+  }, [want])
+  const eff = fitWidths(want, vw, shown)
+  const LEFT_W = eff.left
+  const RIGHT_W = eff.right
+  const maxOf = (side: Side) => maxWidth(side, eff, vw, shown)
+  const resize = (side: Side) => (w: number) =>
+    setWant((prev) => {
+      const cur = fitWidths(prev, vw, shown)
+      const range = side === 'left' ? LEFT_RANGE : RIGHT_RANGE
+      return { ...cur, [side]: Math.round(Math.min(maxWidth(side, cur, vw, shown), Math.max(range.min, w))) }
+    })
+  const reset = (side: Side) => () => setWant((prev) => ({ ...prev, [side]: DEFAULT_WIDTHS[side] }))
   const leftW = s.leftOpen ? GAP + LEFT_W + GAP : mid ? GAP + RAIL_W + GAP : GAP
   // 지도 위 보이는 영역 (패널을 뺀 곳): 첫 화면 맞춤·지도 컨트롤 위치에 쓴다
   const insets: Insets = useMemo(
@@ -80,8 +102,9 @@ export default function App() {
       left: narrow ? GAP : leftW,
       right: !narrow && !mid && s.rightOpen ? GAP + RIGHT_W + GAP : GAP,
     }),
-    [sideTop, sideBottom, narrow, mid, leftW, s.rightOpen],
+    [sideTop, sideBottom, narrow, mid, leftW, s.rightOpen, RIGHT_W],
   )
+  const mapInsets = useDeferredValue(insets)
 
   return (
     <div className="relative h-full w-full overflow-hidden">
@@ -89,7 +112,7 @@ export default function App() {
 
       {/* 지도: 화면 전체. 패널은 그 위에 뜬 글래스 카드 */}
       <Suspense fallback={<div className="map-loading absolute inset-0" data-testid="map-loading" aria-hidden="true" />}>
-        <MapView insets={insets} />
+        <MapView insets={mapInsets} />
       </Suspense>
 
       {/* 상단 바 56px */}
@@ -106,6 +129,11 @@ export default function App() {
       {/* 좌측 패널 320px (L). 1024~1279px는 접으면 아이콘 줄 */}
       {!narrow && s.leftOpen && <LeftPanel collapsible={mid} style={{ top: sideTop, bottom: sideBottom, left: GAP, width: LEFT_W }} />}
       {mid && !s.leftOpen && <IconRail style={{ top: sideTop, left: GAP, width: RAIL_W }} />}
+      {shown.left && (
+        <ResizeHandle side="left" label={UI.shell.leftWidth} value={LEFT_W} min={LEFT_RANGE.min} max={maxOf('left')}
+          style={{ top: sideTop, bottom: sideBottom, left: GAP + LEFT_W - 2, width: HANDLE_W }}
+          onChange={resize('left')} onReset={reset('left')} />
+      )}
 
       {/* 우측 인스펙터 400px (I, P16). 1024~1279px는 지도 위에 겹쳐 뜬다 */}
       {showInspector && (
@@ -123,6 +151,12 @@ export default function App() {
         >
           <Inspector style={{ top: sideTop, bottom: sideBottom, right: GAP, width: RIGHT_W }} />
         </Suspense>
+      )}
+
+      {showInspector && (
+        <ResizeHandle side="right" label={UI.shell.rightWidth} value={RIGHT_W} min={RIGHT_RANGE.min} max={maxOf('right')}
+          style={{ top: sideTop, bottom: sideBottom, right: GAP + RIGHT_W - 2, width: HANDLE_W }}
+          onChange={resize('right')} onReset={reset('right')} />
       )}
 
       {/* 1024px 미만: 좌측 패널·인스펙터·타임라인을 하단 시트 탭으로 (P20) */}

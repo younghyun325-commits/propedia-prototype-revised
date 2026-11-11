@@ -1,6 +1,7 @@
 /** 데이터 상태 탭 (P14 3-4): 레이어별 원천·기준일·건수·라이선스·상태 + DB 빌드 기준일 + 운영 메모. 키는 '있음/없음'만. */
 import type { Health, Manifest, ManifestLayer, MarketStatus } from '../api/map'
 import { UI } from '../copy/ui'
+import { KV_GRID } from '../ui/panelLayout'
 
 function stateLabel(l: ManifestLayer): string {
   if (l.status === 'ready') return UI.status.ready
@@ -14,7 +15,7 @@ function MarketRows({ m }: { m: MarketStatus | undefined }) {
   if (!m.available) return <p data-testid="status-market" data-available="0">{UI.status.marketNone}</p>
   const dotted = (s: string | null) => (s ? s.replaceAll('-', '.') : '—')
   return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1" data-testid="status-market" data-available="1">
+    <dl className={`${KV_GRID}`} data-testid="status-market" data-available="1">
       <dt className="text-ink-muted">{UI.status.trades}</dt>
       <dd data-testid="status-market-trades">
         {UI.status.tradePeriod} <span className="tabular-nums">{dotted(m.trade_from)} ~ {dotted(m.trade_to)}</span> ·{' '}

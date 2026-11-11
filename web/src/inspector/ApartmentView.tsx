@@ -12,6 +12,7 @@ import { UI } from '../copy/ui'
 import { basisMissingText, formatManwon, pickDefaultBand } from '../market/format'
 import { selectProject } from '../state/actions'
 import { Card, KV, Section, Skeleton, dot } from './parts'
+import { KV_GRID } from '../ui/panelLayout'
 
 const AptChart = lazy(() => import('./AptChart'))
 
@@ -20,7 +21,7 @@ function Basis({ a }: { a: ApartmentFeature['sections']['apartment'] }) {
   const b = a.basis
   return (
     <Card testId="apt-basis">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
+      <dl className={`${KV_GRID} text-meta`}>
         {missing ? (
           <KV k={UI.apartment.households} testId="apt-basis-missing">{missing}</KV>
         ) : (

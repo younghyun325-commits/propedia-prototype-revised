@@ -106,7 +106,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
       data-testid={`layer-row-${l.id}`}
       className={`py-1 ${enabled ? '' : 'opacity-70'}`}
     >
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {poiTri !== null ? (
           // 편의시설 (P19-1): 6분류 모두 = 체크, 일부 = 일부 선택, 없음 = 빈칸. 일부·빈칸 → 모두 켜기, 체크 → 모두 끄기
           <TriCheckbox id={inputId} tri={poiTri} disabled={!enabled} testId={`layer-toggle-${l.id}`} className="h-4 w-4"
@@ -122,7 +122,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
             className="h-4 w-4 shrink-0 accent-brand-indigo"
           />
         )}
-        <label htmlFor={inputId} className="flex min-w-0 flex-1 items-center gap-2">
+        <label htmlFor={inputId} className="flex min-w-[7rem] flex-1 items-center gap-2">
           <span className="flex shrink-0">
             {l.id === 'pois' && l.status === 'ready' ? (
               <PoiLegend opacity={state ? Math.max(0.15, state.opacity / 100) : 1} />
@@ -136,6 +136,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
           </span>
           <span className="leading-tight break-keep">{l.name}</span>
         </label>
+        <span className="ml-auto flex shrink-0 items-center gap-2">
         {l.status === 'ready' && l.count !== null && (
           <span className="text-meta text-ink-muted tabular-nums" data-testid={`layer-count-${l.id}`}>
             {UI.layers.count(l.count)}
@@ -163,6 +164,7 @@ function LayerRow({ l }: { l: ManifestLayer }) {
             <SlidersHorizontal size={14} aria-hidden="true" />
           </button>
         )}
+        </span>
       </div>
       {enabled && open && state && panelId && (
         <label className="mt-1 ml-6 flex items-center gap-2 text-meta text-ink-muted">

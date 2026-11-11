@@ -11,6 +11,7 @@ import { EvidenceLine } from '../ui/EvidenceLine'
 import { Stepper } from '../ui/Stepper'
 import { Badge, Card, KV, Section, dot, fmtValue } from './parts'
 import { HistoryList } from './HistoryList'
+import { KV_GRID, ONLY_NARROW, ONLY_WIDE, WIDE_CELL } from '../ui/panelLayout'
 
 function Overview({ f }: { f: ProjectFeature }) {
   const { progress: p, stepper, status_badges, boundary } = f.sections
@@ -31,7 +32,7 @@ function Overview({ f }: { f: ProjectFeature }) {
               <Badge key={b} text={b} tone={b === UI.project.statusOpen ? 'info' : 'warn'} />
             ))}
           </div>
-          <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
+          <dl className={`${KV_GRID} text-meta`}>
             {p.sub_status && <KV k={UI.project.subStatus} testId="project-sub-status">{p.sub_status}</KV>}
             {p.stage_note && <KV k={UI.project.stageNote} testId="project-stage-note">{p.stage_note}</KV>}
           </dl>
@@ -63,7 +64,7 @@ function Overview({ f }: { f: ProjectFeature }) {
                   <Badge text={d.d_day_label} tone={d.status === 'open' ? 'info' : 'muted'} />
                 </span>
               </div>
-              <dl className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-meta">
+              <dl className={`mt-1 ${KV_GRID} text-meta`}>
                 <KV k={UI.project.period}><span className="tabular-nums">{dot(d.starts_on)} ~ {dot(d.due_on)}</span></KV>
                 {d.how_to_submit && <KV k={UI.project.howToSubmit}>{d.how_to_submit}</KV>}
                 {d.places.length > 0 && <KV k={UI.project.places}>{d.places.join(', ')}</KV>}
@@ -174,34 +175,56 @@ function Nearby({ f }: { f: ProjectFeature }) {
   return (
     <div className="space-y-4" data-testid="project-nearby">
       <p className="text-caption text-ink-muted">{UI.nearbyApartments.note}</p>
+      <p className={`text-caption text-ink-muted ${ONLY_WIDE}`} data-testid="project-nearby-later">{UI.nearbyApartments.later}</p>
       {!layerOn && <p className="text-caption text-ink-muted">{UI.nearbyApartments.layerOff}</p>}
       {(['250', '500'] as const).map((m) => (
         <Section key={m} title={UI.nearbyApartments.title(Number(m))} testId={`project-nearby-${m}`}
           aside={<span className="text-caption text-ink-muted tabular-nums">{n[m].length}</span>}>
           {n[m].length ? (
-            <table className="w-full border-collapse text-meta">
-              <thead className="text-left text-ink-muted">
-                <tr>
-                  <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.name}</th>
-                  <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.year}</th>
-                  <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.last}</th>
-                </tr>
-              </thead>
-              <tbody>
+            <>
+              <ul className={`space-y-1.5 ${ONLY_NARROW}`} data-testid="project-nearby-cards">
                 {n[m].map((a) => (
-                  <tr key={a.id} className="cursor-pointer border-t border-ink/10 hover:bg-white/70" onClick={() => pick(a.id)}
-                    data-testid="project-nearby-row">
-                    <td className="py-1">
-                      <button type="button" className="text-left hover:underline" onClick={(e) => { e.stopPropagation(); pick(a.id) }}>
-                        {a.name}
-                      </button>
-                    </td>
-                    <td className="py-1 tabular-nums">{a.build_year ?? '—'}</td>
-                    <td className="py-1 tabular-nums">{a.last_trade_date ? dot(a.last_trade_date) : '—'}</td>
-                  </tr>
+                  <li key={a.id}>
+                    <button type="button" data-testid="project-nearby-card" onClick={() => pick(a.id)}
+                      className="w-full rounded-lg bg-white/60 px-2.5 py-1.5 text-left text-meta hover:bg-white/90 focus-visible:outline-2 focus-visible:outline-brand-indigo">
+                      <span className="block font-semibold">{a.name}</span>
+                      <span className="block text-caption text-ink-muted tabular-nums">
+                        {UI.nearbyApartments.cols.year} {a.build_year ?? '—'} · {UI.nearbyApartments.cols.last} {a.last_trade_date ? dot(a.last_trade_date) : '—'}
+                      </span>
+                    </button>
+                  </li>
                 ))}
-              </tbody>
-            </table>
+              </ul>
+              <table className="hidden w-full border-collapse text-meta @panel-md:table" data-testid="project-nearby-table">
+                <thead className="text-left text-ink-muted">
+                  <tr>
+                    <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.name}</th>
+                    <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.year}</th>
+                    <th scope="col" className={`py-1 font-medium ${WIDE_CELL}`} title={UI.nearbyApartments.later}>{UI.nearbyApartments.cols.age}</th>
+                    <th scope="col" className={`py-1 font-medium ${WIDE_CELL}`}>{UI.nearbyApartments.cols.distance}</th>
+                    <th scope="col" className="py-1 font-medium">{UI.nearbyApartments.cols.last}</th>
+                    <th scope="col" className={`py-1 font-medium ${WIDE_CELL}`} title={UI.nearbyApartments.later}>{UI.nearbyApartments.cols.trades}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {n[m].map((a) => (
+                    <tr key={a.id} className="cursor-pointer border-t border-ink/10 hover:bg-white/70" onClick={() => pick(a.id)}
+                      data-testid="project-nearby-row">
+                      <td className="py-1 pr-2">
+                        <button type="button" className="text-left hover:underline" onClick={(e) => { e.stopPropagation(); pick(a.id) }}>
+                          {a.name}
+                        </button>
+                      </td>
+                      <td className="py-1 pr-2 tabular-nums">{a.build_year ?? '—'}</td>
+                      <td className={`py-1 pr-2 text-ink-muted ${WIDE_CELL}`}>—</td>
+                      <td className={`py-1 pr-2 tabular-nums whitespace-nowrap ${WIDE_CELL}`}>{UI.nearbyApartments.band(Number(m))}</td>
+                      <td className="py-1 pr-2 tabular-nums">{a.last_trade_date ? dot(a.last_trade_date) : '—'}</td>
+                      <td className={`py-1 text-ink-muted ${WIDE_CELL}`}>—</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
           ) : (
             <p className="text-meta text-ink-muted">{UI.nearbyApartments.none}</p>
           )}

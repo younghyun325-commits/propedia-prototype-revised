@@ -12,6 +12,7 @@ import { selectProject } from '../state/actions'
 import { useMapStore } from '../state/useMapStore'
 import { EvidenceLine } from '../ui/EvidenceLine'
 import { Badge, Card, KV, Section, dot } from './parts'
+import { KV_GRID } from '../ui/panelLayout'
 
 const fmt = (n: number | null | undefined) => (n === null || n === undefined ? '—' : n.toLocaleString('ko-KR'))
 const LAYERS = ['city', 'gu', 'dong', 'parcel'] as const
@@ -43,7 +44,7 @@ function LandPermitCard({ p, items }: { p: LandPermit; items: ParcelAt['evidence
           <Badge text={UI.permit.status[p.status]} tone={PERMIT_TONE[p.status]} />
           <p className="mt-1 text-body font-semibold" data-testid="parcel-permit-message">{UI.permit.message[p.status]}</p>
         </div>
-        <dl className="mt-1.5 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta">
+        <dl className={`mt-1.5 ${KV_GRID} text-meta`}>
           <KV k={UI.permit.why}>{UI.permit.reason[p.reason_code] ?? p.reason}</KV>
           {p.deadline_label && <KV k={UI.permit.deadline} testId="parcel-permit-deadline">{p.deadline_label}</KV>}
         </dl>
@@ -139,7 +140,7 @@ export function ParcelView({ d, boundaryNote }: { d: ParcelAt; boundaryNote?: st
       <Section title={UI.parcel.land} testId="parcel-land-card">
         <Card>
           {land && land.status !== 'unavailable' ? (
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta" data-testid="parcel-land">
+            <dl className={`${KV_GRID} text-meta`} data-testid="parcel-land">
               <KV k={UI.parcel.jimok} testId="parcel-jimok">{land.jimok ?? '—'}</KV>
               <KV k={UI.parcel.area}><span className="tabular-nums">{land.area_m2 !== null ? `${fmt(land.area_m2)}㎡` : '—'}</span></KV>
               <KV k={UI.parcel.zone}>{[land.land_use_zone, land.land_use_zone2].filter(Boolean).join(' · ') || '—'}</KV>
@@ -164,7 +165,7 @@ export function ParcelView({ d, boundaryNote }: { d: ParcelAt; boundaryNote?: st
       <Section title={UI.parcelView.building}>
         {b && b.found !== false ? (
           <Card>
-            <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-meta" data-testid="parcel-building">
+            <dl className={`${KV_GRID} text-meta`} data-testid="parcel-building">
               <KV k={UI.parcelView.mainPurpose}>{b.main_purpose ?? '—'}</KV>
               {b.bld_names && b.bld_names.length > 0 && <KV k={UI.parcelView.names}>{b.bld_names.join(', ')}</KV>}
             </dl>

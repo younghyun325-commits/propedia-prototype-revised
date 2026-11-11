@@ -4,6 +4,7 @@ import { UI } from '../copy/ui'
 import { selectProject } from '../state/actions'
 import { useMapStore } from '../state/useMapStore'
 import { MiniStepper } from '../ui/Stepper'
+import { ONLY_WIDE_INLINE, UNTIL_WIDE_INLINE } from '../ui/panelLayout'
 
 export function ProjectsTab({ projects }: { projects: MapProject[] }) {
   const selected = useMapStore((s) => s.selected)
@@ -27,6 +28,11 @@ export function ProjectsTab({ projects }: { projects: MapProject[] }) {
             >
               <div className="flex items-start gap-2">
                 <span className="flex-1 font-semibold leading-snug">{p.short_name}</span>
+                {p.deadline && (
+                  <span className={`shrink-0 text-meta tabular-nums text-ink-muted ${ONLY_WIDE_INLINE}`} data-testid="project-deadline-inline">
+                    {p.deadline.title} · {p.deadline.d_day_label}
+                  </span>
+                )}
                 {p.unverified && (
                   <span className="rounded-full bg-layer-regulation/15 px-1.5 py-px text-caption font-semibold text-warn">
                     {UI.projects.unverified}
@@ -48,7 +54,7 @@ export function ProjectsTab({ projects }: { projects: MapProject[] }) {
                   </span>
                 ))}
                 {p.deadline && (
-                  <span className="text-ink-muted">
+                  <span className={`text-ink-muted ${UNTIL_WIDE_INLINE}`}>
                     {UI.projects.deadline} {p.deadline.title} · <span className="tabular-nums">{p.deadline.d_day_label}</span>
                   </span>
                 )}

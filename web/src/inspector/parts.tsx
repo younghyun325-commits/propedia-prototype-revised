@@ -41,7 +41,7 @@ export function KV({ k, children, testId }: { k: string; children: ReactNode; te
   return (
     <div className="contents">
       <dt className="text-ink-muted">{k}</dt>
-      <dd data-testid={testId} className="min-w-0">{children}</dd>
+      <dd data-testid={testId} className="min-w-0 @max-panel-md:mb-1">{children}</dd>
     </div>
   )
 }

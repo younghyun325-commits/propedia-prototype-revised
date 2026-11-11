@@ -176,3 +176,9 @@ html.map-moving .map-tooltip {
 .tl-event { cursor: pointer; }
 .tl-event:hover, .tl-event:focus-visible { filter: brightness(0.85); }
 .tl-scrubber { cursor: ew-resize; }
+
+html.panel-resizing,
+html.panel-resizing * {
+  cursor: col-resize !important;
+  user-select: none;
+}

@@ -2020,6 +2020,168 @@ def p22_1_checks(page, url: str, check) -> None:
           and page.locator("[data-testid=regulation-permit-note]").count() == 1)
 
 
+SMALL_TEXT_JS = """() => { const bad = [];
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('canvas, .maplibregl-canvas-container')) continue;
+    if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
+    const r = el.getBoundingClientRect(); if (!r.width || !r.height) continue;
+    const cs = getComputedStyle(el); if (cs.visibility === 'hidden' || cs.display === 'none') continue;
+    const fs = parseFloat(cs.fontSize);
+    if (fs < 12) bad.push(el.tagName.toLowerCase() + ' ' + fs + 'px ' + el.textContent.trim().slice(0, 16));
+  } return bad }"""
+TAB_LINES_JS = """(sel) => [...document.querySelectorAll(sel)].map(t => {
+  const tops = new Set(); const w = document.createTreeWalker(t, NodeFilter.SHOW_TEXT);
+  for (let n = w.nextNode(); n; n = w.nextNode()) { if (!n.textContent.trim()) continue;
+    const r = document.createRange(); r.selectNodeContents(n);
+    for (const x of r.getClientRects()) if (x.width > 0) tops.add(Math.round(x.top)); }
+  return { label: t.innerText.trim() || t.getAttribute('aria-label') || '', lines: tops.size,
+           named: !!(t.innerText.trim() || t.getAttribute('aria-label')) } })"""
+CHIPS_JS = """() => [...document.querySelectorAll('[data-testid=notice-chip], [data-testid=notice-more]')].map(c => ({
+  t: c.innerText, cut: c.scrollWidth > c.clientWidth + 1, title: !!c.title, h: Math.round(c.getBoundingClientRect().height) }))"""
+NEARBY_JS = """() => { const vis = s => [...document.querySelectorAll(s)].filter(e => e.offsetParent).length;
+  const head = [...document.querySelectorAll('[data-testid=project-nearby-table]')].find(e => e.offsetParent);
+  return { w: Math.round(document.querySelector('[data-testid=right-panel]').getBoundingClientRect().width),
+    cards: vis('[data-testid=project-nearby-card]'), table: vis('[data-testid=project-nearby-table]'),
+    cols: head ? [...head.querySelector('thead tr').children].filter(c => getComputedStyle(c).display !== 'none').length : 0 } }"""
+BAR_LEFT_JS = "() => document.querySelector('[data-testid=cursor-bar]').getBoundingClientRect().left"
+
+
+def _width(page, testid: str) -> float:
+    return page.evaluate(f"() => document.querySelector('[data-testid={testid}]')?.getBoundingClientRect().width ?? 0")
+
+
+def _drag(page, testid: str, dx: float) -> None:
+    box = page.locator(f"[data-testid={testid}]").bounding_box()
+    x, y = box["x"] + box["width"] / 2, box["y"] + box["height"] / 2
+    page.mouse.move(x, y)
+    page.mouse.down()
+    for i in range(1, 9):
+        page.mouse.move(x + dx * i / 8, y)
+        page.wait_for_timeout(20)
+    page.mouse.up()
+    page.wait_for_timeout(350)
+
+
+def p22_2_checks(pw, url: str, check, shots: Path | None = None) -> None:
+    """P22-2: 글씨 12px 이상, 탭 한 줄, 상단 칩 넘침, 사이드바 너비 조절(드래그·키보드·범위·저장), 너비별 배치"""
+    home = url.split("?")[0] + ("?debug=1" if "debug=1" in url else "")
+    with_q = home + ("&" if "?" in home else "?")
+    b = pw.chromium.launch()
+
+    ctx = b.new_context(viewport={"width": 1440, "height": 900})
+    page = ctx.new_page()
+    _open(page, home)
+    tabs = page.evaluate(TAB_LINES_JS, "[data-testid^=left-tab-]")
+    check("[P22-2] 왼쪽 탭 라벨이 모두 한 줄 (아이콘이면 접근성 이름)",
+          len(tabs) == 4 and all(t["lines"] <= 1 and t["named"] for t in tabs), str(tabs))
+    chips = page.evaluate(CHIPS_JS)
+    check("[P22-2] 상단 칩: 한 줄, 잘리면 툴팁(title)",
+          bool(chips) and all((not c["cut"]) or c["title"] for c in chips) and len({c["h"] for c in chips}) == 1, str(chips)[:300])
+    small = page.evaluate(SMALL_TEXT_JS)
+    _open(page, with_q + "sel=project:1")
+    _inspector_ready(page)
+    small += page.evaluate(SMALL_TEXT_JS)
+    check("[P22-2] 계산된 글씨 크기 12px 미만 요소 없음 (데스크톱, 지도 캔버스 제외)", not small, "; ".join(small[:6]))
+    itabs = page.evaluate(TAB_LINES_JS, "[data-testid^=inspector-tab-]")
+    check("[P22-2] 인스펙터 탭 라벨 한 줄", bool(itabs) and all(t["lines"] <= 1 for t in itabs), str(itabs)[:200])
+    _drag(page, "resize-left", 300)
+    lmax = _width(page, "left-panel")
+    want = int(1440 * 0.6) - 48 - 400
+    check("[P22-2] 지도 40% 제한: 1440px·오른쪽 400px이면 왼쪽 최대 = 1440×0.6 − 48 − 400",
+          abs(lmax - want) <= 1 and page.get_attribute("[data-testid=resize-left]", "aria-valuemax") == str(want), f"{lmax:.0f} (기대 {want})")
+    page.locator("[data-testid=resize-left]").dblclick()
+    page.wait_for_timeout(300)
+
+    r0 = _width(page, "right-panel")
+    page.focus("[data-testid=resize-right]")
+    page.keyboard.press("ArrowLeft")
+    page.keyboard.press("ArrowLeft")
+    page.wait_for_timeout(150)
+    r1 = _width(page, "right-panel")
+    page.keyboard.press("Shift+ArrowRight")
+    page.wait_for_timeout(150)
+    r2 = _width(page, "right-panel")
+    page.keyboard.press("Enter")
+    page.wait_for_timeout(150)
+    r3 = _width(page, "right-panel")
+    check("[P22-2] 오른쪽 손잡이 키보드: ←×2 = +32px, Shift+→ = −64px, Enter = 기본 400px",
+          round(r1 - r0) == 32 and round(r1 - r2) == 64 and abs(r3 - 400) <= 1
+          and page.get_attribute("[data-testid=resize-right]", "aria-label") == "오른쪽 패널 너비",
+          f"{r0:.0f} → {r1:.0f} → {r2:.0f} → {r3:.0f}")
+    _drag(page, "resize-right", 400)
+    r4 = _width(page, "right-panel")
+    check("[P22-2] 오른쪽 패널을 300px 미만으로 줄이려 해도 320px에서 멈춤", abs(r4 - 320) <= 1,
+          f"{r4:.0f}, aria-valuenow {page.get_attribute('[data-testid=resize-right]', 'aria-valuenow')}")
+    page.click("[data-testid=inspector-tab-nearby]")
+    page.wait_for_timeout(400)
+    narrow = page.evaluate(NEARBY_JS)
+    if shots:
+        page.screenshot(path=str(shots / "desktop_12_right_narrow_cards.png"))
+    check("[P22-2] 오른쪽 좁음(320px): 영향권 단지가 카드 목록", narrow["cards"] > 0 and narrow["table"] == 0, str(narrow))
+    ctx.close()
+
+    ctx = b.new_context(viewport={"width": 1920, "height": 1080})
+    page = ctx.new_page()
+    _open(page, with_q + "sel=project:1")
+    _inspector_ready(page)
+    left0 = _width(page, "left-panel")
+    bar0 = page.evaluate(BAR_LEFT_JS)
+    _drag(page, "resize-left", 500 - left0)
+    left1 = _width(page, "left-panel")
+    page.wait_for_timeout(300)
+    bar1 = page.evaluate(BAR_LEFT_JS)
+    check("[P22-2] (1920px) 왼쪽 손잡이 드래그 → 패널 500px, 지도 보이는 영역 줄어듦(커서 표시줄이 오른쪽으로)",
+          abs(left0 - 340) <= 1 and abs(left1 - 500) <= 2 and bar1 - bar0 >= 150,
+          f"{left0:.0f} → {left1:.0f}, 표시줄 {bar0:.0f} → {bar1:.0f}")
+    page.wait_for_timeout(400)
+    page.reload()
+    _ready(page)
+    _inspector_ready(page)
+    left2 = _width(page, "left-panel")
+    check("[P22-2] 새로고침 뒤에도 왼쪽 너비 유지", abs(left2 - left1) <= 2, f"{left2:.0f}")
+    if shots:
+        page.screenshot(path=str(shots / "desktop_10_left_max.png"))
+    sep = page.locator("[data-testid=resize-left]")
+    aria = {k: sep.get_attribute(k) for k in ("role", "aria-orientation", "aria-label", "aria-valuenow", "aria-valuemin", "aria-valuemax")}
+    check("[P22-2] 손잡이 접근성: separator·vertical·이름·값",
+          aria["role"] == "separator" and aria["aria-orientation"] == "vertical" and aria["aria-label"] == "왼쪽 패널 너비"
+          and aria["aria-valuemin"] == "260" and aria["aria-valuenow"] is not None, str(aria))
+    sep.dblclick()
+    page.wait_for_timeout(300)
+    check("[P22-2] 더블클릭 → 기본 너비 340px", abs(_width(page, "left-panel") - 340) <= 1, f"{_width(page, 'left-panel'):.0f}")
+
+    page.focus("[data-testid=resize-right]")
+    for _ in range(4):
+        page.keyboard.press("Shift+ArrowLeft")
+    page.wait_for_timeout(200)
+    page.click("[data-testid=inspector-tab-nearby]")
+    page.wait_for_timeout(400)
+    wide = page.evaluate(NEARBY_JS)
+    check("[P22-2] 오른쪽 넓음(>520px): 영향권 단지가 표, 거리·준공 연차·실거래 요약 열 추가",
+          wide["w"] > 520 and wide["cards"] == 0 and wide["table"] > 0 and wide["cols"] == 6, str(wide))
+    if shots:
+        page.screenshot(path=str(shots / "desktop_13_right_wide_table.png"))
+        page.focus("[data-testid=resize-right]")
+        for _ in range(8):
+            page.keyboard.press("Shift+ArrowLeft")
+        page.wait_for_timeout(300)
+        page.screenshot(path=str(shots / "desktop_11_right_max.png"))
+    ctx.close()
+
+    ctx = b.new_context(viewport={"width": 390, "height": 844}, device_scale_factor=2, has_touch=True, is_mobile=True)
+    page = ctx.new_page()
+    page.goto(with_q + "sel=project:1")
+    page.wait_for_selector("[data-testid=bottom-sheet]", timeout=20000)
+    page.wait_for_load_state("networkidle")
+    page.wait_for_timeout(1500)
+    msmall = page.evaluate(SMALL_TEXT_JS)
+    check("[P22-2] 모바일: 손잡이 없음, 하단 시트 유지, 12px 미만 글씨 없음",
+          page.locator("[data-testid^=resize-]").count() == 0 and page.locator("[data-testid=bottom-sheet]").count() == 1 and not msmall,
+          "; ".join(msmall[:6]))
+    ctx.close()
+    b.close()
+
+
 def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
@@ -2028,7 +2190,7 @@ def main() -> int:
     ap.add_argument("--update-screens", action="store_true",
                     help="--shot 포함. 실패 0건일 때만 이번 캡처로 docs/screens/ 갱신")
     ap.add_argument("--perf", action="store_true", help="P18 프레임 시간 측정")
-    ap.add_argument("--only", choices=["p19", "p19-1", "p20", "p22-1"], help="기본 점검 + 이 단계만 (반복 확인용)")
+    ap.add_argument("--only", choices=["p19", "p19-1", "p20", "p22-1", "p22-2"], help="기본 점검 + 이 단계만 (반복 확인용)")
     ap.add_argument("--base", help="빌드본을 이 주소로 점검 (예: http://localhost:8000, https://….vercel.app). "
                                    "로컬 주소면 --built와 같은 판정, 원격이면 배경 타일·WMS 200과 콘솔 오류 0을 요구")
     a = ap.parse_args()
@@ -2132,7 +2294,7 @@ def main() -> int:
 
         # 커서 위치 표시줄: 지도 보이는 영역 가운데
         box = page.locator("[data-testid=map]").bounding_box()
-        cx, cy = box["x"] + (12 + 320 + 12 + box["width"] - 12 - 400 - 12) / 2, box["y"] + box["height"] / 2
+        cx, cy = box["x"] + (12 + 340 + 12 + box["width"] - 12 - 400 - 12) / 2, box["y"] + box["height"] / 2
         page.mouse.move(cx, cy)
         page.wait_for_timeout(300)
         bar = page.inner_text("[data-testid=cursor-bar]")
@@ -2233,6 +2395,8 @@ def main() -> int:
             p19_checks(page, url, check, a.shot)
         if not a.only or a.only == "p22-1":
             p22_1_checks(page, url, check)
+        if not a.only or a.only == "p22-2":
+            p22_2_checks(p, url, check, shots_dir if a.shot else None)
         if not a.only or a.only == "p20":
             p20_checks(page, url, check, a.shot, a.built)
             p20_motion_check(p, url, check)

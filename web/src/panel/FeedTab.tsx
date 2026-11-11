@@ -7,6 +7,7 @@ import { useFeed, type FeedItem } from '../api/map'
 import { UI } from '../copy/ui'
 import { focusSel } from '../state/actions'
 import { useMapStore } from '../state/useMapStore'
+import { ONLY_WIDE_INLINE, UNTIL_WIDE_INLINE } from '../ui/panelLayout'
 
 const dot = (iso: string | null | undefined) => (iso ? iso.replaceAll('-', '.') : '—')
 
@@ -23,11 +24,16 @@ function Card({ it, selected }: { it: FeedItem; selected: boolean }) {
             {UI.feed.recent}
           </span>
         )}
-        <span className="ml-auto text-caption tabular-nums text-ink-muted">
+        <span className={`ml-auto text-caption tabular-nums text-ink-muted ${UNTIL_WIDE_INLINE}`}>
           {UI.feed.published} {dot(it.published_at)}
         </span>
       </div>
-      <p className="mt-1 text-meta leading-snug font-semibold" data-testid="feed-title">{it.short_title}</p>
+      <div className="mt-1 flex items-baseline gap-2">
+        <p className="min-w-0 flex-1 text-meta leading-snug font-semibold" data-testid="feed-title">{it.short_title}</p>
+        <span className={`shrink-0 text-caption tabular-nums text-ink-muted ${ONLY_WIDE_INLINE}`} data-testid="feed-date-inline">
+          {UI.feed.published} {dot(it.published_at)}
+        </span>
+      </div>
       {it.gosi_no && <p className="text-caption text-ink-muted">{it.gosi_no}</p>}
       {it.related.length > 0 && (
         <p className="mt-1 text-caption">

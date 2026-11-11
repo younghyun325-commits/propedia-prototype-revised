@@ -53,6 +53,8 @@ export const UI = {
   },
   // 반응형 (P20)
   shell: {
+    leftWidth: '왼쪽 패널 너비',
+    rightWidth: '오른쪽 패널 너비',
     narrowNotice: '큰 화면에서 모든 기능을 쓸 수 있습니다',
     noticeLabel: '화면 폭 안내',
   },
@@ -399,7 +401,9 @@ export const UI = {
     title: (m: number) => `영향권 ${m}m 안 단지`,
     note: 'Propedia 표시 기준(구역 경계에서 250m·500m)이며 영향의 크기를 뜻하지 않습니다. 단지 경계가 영향권에 걸친 단지입니다',
     none: '이 거리 안에 단지가 없습니다',
-    cols: { name: '단지', year: '준공연도', last: '최근 거래일' },
+    cols: { name: '단지', year: '준공연도', last: '최근 거래일', age: '준공 연차', distance: '거리', trades: '실거래 요약' },
+    band: (m: number) => `${m}m 안`,
+    later: '준공 연차·실거래 요약 칸은 다음 단계에서 채웁니다',
     layerOff: '아파트 단지 레이어를 켜면 지도에서 함께 볼 수 있습니다',
   },
   palette: {
