@@ -16,7 +16,9 @@
 - P18: 생활 인프라(학교·역 기본 켜짐, 정류장 줌 15 안내, 클러스터·이름, 편의시설 분류 행), 역·정류장 인스펙터, 노선 선택 모드,
   반경 보기, 겹침 보기, Ctrl+K 역·정류장 번호·노선, 스크린샷 5장(map_06a~e), --perf로 프레임 시간
 
-사용: python tests/ui_check_map.py [--built | --base URL] [--shot]
+사용: python tests/ui_check_map.py [--built | --base URL] [--shot] [--update-screens]
+  캡처(--shot)는 tmp/ui_check_map/<타임스탬프>/에 쓴다. docs/screens/는 --update-screens(= --shot 포함)이고
+  실패가 0건일 때만 그 실행의 캡처로 갱신한다 (tests/_target.publish_shots).
   --base: 그 주소의 빌드본(/map/?debug=1). 로컬 주소면 --built와 같은 판정, 원격(운영)이면 배경 타일·WMS 200과
   콘솔 오류 0을 요구하고, 스크린샷은 prod_ 접두, --perf는 숫자만 남김('운영에서 건너뜀', 실패로 세지 않음).
 """
@@ -31,7 +33,7 @@ from playwright.sync_api import sync_playwright
 import _target  # tests/_target.py (스크립트로 실행하면 tests/가 sys.path에 들어감)
 
 ROOT = Path(__file__).resolve().parents[1]
-SCREENS = ROOT / "docs" / "screens"
+SCREENS = _target.SCREENS        # 이름 기준 위치. 실제 캡처는 main()이 tmp/ui_check_map/<타임스탬프>/로 옮긴다
 SHOT = SCREENS / "map_02a_layers_preview.png"
 SHOT_HANYANG = SCREENS / "map_02b_hanyang7.png"
 SHOT_DAECHEONG = SCREENS / "map_02c_daecheong.png"
@@ -61,16 +63,19 @@ def mask(url: str) -> str:
     return _target.mask_text(url)
 
 
-def _prod_shots() -> None:
-    """원격 점검: SHOT* 스크린샷 경로에 prod_ 접두 (로컬 스크린샷을 덮어쓰지 않게)"""
+def _retarget_shots(dst: Path, remote: bool) -> None:
+    """SHOT* 스크린샷 경로를 이번 실행 폴더 dst로 옮긴다. 원격 점검이면 prod_ 접두 (로컬 스크린샷과 이름이 겹치지 않게)"""
     g = globals()
+
+    def move(v: Path) -> Path:
+        return dst / _target.shot_name(v.name, remote)
     for k, v in list(g.items()):
         if not k.startswith("SHOT"):
             continue
         if isinstance(v, Path):
-            g[k] = v.with_name(_target.shot_name(v.name, True))
+            g[k] = move(v)
         elif isinstance(v, dict):
-            g[k] = {kk: vv.with_name(_target.shot_name(vv.name, True)) for kk, vv in v.items()}
+            g[k] = {kk: move(vv) for kk, vv in v.items()}
 
 
 SHOT_LAYERS = SCREENS / "map_02_layers.png"
@@ -1960,7 +1965,9 @@ def main() -> int:
     sys.stdout.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser()
     ap.add_argument("--built", action="store_true", help="빌드본 http://127.0.0.1:8000/map/ 점검")
-    ap.add_argument("--shot", action="store_true", help=f"스크린샷 저장 {SHOT.relative_to(ROOT)}")
+    ap.add_argument("--shot", action="store_true", help="스크린샷 저장 (tmp/ui_check_map/<타임스탬프>/)")
+    ap.add_argument("--update-screens", action="store_true",
+                    help="--shot 포함. 실패 0건일 때만 이번 캡처로 docs/screens/ 갱신")
     ap.add_argument("--perf", action="store_true", help="P18 프레임 시간 측정")
     ap.add_argument("--only", choices=["p19", "p19-1", "p20"], help="기본 점검 + 이 단계만 (반복 확인용)")
     ap.add_argument("--base", help="빌드본을 이 주소로 점검 (예: http://localhost:8000, https://….vercel.app). "
@@ -1970,8 +1977,11 @@ def main() -> int:
     remote = bool(a.base) and _target.is_remote(base)
     if a.base:
         a.built = True                      # 배포본·로컬 빌드본 모두 빌드 결과 (?debug=1로 지도 객체 노출)
-    if remote:
-        _prod_shots()
+    if a.update_screens:
+        a.shot = True
+    shots_dir = _target.run_dir("ui_check_map") if a.shot else None
+    if shots_dir:
+        _retarget_shots(shots_dir, remote)
     loose_tiles = a.built and not remote    # 로컬 빌드본: 배경 키의 서비스 URL이 3000이라 타일이 막힐 수 있음
     url = f"{base}/map/?debug=1" if a.built else "http://localhost:3000/map/"
 
@@ -2055,7 +2065,6 @@ def main() -> int:
         hatch = page.evaluate("() => window.__propediaMap.hasImage('propedia-hatch')")
         check("규제 빗금 패턴 등록", hatch)
         if a.shot:
-            SCREENS.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=str(SHOT))
 
         check("worker 오류 0", not [e for e in console_errors if WORKER_RE.search(e)],
@@ -2194,6 +2203,8 @@ def main() -> int:
     judged = [ok for _, ok, _ in results if ok is not None]
     n_ok, n_skip = sum(judged), len(results) - len(judged)
     print(f"{n_ok}/{len(judged)} 통과" + (f" · 운영에서 건너뜀 {n_skip}" if n_skip else ""))
+    if shots_dir:
+        _target.publish_shots(shots_dir, a.update_screens, len(judged) - n_ok)
     return 0 if n_ok == len(judged) else 1
 
 

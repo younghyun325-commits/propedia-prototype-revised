@@ -1,6 +1,6 @@
 """DEMO_MAP.md 5분 대본 재현 (P20). Playwright(Chromium), pytest 수집 대상 아님.
 
-대본 순서대로 누르고, 장면마다 화면에 나와야 할 것을 확인하고, 스크린샷(docs/screens/demo_0N_*.png)과 걸린 시간을 남긴다.
+대본 순서대로 누르고, 장면마다 화면에 나와야 할 것을 확인하고, 스크린샷(tmp/demo_map_run/<타임스탬프>/demo_0N_*.png, --update-screens이고 실패 0건이면 docs/screens/로)과 걸린 시간을 남긴다.
 사람이 말하는 시간은 빼고 화면 동작 시간만 잰다 (리허설 때 말할 시간은 대본의 장면별 목표 시간을 따른다).
 
 미리 띄울 것: 빌드본 uvicorn 8000 (기본) 또는 개발 서버 3000 (--dev).
@@ -17,7 +17,6 @@ from playwright.sync_api import sync_playwright
 import _target  # tests/_target.py: 원격 판정·키 가림·prod_ 스크린샷
 
 ROOT = Path(__file__).resolve().parents[1]
-SCREENS = ROOT / "docs" / "screens"
 # 대치동 학원가 (대치역~은마아파트 사거리 사이) 500m
 DAECHI_ACADEMY = "127.06200,37.49460,500"
 
@@ -27,6 +26,7 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dev", action="store_true", help="개발 서버 http://localhost:3000/map/")
     ap.add_argument("--base", help="배포 주소 (예: https://….vercel.app)")
+    ap.add_argument("--update-screens", action="store_true", help="실패 0건일 때만 이번 캡처로 docs/screens/ 갱신")
     a = ap.parse_args()
     if a.base:
         home = a.base.rstrip("/") + "/map/?debug=1"
@@ -35,9 +35,11 @@ def main() -> int:
     q = home + ("&" if "?" in home else "?")
     remote = bool(a.base) and _target.is_remote(a.base)
 
+    shots_dir = _target.run_dir("demo_map_run")
+
     def shot(name: str) -> str:
-        """원격이면 prod_ 접두 (로컬 스크린샷을 덮어쓰지 않음)"""
-        return str(SCREENS / _target.shot_name(name, remote))
+        """이번 실행 폴더. 원격이면 prod_ 접두 (로컬 스크린샷과 이름이 겹치지 않게)"""
+        return str(shots_dir / _target.shot_name(name, remote))
 
     results: list[tuple[str, float, bool, str]] = []
     errors: list[str] = []
@@ -67,7 +69,6 @@ def main() -> int:
             except Exception as e:  # noqa: BLE001 — 장면 하나가 실패해도 나머지를 돈다
                 ok, detail = False, f"{type(e).__name__}: {str(e).splitlines()[0][:160]}"
             dt = time.perf_counter() - t0
-            SCREENS.mkdir(parents=True, exist_ok=True)
             page.screenshot(path=shot(f"demo_{n:02d}_{slug}.png"))
             results.append((f"{n}. {name}", dt, ok, detail))
 
@@ -209,7 +210,9 @@ def main() -> int:
     print(f"전체 화면 동작 시간 {total:.1f}초 · 페이지 오류 {len(errors)}건")
     for e in errors[:5]:
         print("  ", _target.mask_text(e))
-    return 0 if all(r[2] for r in results) and not errors else 1
+    n_fail = sum(1 for r in results if not r[2]) + (1 if errors else 0)
+    _target.publish_shots(shots_dir, a.update_screens, n_fail)
+    return 0 if not n_fail else 1
 
 
 if __name__ == "__main__":

@@ -10,3 +10,5 @@ web/node_modules/
 data_raw/11.공간정보/
 # 생활 인프라 원본 CSV (P18) — 원본은 커밋하지 않고 빌드한 GeoJSON만 커밋
 data_raw/12.생활인프라/
+# 점검 도구 캡처·임시 출력 (tests/_target.run_dir)
+tmp/
