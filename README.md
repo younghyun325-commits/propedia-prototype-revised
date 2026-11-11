@@ -30,6 +30,12 @@
 npm --prefix web run dev            # http://localhost:3000/map/  (/api는 8000으로 프록시)
 ```
 
+**`--reload`가 바뀐 코드를 반영하지 않을 때 (Windows, 2026-11-11 확인)**
+- 이 venv에는 `watchfiles`가 없어 uvicorn은 `StatReload`(작업 폴더 `*.py` 수정 시각 확인)를 씁니다. 그래서 `WATCHFILES_FORCE_POLLING` 같은 watchfiles 환경변수는 효과가 없습니다. 변경 감지 자체는 OneDrive 폴더에서도 됩니다(로그 `StatReload detected changes in ... Reloading...`).
+- 멈추는 곳은 재시작입니다. uvicorn 0.54는 Windows에서 worker에 `CTRL_C_EVENT`를 보내 끄는데(`uvicorn/supervisors/basereload.py`), 이 신호는 **같은 콘솔 창**의 프로세스에만 전달됩니다. 콘솔 없이 띄운 서버(Claude Code 백그라운드 셸, 일부 작업 실행기)는 `Reloading...` 뒤 옛 worker가 그대로 남아 옛 코드로 응답합니다.
+- 해결: VS Code 터미널(또는 cmd·PowerShell 창)에서 직접 띄웁니다. 콘솔 없이 띄웠다면 바꾼 뒤 서버를 직접 끄고 다시 띄웁니다. 8000번을 쥔 프로세스는 `Get-NetTCPConnection -LocalPort 8000 -State Listen`으로 찾고, 자식 worker(`multiprocessing.spawn`)까지 끕니다.
+- 감시 범위를 줄이려면 `--reload-dir api --reload-dir core`(여러 번 지정 가능, [uvicorn 설정 문서](https://www.uvicorn.org/settings/#development)). `--reload-include`·`--reload-exclude`는 watchfiles가 있어야 동작합니다.
+
 빌드본 확인: `npm --prefix web run build` → `public/map/` → `http://127.0.0.1:8000/map/` (점검 스크립트는 `?debug=1`).
 
 **`web/`를 고치면 `npm --prefix web run build` 후 `public/map/`을 함께 커밋합니다** (P20). Vercel은 빌드 중에 만든 `public/` 파일을 서빙하지 않아(관찰: Preview ee79ea4) 커밋된 빌드 결과를 그대로 씁니다 — `db/propedia.db`를 커밋하는 것과 같은 방식. 빌드는 `.env`와 무관하게 같은 소스면 같은 파일이 나오고(배경지도 키를 넣지 않음), `public/map/build-info.json`의 소스 해시를 `tests/test_public_map_fresh.py`가 확인합니다.

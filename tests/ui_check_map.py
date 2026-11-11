@@ -1135,11 +1135,23 @@ def p18_checks(page, url: str, check, shot: bool) -> None:
     if shot:
         page.screenshot(path=str(SHOT_P18["c_station"]))
     # 히트 반경: 칩 중심에서 20px 떨어진 곳은 아이콘 선택이 아님
+    # 고정 시간 대신 상태로 기다린다: URL sel은 상태가 바뀔 때마다 300ms 디바운스가 다시 시작되고(useUrlSync),
+    # 빈 곳 클릭은 실시간 필지 조회 응답이 와야 상태가 끝나므로, 응답이 늦으면 500ms 뒤에도 옛 sel이 남아 있었다.
     page.click("[data-testid=inspector-close]")
+    closed = _wait_url(page, lambda u: _q(page, "sel") != station, 3000)      # 닫기가 URL까지 반영됨
+    page.evaluate(JS_IDLE)                                                   # 지도 이동이 끝난 뒤 화면 좌표 계산
     x, y = page.evaluate(JS_PT, [lon, lat])
-    page.mouse.click(x + 20, y + 20)
-    page.wait_for_timeout(500)
-    check("[P18] 아이콘 밖(20px)을 누르면 아이콘을 고르지 않음", _q(page, "sel") != station, str(_q(page, "sel")))
+    t0 = time.time()
+    try:   # 빈 곳으로 처리되면 필지 조회 요청이 나간다 (아이콘이 골라지면 요청 없음 → 실패)
+        with page.expect_response(lambda r: "/api/v1/map/parcel-at" in r.url, timeout=10000):
+            page.mouse.click(x + 20, y + 20)
+        looked_up = True
+    except Exception:
+        looked_up = False
+    t_resp = time.time() - t0
+    settled = _wait_url(page, lambda u: _q(page, "sel") != station, 3000)   # 응답 뒤 디바운스까지 기다림
+    check("[P18] 아이콘 밖(20px)을 누르면 아이콘을 고르지 않음", closed and looked_up and settled,
+          f"sel={_q(page, 'sel')} 닫힘 {closed} 필지 조회 {looked_up} ({t_resp:.2f}s)")
 
     # 5. 정류장 클릭 → ARS(고정폭)·지나는 노선 칩 → 노선 선택 모드 → 해제
     _open(page, with_q + "layers=projects,impact250,impact500,parcels,schools,stations,bus_stops")
