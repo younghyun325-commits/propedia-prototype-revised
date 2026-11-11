@@ -24,6 +24,7 @@ import shapely
 from pyproj import Transformer
 from shapely.geometry import shape
 
+from pipeline import sync_server_data
 from pipeline.common import BUILD, PUBLIC, SEED, SHP_SEOULPLAN, SHP_UIJE, fail, log, setup_stdout, sha256
 from pipeline.geo import to_5186, write_fc
 
@@ -180,6 +181,7 @@ def main() -> int:
             log(f"  {k} | {n} | {info['examples'][k]}")
     update_manifest(entries)
     log(f"\nmanifest.json sha256 {sha256(OUT / 'manifest.json')[:16]}")
+    sync_server_data.sync(quiet=True)    # 서버가 읽는 사본 (P20-B, core/paths.py)
 
     dp = BUILD / "reference_dupes.csv"
     dp.parent.mkdir(parents=True, exist_ok=True)

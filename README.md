@@ -54,9 +54,12 @@ npm --prefix web run dev            # http://localhost:3000/map/  (/api는 8000�
 | 4 | 실거래 (아래 'market.db 갱신 규칙') | 사용 (공공데이터포털) | `db/market.db`, `seed/apartments.geojson` |
 | 5 | `python -m pipeline.fetch_pois` | 사용 (상가 API, 캐시 있으면 0회) | `public/data/layers/` 학교·역·정류장·노선·편의시설 |
 | 6 | `python -m pipeline.build_map_layers` | – | `public/data/layers/propedia_*.geojson`, `manifest.json` (좌표 소수 6자리) |
-| 7 | `npm --prefix web run build` | – | `public/map/` + `build-info.json` — **커밋** (Vercel은 빌드하지 않음, P20) |
-| 8 | `python -m evals.run_eval` (`--live`) | (`--live`만) | M1~M24 (`--live`면 M18·M21까지) |
-| 9 | `python -m pipeline.check_secrets` | – | 빌드 산출물·커밋 파일의 키 노출 건수(변수 이름별, 값은 출력 안 함) |
+| 7 | `python -m pipeline.sync_server_data` | – | `data/server/` — 서버가 읽는 9개 파일 사본 (1·3·5·6이 끝에서 자동으로 부릅니다. `--check`로 비교만) |
+| 8 | `npm --prefix web run build` | – | `public/map/` + `build-info.json` — **커밋** (Vercel은 빌드하지 않음, P20) |
+| 9 | `python -m evals.run_eval` (`--live`) | (`--live`만) | M1~M24 (`--live`면 M18·M21까지) |
+| 10 | `python -m pipeline.check_secrets` | – | 빌드 산출물·커밋 파일의 키 노출 건수(변수 이름별, 값은 출력 안 함) |
+
+**지도 데이터를 두 곳에 두는 이유 (P20-B)**: Vercel은 프로젝트 루트 `public/`을 CDN이 플랫폼 수준에서 서빙하고 **Python 함수 묶음에는 넣지 않습니다** (문서는 `app.mount()`·`app.frontend()`로 승격된 디렉터리에만 '실행 중에 읽을 수 있다'고 보장합니다. 관찰: 운영에서 `/data/layers/manifest.json`은 CDN 200인데 `/api/v1/map/manifest`는 503, 참고 WMS 타일은 경계 bbox가 없어 400, 필지 응답 `ref_zones`는 0건). 그래서 브라우저가 받는 파일은 `public/data`에 두고, **서버가 읽는 9개(0.60MB)만** `public/` 밖 `data/server/`에 같은 내용으로 둡니다 — `db/propedia.db`를 커밋하는 것과 같은 자리입니다. `core/`는 `data/server/`만 읽고(`core/paths.py`), 두 사본이 같은지와 `core/`가 `public/`을 읽지 않는지는 `tests/test_server_data.py`가 확인합니다.
 
 ## 반영 범위
 
@@ -81,7 +84,8 @@ npm --prefix web run dev            # http://localhost:3000/map/  (/api는 8000�
 ```
 api/index.py        FastAPI 앱 (Vercel 진입점, 로컬은 public/도 서빙)
 core/               조회·판정 로직 (표준 라이브러리만, 네트워크 없음, DB 읽기 전용)
-public/             화면 5개 + assets + 원문 쪽 이미지(pages/)
+public/             화면 5개 + assets + 원문 쪽 이미지(pages/) + 지도 화면(map/)·지도 데이터(data/) — CDN이 서빙
+data/server/        서버가 실행 중에 읽는 지도 파일 9개 (public/data 사본, 이유는 core/paths.py)
 db/                 schema.sql, propedia.db (빌드 산출물, 커밋함)
 pipeline/           빌드 스크립트 (시연 코드에서 import 금지)
 seed/               법정동 코드·시연 주소·단계 템플릿/규칙·D2 쪽 선택·전사 원본(transcripts/)·건축물대장 요약(buildings.json)

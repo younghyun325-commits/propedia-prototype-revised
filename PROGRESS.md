@@ -186,7 +186,45 @@ README(지도 화면·로컬 실행 2터미널·지도 빌드 순서·market.db 
 
 - 증상 4개(레이어 탭 503, 참고 WMS 400, 참고 구역 0건, 타임라인 `data_as_of`에 레이어 기준일 누락)가 **한 원인**이다.
 - 원인: Vercel FastAPI 프리셋은 프로젝트 루트 `public/`을 CDN이 플랫폼 수준에서 서빙하고 **Python 함수 묶음에는 넣지 않는다.** 문서는 `public/` 절에서 CDN 서빙만 설명하고("Do not mount the `public/` directory with `app.mount()`. Vercel handles it at the platform level."), '묶음에 남겨 실행 중에 읽을 수 있다'는 보장은 `app.mount()`·`app.frontend()`로 승격된 디렉터리에만 적는다("Promoted source directories are kept in the function bundle by default so the app can read from them at runtime"). 우리 `api/index.py`의 mount는 `VERCEL != "1"`일 때만 실행되므로 배포본에는 승격도 묶음 포함도 없다. P20의 `/map/` 404(빌드 중 만든 `public/map/`이 서빙되지 않음)와는 **다른 문제**다.
-- 고친 방법은 아래 'P20-B 수정' 절에 적는다.
+### P20-B 수정 — 서버가 읽는 파일을 `public/` 밖으로 (방안 B, 사람 결정)
+
+- 비교한 방안: A `vercel.json` `functions.includeFiles`로 `public/data` 포함 — 문서에 있는 속성이지만 '`public/`은 플랫폼이 처리한다'와 충돌할 수 있어 **배포해 봐야** 알 수 있다. C manifest·참고 도형·경계를 DB 테이블로 옮기기 — 파일 중복은 없지만 바꾸는 양이 B의 4~5배이고 빌드마다 커밋된 `.db` 바이트가 바뀐다. **B** `public/` 밖 복사 — `db/*.db`가 운영에서 읽히는 것이 이미 증거이고, 배포 없이 로컬 테스트로 검증된다.
+- 서버가 실행 중에 읽는 파일은 전수 조사 결과 **9개 0.60MB**뿐이다 (`core/map.py` manifest·`propedia_*`(근거 쪽)·`base/*`(경계·WMS bbox), `core/refzones.py` `ref_*`). 브라우저만 쓰는 큰 레이어(pois·apartments·bus 등 5.3MB)는 복사하지 않는다 → 함수 묶음 15.8MB → 16.4MB (한도 500MB).
+- 바꾼 것
+  - 새 `core/paths.py`: `SERVER_DATA = data/server`, `layers_dir()`·`base_dir()`, `public_dir()`(환경변수 `PROPEDIA_PUBLIC_DIR`로 바꿀 수 있음 — 없는 경로를 주면 배포본과 같은 조건). 머리말에 Vercel 문서 인용과 운영 관찰을 적었다.
+  - `core/map.py`·`core/refzones.py`가 `data/server/`만 읽는다. 503 안내 문구도 실제 경로(`data/server/layers/manifest.json`)와 실행할 명령으로 고쳤다.
+  - 새 `pipeline/sync_server_data.py`(`--check`): `public/data` → `data/server` 9개만, 바이트가 다를 때만 쓴다(멱등). `build_map_base`·`build_map_layers`·`import_reference`·`fetch_pois`가 끝에서 부른다(세 스크립트가 `manifest.json`을 고치므로). 이 노트북에는 `data_raw` 원본이 없어 지도 빌드를 다시 돌릴 수 없으므로 이 복사 스크립트만으로 처리했다.
+  - `.gitattributes`에 `public/data/** -text`·`data/server/** -text` (줄끝 변환이 한쪽에만 걸리면 두 사본의 바이트가 어긋난다). `vercel.json`·`.vercelignore`는 바꾸지 않았다.
+- 배포 재현 테스트 `tests/test_server_data.py` 10개: `PROPEDIA_PUBLIC_DIR`를 없는 경로로 두고 manifest·`parcel-at`의 `ref_zones`·`feature/project/1`·WMS bbox(`wms_request_error`)·타임라인 `data_as_of`를 점검하고, `core/`가 `public/`을 가리키지 않는지(AST로 `public_dir()` 사용·경로 결합·`public/data` 문자열)와 두 사본이 바이트까지 같은지 확인한다.
+  - **고치기 전 코드에서 운영과 똑같이 실패했다**: manifest 503(같은 문구), `ref_zones` `[]`, `refzones.loaded_count()` 0, `gangnam_bbox()` None(→ WMS 400), `data_as_of`에 `layer:*` 0건 → 8 failed, 2 passed. 고친 뒤 10 passed.
+- 확인: `pytest -q` **334 passed, 4 skipped** (전 328 → 새 테스트 10개, `LAYERS_DIR`를 쓰던 기존 테스트 7개는 `core.paths.layers_dir()`/`_layers_dir` 몽키패치로 고침. `import_reference` 멱등 테스트의 '커밋된 결과'는 그 스크립트가 쓰는 `public/data/layers`를 본다)
+  - `npm --prefix web run test` 156 passed / `tests/test_public_map_fresh.py` 2 passed (`web/`는 고치지 않아 `public/map/` 재빌드 없음) / `pipeline.sync_server_data --check` 같음 / `pipeline.check_secrets` 통과(단 `.env`가 없어 찾을 값이 없는 통과 — HUMAN_TODO 57)
+  - `python -m evals.run_eval`은 **실행했다가 되돌렸다**: 이 노트북에는 `--live` 키도 `data_raw/12.생활인프라` CSV도 없어 M18·M21이 빠지고 M24 분모가 없는 약한 리포트가 나온다 → `evals/report.md`·`db/propedia.db`를 `git checkout`으로 복구(커밋된 Windows 쪽 리포트 유지). 지표 재확인은 원본이 있는 PC에서.
+
+### 이어서 할 일 (P20-B, 2026-11-11 노트북 중단 지점)
+
+1. 화면 점검 2개를 끝낸다. 서버는 **새 포트**에 띄워 옛 worker를 피한다 (README `--reload` 주의):
+   - `.venv/bin/python -m uvicorn api.index:app --port 8011 &` → `.venv/bin/python tests/ui_check_map.py --base http://127.0.0.1:8011`
+     - **중단 지점**: `[P17] 영향권 안 단지 행 → 그 단지 선택`에서 `[data-testid=project-nearby-row] button` 클릭이 30초 타임아웃(`tests/ui_check_map.py:1011`). 그 앞 `check(... rows > 0 ...)` 결과를 먼저 봐야 한다 — 행이 0개면 `market.db`(실거래) 쪽이고, P20-B 변경(`data/server`)과는 무관할 가능성이 크다(영향권 안 단지는 `core/market.nearby_for_project`, 즉 DB에서 온다). 먼저 `tests/ui_check_map.py --base … --only p20`으로 P20 항목만 돌려 P20-B 영향이 없음을 확인하고, P17 행은 따로 본다.
+   - `.venv/bin/python tests/ui_check.py --channel chrome` (기존 화면, macOS 기본 채널)
+2. 커밋 2개(`73eafbf` 기록·README, 그다음 P20-B 수정)를 push한다 — **Claude Code는 push하지 않는다**: `git push origin feat/map-console`
+3. 사람이 Preview 확인 → `main` 빨리감기 (아래 '다음 배포 절차').
+4. 재배포 뒤 HUMAN_TODO 58 점검(레이어 탭·참고 WMS 타일·필지 참고 구역·타임라인 자료 기준일).
+
+### 다음 배포 절차 (macOS zsh, 지금 `origin/main` = `8ae7582`)
+
+| 명령 | 뜻 |
+|---|---|
+| `git fetch origin` | 원격 상태를 먼저 가져온다 (아래 판정이 최신 기준이 되게) |
+| `git status -sb` | 작업 트리가 깨끗하고 `feat/map-console`이 원격보다 앞선 것만 있는지 |
+| `git merge-base --is-ancestor origin/main feat/map-console && echo "빨리감기 가능"` | `origin/main`이 우리 브랜치의 조상인지 = 되감기 없이 반영되는지. 아무것도 안 나오면 **멈추고** 원인을 본다 |
+| `mv .git/hooks/pre-push .git/hooks/pre-push.off` | 로컬 훅이 main push를 막으므로 잠시 끈다 (훅은 커밋되지 않는 로컬 파일) |
+| `git push origin feat/map-console:main` | 브랜치 내용을 main으로. 기대 출력: `8ae7582..<새 해시>  feat/map-console -> main` |
+| `mv .git/hooks/pre-push.off .git/hooks/pre-push` | 훅을 바로 되돌린다 (실패했더라도 이 줄은 반드시 실행) |
+| `git switch main && git merge --ff-only origin/main && git switch feat/map-console` | 로컬 main도 같은 자리로 맞추고 작업 브랜치로 돌아온다 |
+
+- `! [rejected] (non-fast-forward)`가 나오면: 누군가 main에 다른 커밋을 올린 것이다. **force push하지 말고** `git log --oneline origin/main` 으로 확인한 뒤 그 커밋을 `feat/map-console`에 먼저 합친다.
+- `pre-push.off`가 남아 있으면 훅이 꺼진 상태다 — `ls .git/hooks/pre-push*`로 확인한다.
 
 ## P19 하단 타임라인·고시 피드 (+ 편의시설 선택 수정) — 완료 (2026-11-11)
 

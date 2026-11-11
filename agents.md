@@ -361,8 +361,12 @@ pretotype/
   db/
     schema.sql
     propedia.db           # 커밋함 (빌드 산출물, 수 MB 이하)
+  data/server/            # P20-B 커밋함. 서버가 실행 중에 읽는 지도 파일 9개 (public/data 사본, 0.6MB)
+    layers/manifest.json, propedia_*.geojson, ref_*.geojson
+    base/gangnam.geojson, bjd.geojson
+                          # Vercel은 public/을 CDN이 서빙하고 함수 묶음에 넣지 않는다 → core/는 여기만 읽는다 (core/paths.py)
   core/                   # 조회·판정 로직. 표준 라이브러리만 사용
-    __init__.py, db.py, address.py, lookup.py, progress.py, review.py, text.py, timeutil.py
+    __init__.py, db.py, address.py, lookup.py, progress.py, review.py, text.py, timeutil.py, paths.py(P20-B)
     live/                 # P10 실시간 조회 (네트워크는 여기서만): http.py, juso.py, vworld.py
   api/
     index.py              # FastAPI 앱 (Vercel 진입점, 로컬에서는 public/도 서빙)
@@ -1548,6 +1552,7 @@ P0에서 위 5줄로 만들고, 작업 중 생기는 일을 추가한다.
 ## 21. 변경 이력
 | 날짜 | 작성자 | 내용 |
 |---|---|---|
+| 2026-11-11 | Claude Code (P20-B) | **운영 배포에서 함수가 `public/`을 읽지 못하는 문제 수정**: Vercel은 루트 `public/`을 CDN이 플랫폼 수준에서 서빙하고 Python 함수 묶음에 넣지 않는다(문서는 `app.mount()`·`app.frontend()`로 승격된 디렉터리만 '실행 중에 읽을 수 있다'고 보장. 관찰 2026-11-11 운영 8ae7582: `/data/layers/manifest.json` CDN 200 ↔ `/api/v1/map/manifest` 503, 참고 WMS 타일 400(경계 bbox 없음), 필지 `ref_zones` 0건, 타임라인 `data_as_of`에 레이어 기준일 누락. `db/*.db`는 읽힘) → 서버가 읽는 9개 파일(0.60MB)을 `data/server/`에 같은 내용으로 두고 `core/`는 거기만 읽는다(`core/paths.py`, §6). `pipeline/sync_server_data.py`(`--check`, 네 빌드 스크립트가 끝에서 호출), `.gitattributes` `public/data/** data/server/** -text`, `tests/test_server_data.py`(`PROPEDIA_PUBLIC_DIR`로 배포 조건 재현 + `core/`가 `public/`을 가리키지 않는지). `vercel.json`·`.vercelignore`는 그대로 |
 | 2026-11-11 | Claude Code (P20) | `/map/` 배포 404 해결: Vercel은 빌드 중에 만든 `public/map/`을 서빙하지 않음(관찰: Preview ee79ea4, 문서는 루트 `public/` CDN 서빙만 설명) → `vercel.json` `buildCommand` 삭제, `public/map/` 빌드 결과 커밋(`.gitattributes` `-text`, `excludeFiles`에 `public/map/**`), `build-info.json` 소스 해시 + `tests/test_public_map_fresh.py`. 배경지도 키는 빌드에 넣지 않고 `GET /api/v1/map/config`(`VITE_VWORLD_KEY`만, 서버 키로 대체 안 함). meta `patched_at`·`patched_by`(`pipeline/common.mark_patched`, patch_* 가 행을 바꿨을 때만, 첫 값 `pipeline/mark_patched.py`) → health·manifest·데이터 상태 탭 |
 | 2026-11-11 | Claude Code (P20) | 운영 저장소·Vercel 프로젝트 전환, 저장소 비공개: GitHub `younghyun325-commits/propedia-prototype`(비공개, `origin`) · Vercel klowyh(Hobby) 프로젝트 `propedia-prototype`(Root `./`). 옛 저장소 `greekyogurt02/propedia-pretotype`는 기록으로만, 원격 없음. 새 커밋 작성자는 `git config --local user.email`. 이력 재작성은 하지 않음(HUMAN_TODO 44 닫힘). §15-5 |
 | 2026-11-11 | Claude Code (P20) | 운영 주소 변경: propedia-pretotype.vercel.app → propedia-prototype.vercel.app (`core/live/vworld.py` `DEFAULT_DOMAIN`·테스트·`.env.example`·README·DEMO·DEMO_MAP·HUMAN_TODO 34·§15-1-1). Vercel 도메인·옛 주소 리디렉트·브이월드 새 키·환경변수는 사람 (HUMAN_TODO 53~55). GitHub 저장소·git 원격·폴더·Vercel 프로젝트 이름은 그대로 |

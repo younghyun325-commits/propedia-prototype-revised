@@ -1,6 +1,7 @@
 """지도 화면용 조회 (docs/map/PLAN.md P14). 표준 라이브러리만, DB는 읽기 전용, 네트워크 없음.
 
-- map_manifest: public/data/layers/manifest.json + public/data/base/ 를 읽어 레이어 목록(아직 없는 레이어는 pending)
+- map_manifest: data/server/layers/manifest.json + data/server/base/ 를 읽어 레이어 목록(아직 없는 레이어는 pending)
+  (서버가 읽는 파일은 CDN이 서빙하는 폴더 밖에 둔다 — 이유는 core/paths.py)
 - state_at (P19): '그날 기준' 판정 하나 — 문서 발행 여부, 사업 표시·단계·기한(progress(today=그날)), 규제 효력 상태,
   상단 칩. map_projects·map_notices·map_feature·timeline·feed가 모두 이 함수를 쓴다 (날짜 계산은 core/timeutil)
 - map_notices: 지도에 영역이 없는 서울 전역·강남구 단위 고시 (상단 바 칩). 효력 판정은 lookup.load_items 그대로
@@ -20,12 +21,11 @@ from core import refzones
 from core.lookup import DISCLAIMER, load_items, lookup_pnu
 from core.progress import progress
 from core.market import nearby_for_project
+from core.paths import base_dir as _base_dir, layers_dir as _layers_dir
 from core.review import Overrides
 from core.timeutil import EFFECTIVE_SHORT_LABELS, d_day, effective, parse_date
 
 ROOT = Path(__file__).resolve().parents[1]
-LAYERS_DIR = ROOT / "public" / "data" / "layers"
-BASE_DIR = ROOT / "public" / "data" / "base"
 SGG_GANGNAM = "11680"
 
 # 포함 판정 (pipeline/build_map_layers.py도 이 표를 쓴다: 한 곳에서만 정의)
@@ -34,7 +34,8 @@ INCLUSION = {"representative_only": "possible", "map_reading": "likely", "manual
 INCLUSION_LABEL = {"included": "포함", "possible": "포함될 수 있음", "likely": "포함된 것으로 보임 (확인 필요)"}
 JUDGMENTS = ("included", "possible", "likely")
 
-UNAVAILABLE = "지도 레이어 목록 파일(public/data/layers/manifest.json)을 읽지 못했습니다. pipeline.build_map_layers를 먼저 실행해 주세요"
+UNAVAILABLE = ("지도 레이어 목록 파일(data/server/layers/manifest.json)을 읽지 못했습니다. "
+               "pipeline.build_map_layers 뒤 pipeline.sync_server_data를 실행해 주세요")
 VWORLD_SRC = "브이월드 WMTS (국토교통부)"
 VWORLD_LICENSE = "공공누리 1유형 (출처표시)"
 D5_NOTE = "경계 확인 전, 법정동(압구정동) 단위로만 표시"
@@ -92,7 +93,7 @@ def _read_json(path: Path) -> dict | None:
 
 
 def _features(name: str) -> list[dict]:
-    fc = _read_json(LAYERS_DIR / f"{name}.geojson")
+    fc = _read_json(_layers_dir() / f"{name}.geojson")
     return (fc or {}).get("features") or []
 
 
@@ -122,7 +123,7 @@ def parcel_judgments(con) -> dict:
 
 
 def map_manifest(con) -> dict:
-    man = _read_json(LAYERS_DIR / "manifest.json")
+    man = _read_json(_layers_dir() / "manifest.json")
     if not man or not isinstance(man.get("layers"), dict):
         raise MapDataUnavailable(UNAVAILABLE)
     L = man["layers"]
@@ -207,7 +208,7 @@ def map_manifest(con) -> dict:
                        "unverified": False, "doc_ids": [], "source_pages": [], **({"badge": p["badge"]} if p.get("badge") else {})})
 
     for id_, name, fn in (("boundary-gangnam", "강남구 경계", "gangnam"), ("boundary-bjd", "법정동 경계", "bjd")):
-        fc = _read_json(BASE_DIR / f"{fn}.geojson")
+        fc = _read_json(_base_dir() / f"{fn}.geojson")
         entry(id_, "base", name, "line",
               {"source": "브이월드 2D 데이터 (국토교통부)", "license": VWORLD_LICENSE,
                "count": len(fc["features"]) if fc else None}, status="ready" if fc else "pending")
@@ -410,10 +411,10 @@ _gangnam_bbox: list[float] | None = None
 
 
 def gangnam_bbox() -> list[float] | None:
-    """public/data/base/gangnam.geojson의 [서, 남, 동, 북] (처음 한 번 읽음)"""
+    """data/server/base/gangnam.geojson의 [서, 남, 동, 북] (처음 한 번 읽음)"""
     global _gangnam_bbox
     if _gangnam_bbox is None:
-        fc = _read_json(BASE_DIR / "gangnam.geojson") or {}
+        fc = _read_json(_base_dir() / "gangnam.geojson") or {}
         boxes = [b for b in (_bbox(f["geometry"]) for f in fc.get("features") or []) if b]
         if boxes:
             _gangnam_bbox = [min(b[0] for b in boxes), min(b[1] for b in boxes),
@@ -941,7 +942,7 @@ def timeline(con, frm, to) -> dict:
             "title": tpl.get((h["project_type"], h["sub_stage_code"]), h["sub_stage_code"]), "code": h["sub_stage_code"],
             "project_id": h["project_id"], "sel": f"project:{h['project_id']}",
             "source": source(con, h["source_doc_id"], h["pdf_page"])})
-    man = _read_json(LAYERS_DIR / "manifest.json") or {}
+    man = _read_json(_layers_dir() / "manifest.json") or {}
     m = meta(con)
     pts = [("db:as_of", "DB 기준일 (가장 최근 문서)", m.get("as_of"), m.get("as_of")),
            ("db:build_at", "DB 빌드", (m.get("build_at") or "")[:10] or None, (m.get("build_at") or "")[:10] or None)]

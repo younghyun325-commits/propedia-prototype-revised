@@ -31,6 +31,7 @@ import yaml
 from shapely.geometry import Point, shape
 from shapely.prepared import prep
 
+from pipeline import sync_server_data
 from pipeline.build_map_layers import within_impact
 from pipeline.common import BUILD, DATA_RAW, PUBLIC, SEED, fail, log, setup_stdout, sha256
 from pipeline.geo import to_5186, write_fc
@@ -567,6 +568,7 @@ def main() -> None:
     for k, v in sorted(sizes.items()):
         log(f"  {k}: {v:,} B sha256 {report['sha256'][k]}")
     log(f"manifest.json sha256 {report['sha256']['manifest.json']} · 리포트 build/pois_report.json · {report['seconds_total']}초")
+    sync_server_data.sync(quiet=True)    # 서버가 읽는 사본 (P20-B, core/paths.py)
 
 
 if __name__ == "__main__":

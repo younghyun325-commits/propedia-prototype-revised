@@ -25,6 +25,7 @@ from shapely.geometry import Point, shape
 from core.db import connect_ro
 from core.map import INCLUSION, INCLUSION_LABEL
 from core.progress import progress
+from pipeline import sync_server_data
 from pipeline.boundaries import read_boundary
 from pipeline.common import PUBLIC, SEED, fail, log, setup_stdout, sha256
 from pipeline.geo import geom_out, to_4326, to_5186, write_fc
@@ -214,6 +215,7 @@ def main() -> None:
     mp.write_text(json.dumps(manifest, ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8", newline="\n")
     log(f"manifest.json sha256 {sha256(mp)[:16]} · 메모 {notes}")
     log(f"레이어 합계 {total:,} B ({total / 1024 / 1024:.2f} MB, 목표 2MB 이하)")
+    sync_server_data.sync(quiet=True)    # 서버가 읽는 사본 (P20-B, core/paths.py)
 
 
 if __name__ == "__main__":

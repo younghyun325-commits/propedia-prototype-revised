@@ -21,6 +21,7 @@ import httpx
 from dotenv import load_dotenv
 
 from core.live.vworld import domain as vworld_domain
+from pipeline import sync_server_data
 from pipeline.common import BUILD, PUBLIC, ROOT, SEED, fail, log, setup_stdout, sha256
 
 DATA_URL = "https://api.vworld.kr/req/data"
@@ -152,6 +153,7 @@ def main() -> None:
         log(f"public/data/base/{path.name}: {n:,} B  sha256 {sha256(path)}")
         if n > SIZE_WARN:
             log(f"  ※ 1MB를 넘습니다 — 단순화 여부 확인 필요")
+    sync_server_data.sync(quiet=True)    # 서버가 읽는 사본 (P20-B, core/paths.py)
 
 
 if __name__ == "__main__":

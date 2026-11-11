@@ -5,3 +5,7 @@
 *.db binary
 # 지도 빌드 결과 (P20, 커밋함): 줄끝 변환 없이 바이트 그대로 — 빌드 결과·체크아웃·배포가 같은 파일
 public/map/** -text
+# 지도 데이터 (P20-B): 같은 내용을 두 곳에 둔다 (브라우저용 public/data, 서버용 data/server — core/paths.py).
+# 줄끝 변환이 한쪽에만 걸리면 두 사본의 바이트가 어긋나므로 양쪽 모두 변환하지 않는다
+public/data/** -text
+data/server/** -text

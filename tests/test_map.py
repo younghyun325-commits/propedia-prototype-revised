@@ -1,6 +1,6 @@
 """지도 API (docs/map/PLAN.md P14): manifest·notices·projects·health 키 상태, within_impact.
 
-건수는 숫자로 적지 않고 public/data/layers/manifest.json·GeoJSON·DB에서 읽어 비교한다.
+건수는 숫자로 적지 않고 서버가 읽는 data/server/layers/manifest.json·GeoJSON·DB에서 읽어 비교한다 (P20-B: core/paths.py).
 """
 import json
 import os
@@ -8,6 +8,7 @@ from datetime import date
 
 from core import map as map_mod
 from core.live.http import env_key
+from core.paths import layers_dir
 from core.progress import progress
 
 ROOT = map_mod.ROOT
@@ -18,11 +19,11 @@ KINDS = {"fill", "line", "symbol", "raster"}
 
 
 def _manifest_file() -> dict:
-    return json.loads((map_mod.LAYERS_DIR / "manifest.json").read_text(encoding="utf-8"))
+    return json.loads((layers_dir() / "manifest.json").read_text(encoding="utf-8"))
 
 
 def _fc(name: str) -> list[dict]:
-    return json.loads((map_mod.LAYERS_DIR / f"{name}.geojson").read_text(encoding="utf-8"))["features"]
+    return json.loads((layers_dir() / f"{name}.geojson").read_text(encoding="utf-8"))["features"]
 
 
 def test_manifest_shape_matches_fixture(client):
@@ -83,7 +84,7 @@ def test_manifest_reference_layers(client):
 
 
 def test_manifest_503(client, monkeypatch, tmp_path):
-    monkeypatch.setattr(map_mod, "LAYERS_DIR", tmp_path)
+    monkeypatch.setattr(map_mod, "_layers_dir", lambda: tmp_path)
     r = client.get("/api/v1/map/manifest")
     assert r.status_code == 503
     assert "manifest.json" in r.json()["detail"]

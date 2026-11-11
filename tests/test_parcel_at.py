@@ -20,10 +20,12 @@ from core import map as map_mod
 from core.live import vworld
 from core.live.http import LiveError
 from core.lookup import lookup, lookup_pnu
+from core.paths import layers_dir
 from tests.live_fixtures import FixtureFetch
 
 ROOT = Path(__file__).resolve().parents[1]
 FIX = ROOT / "tests" / "fixtures"
+PUBLIC_LAYERS = ROOT / "public" / "data" / "layers"   # import_reference가 쓰는 곳 (브라우저용 사본)
 TODAY = date(2026, 11, 10)
 YEOKSAM = (37.498701, 127.031577)          # 역삼동 823 경계 중심점 (evals/goldset/live_parcels.yaml)
 PNU_YEOKSAM = "1168010100108230000"
@@ -153,7 +155,7 @@ def test_lookup_pnu_same_layers_as_lookup(con):
 
 # ---- 참고 구역 점 판정 ----
 def _ref_feature(name):
-    fc = json.loads((map_mod.LAYERS_DIR / "ref_seoulplan.geojson").read_text(encoding="utf-8"))
+    fc = json.loads((layers_dir() / "ref_seoulplan.geojson").read_text(encoding="utf-8"))
     return next(f for f in fc["features"] if f["properties"]["DGM_NM"] == name)
 
 
@@ -186,7 +188,7 @@ def test_import_reference_idempotent(tmp_path, monkeypatch):
     if not (common.SHP_SEOULPLAN.exists() and common.SHP_UIJE.exists()):
         pytest.skip("data_raw/11.공간정보 SHP 없음")
     from pipeline import import_reference as ir
-    shutil.copy(map_mod.LAYERS_DIR / "manifest.json", tmp_path / "manifest.json")
+    shutil.copy(PUBLIC_LAYERS / "manifest.json", tmp_path / "manifest.json")
     monkeypatch.setattr(ir, "OUT", tmp_path)
     monkeypatch.setattr(ir, "BUILD", tmp_path / "build")
 
@@ -198,12 +200,12 @@ def test_import_reference_idempotent(tmp_path, monkeypatch):
     assert digest() == one
     for name in ("ref_seoulplan.geojson", "ref_uije.geojson", "manifest.json"):     # 커밋된 결과와도 같다
         # git autocrlf로 작업 사본이 CRLF가 될 수 있어 줄끝만 맞춰 비교 (빌드 출력은 LF)
-        committed = (map_mod.LAYERS_DIR / name).read_bytes().replace(b"\r\n", b"\n")
+        committed = (PUBLIC_LAYERS / name).read_bytes().replace(b"\r\n", b"\n")
         assert one[name] == hashlib.sha256(committed).hexdigest(), name
 
 
 def test_reference_geojson_keeps_original_fields():
-    fc = json.loads((map_mod.LAYERS_DIR / "ref_uije.geojson").read_text(encoding="utf-8"))
+    fc = json.loads((layers_dir() / "ref_uije.geojson").read_text(encoding="utf-8"))
     p = fc["features"][0]["properties"]
     assert {"PRESENT_SN", "LCLAS_CL", "ATRB_SE", "DGM_NM", "DGM_AR", "SIGNGU_SE", "CREATE_DAT"} <= set(p)
     assert {k for k in p if k.startswith("_")} == {"_source", "_license", "_as_of", "_ref", "_layer", "_row"}

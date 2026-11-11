@@ -1,15 +1,17 @@
 # 사람 확인 목록
 
-## 정리 (P20-A, 2026-11-11)
+## 정리 (P20-B, 2026-11-11)
 
 번호는 아래 전체 표의 번호입니다. 상태가 바뀌면 전체 표를 고치고 이 정리도 함께 고칩니다.
 
 ### 닫힌 것 (17)
 4 Vercel 배포 · 6 도로명주소 키 재발급 · 7 한양7차 중심 좌표 · 11 D2·D4 쪽 이미지 이용 조건 · 12 규제 고시 공고문 · 14 공공데이터포털 키 · 15 D6 종료일 · 18 브이월드 활용 API · 19 Vercel 실시간 키 · 26 Vercel 브이월드 키 교체 · 27 로고 원본 · 29 브이월드 개발 키 · 30 공간정보 SHP · 32 Preview 지도 화면·health · 36 압구정동 528 반영 · 48 Preview 실거래 API·원문 이미지 · 49 학교 이용허락범위
 
-### 남은 것 — 운영 배포(main) 전에 필요 (8)
+### 남은 것 — 운영 배포(main) 전에 필요 (10)
 | # | 할 일 (짧게) |
 |---|---|
+| 58 | **P20-B 재배포 뒤 운영 점검** — 레이어 탭·참고 WMS 타일·필지 참고 구역·타임라인 자료 기준일 |
+| 57 | **노트북 `.env`** — 작업 폴더에 없고 Desktop 쪽은 키 값이 비어 있음 → `check_keys` 실행 못 함 |
 | 52 | **P20-A Preview 확인 목록** — Preview 2차에서 `/map/`·`/index.html` 확인. 남은 307·noindex·압축·D5·D6·390px 시트는 운영 배포 후 점검에서 |
 | 51 | **개발키 재발급**: 로컬 `.env`의 브이월드 개발키 3변수(같은 값) — 출력·채팅 노출. 운영 키는 별도 유지 |
 | 34 | Vercel `VITE_VWORLD_KEY` — Preview 확인(configured true). Production은 운영 배포 후 확인 |
@@ -81,6 +83,8 @@
 | 54 | 새 Vercel 프로젝트(klowyh/`propedia-prototype`) 환경변수 확인: `VWORLD_API_KEY`·`VITE_VWORLD_KEY` = 서비스 URL `https://propedia-prototype.vercel.app`로 받은 새 주소용 키, `VWORLD_DOMAIN` = `https://propedia-prototype.vercel.app`, `JUSO_CONFM_KEY` 있으면 등록, `DATA_GO_KR_SERVICE_KEY`는 넣지 않음, Preview에만 `VERCEL_ANALYZE_BUILD_OUTPUT=1`. `VITE_VWORLD_KEY`는 P20부터 빌드가 아니라 서버 실행 중에 읽힘(`/api/v1/map/config`) — 등록·변경 뒤 Redeploy. 로컬 `.env`의 `VWORLD_DOMAIN`은 `http://localhost:3000` 그대로 | 코드 기본 domain이 새 주소. 옛 키는 옛 주소만 허용 | 운영 배포 전 | 열림 |
 | 55 | 확인: 옛 주소 접속 시 새 주소로 이동, 새 주소에서 배경지도·필지 클릭 조회·WMS 타일 동작 | 53·54 결과 확인 | 53·54 뒤 | 열림 |
 | 56 | **공공데이터포털 일반 인증키 재발급 권장** (채팅에 붙여 넣은 적 있음). 재발급 후 로컬 `.env` `DATA_GO_KR_SERVICE_KEY` 교체, `python -m pipeline.check_keys`로 확인. Vercel에는 넣지 않음 | 빌드용 키(실거래·단지 목록·상가·건축물대장). 런타임은 쓰지 않음 | 다음 데이터 갱신 전 | 열림 |
+| 57 | **노트북 `.env`**: `~/dev/propedia-prototype/.env`에 파일이 없어 `python -m pipeline.check_keys`를 실행하지 못했다(2026-11-11). `~/Desktop/propedia-prototype-main/.env`에는 변수 이름 11개가 있으나 키 값이 비어 있다(`JUSO_CONFM_KEY`·`JUSO_CONFM_KEY_ALT`·`DATA_GO_KR_SERVICE_KEY`·`VWORLD_API_KEY`·`VWORLD_API_KEY_DEV`·`VWORLD_DOMAIN`·`VITE_VWORLD_KEY` — 값은 보지 않고 이름별 있음/없음만 확인). `.env`를 작업 폴더에 두고 값을 채운 뒤 `check_secrets`·`check_keys`를 다시 돌릴 것 | 키가 없으면 `check_secrets`는 '찾을 값이 없어' 통과하므로 실질 점검이 아니고, `check_keys`는 멈춘다(H1). 브이월드 개발키 재발급 결과 확인도 51과 함께 막혀 있다 | 바로 | 열림 |
+| 58 | P20-B 재배포 뒤 운영에서 확인: 좌측 **레이어 탭**이 열리는지(`/api/v1/map/manifest` 200), **참고 WMS**(용도지역·지구단위계획·지적도) 타일이 보이고 두 번째 요청에 `x-vercel-cache: HIT`인지, 필지 클릭 결과에 **참고 구역**(예: 역삼동 823 → 영동1토지구획정리사업)이 나오는지, 하단 타임라인 '자료 기준일'에 레이어 항목이 있는지, 지도에서 필지 몇 곳을 눌러 '강남구 밖입니다'가 나오지 않는지(Preview 한정 현상이었는지) | Vercel 함수가 `public/`을 읽지 못해 생긴 증상 4개의 수정 확인. Preview에서는 브이월드 키 서비스 URL이 운영 주소라 실시간 조회·타일 확인이 제한된다 | 재배포 직후 | 열림 |
 
 ## 실거래 대조표 (HUMAN_TODO 46)
 
