@@ -109,6 +109,12 @@
 | 65 | OneDrive 옛 복사본 `C:\Users\young\OneDrive\Desktop\Anti Gravity\propedia-prototype-main(revised)` 삭제 (키가 든 `.env`가 있으면 휴지통도 비우기) | 잘못 연 옛 세션의 폴더. origin 원격은 사람이 이미 제거 | P22-0 커밋·push 뒤 | 열림 |
 | 66 | Mac에서 이어 할 때: `~/dev/propedia-prototype-revised`로 **새로 clone** → upstream 원격 추가 + push URL `PUSH_DISABLED_original_repo` → `git config --local user.email` 저장소 주인 noreply → `sh scripts/install_hooks.sh` → `.env`·gitignore 데이터 복사 (docs/map/P22_조사.md §1) | 훅은 커밋되지 않는 로컬 파일이라 clone마다 설치해야 함 | Mac 작업 시작 전 | 열림 |
 | 67 | **복제본 Preview 배포 준비** (원본 Vercel 프로젝트는 건드리지 않음): ① 새 Vercel 프로젝트를 `propedia-prototype-revised`에 연결 (Root `./`) ② 환경변수 `VWORLD_API_KEY`·`VITE_VWORLD_KEY`·`JUSO_CONFM_KEY`·`VWORLD_DOMAIN`(= 새 주소) 등록 ③ 브이월드 인증키 서비스 URL에 새 주소 등록 또는 새 키 발급 (지금 키의 서비스 URL은 원본 운영 주소) ④ `vercel.json` `regions: icn1` 유지. 원본 주소가 하드코딩된 곳은 docs/map/P22_조사.md §0 (바꾸지 않음) | 복제본을 Preview로 확인하려면 계정 작업이 필요 | Preview가 필요할 때 (영현 결정) | 열림 |
+| 68 | **브이월드 키의 서비스 URL 확인**: 지금 `.env`의 `VWORLD_API_KEY`(= `VITE_VWORLD_KEY` = `VWORLD_API_KEY_DEV`, 같은 값)는 국가중점 API(토지 3종)에서 `domain=https://propedia-prototype.vercel.app`이면 `INCORRECT_KEY`, `domain=http://localhost…`이면 OK (2026-11-12). 11-11에는 운영 주소로 OK였음. 브이월드 개발자센터에서 이 키의 서비스 URL을 확인하고, 운영 키를 넣은 것이 맞는지 확인. 운영 Vercel 환경변수의 키가 같은 값이면 운영의 토지 정보도 실패할 수 있음 | 로컬 점검은 프로세스 환경변수 `VWORLD_DOMAIN=http://localhost:3000`으로만 진행함 (`.env`는 그대로) | 바로 (61과 함께 처리 가능) | 열림 |
+| 69 | `data_raw/12.생활인프라/`를 Mac `~/dev/propedia-prototype/data_raw/12.생활인프라/`에서 가져오기 (결정 5) | `tests/test_pois.py` 건너뜀 1개, 버스·정류장 다시 빌드 | P22-7 전 (없으면 지금 `bus_routes.json`으로 진행) | 열림 |
+| 70 | 브이월드 국가중점 API 일일 호출 한도 확인 (개발자센터 인증키 화면) | 응답 헤더에 한도 정보 없음. P22-8 공시지가 추이는 필지당 1회 호출 (P22_조사 §6-2) | P22-8 전 | 열림 |
+| 71 | 토지거래허가 기한 확인: ① 서울시 제2025-2774호(강남3구·용산 아파트, 2026-12-31까지) 연장 공고 ② 국토부 제2025-1219호(2026-12-31까지) 연장 공고 ③ 서울시 제2025-1831호 재지정분(대치 미도 '모든 부동산' 등, 2026-06-22 끝)의 2026년 재지정 공고 ④ 제2025-953호 p2 지정기간 원문 날짜(텍스트로 안 뽑힘). 찾으면 강남구청 고시공고(`gangnam.go.kr/board/B_000046`) 첨부를 `data_raw/13.토지거래허가_서울시/`에 | 화면은 모르면 "2026.12.31까지(연장 여부 확인 필요)" | 2026-12 | 열림 |
+| 72 | 법령·연한 근거 전달: 리모델링 연한 조문, 재건축 연한(서울시 조례) 조문, 국토부 토허구역 연장 여부 — 2026-11-12 전달분은 세 칸 모두 빈칸이라 데이터·화면에 '확인 필요'로 표시 (결정 9) | 원칙 3 (안내 문구는 법령 대조 후 사람이 작성) | P22-4·P22-5 전 | 열림 |
+| 73 | 공공데이터포털 건축HUB 건축물대장정보·공동주택 기본 정보 승인 반영 확인 (2026-11-12 둘 다 `SERVICE_KEY_IS_NOT_REGISTERED_ERROR`). 반영되면 `python -m pipeline.fetch_apt_basis` 실행과 은마 등 3곳 동별 사용승인일 확인을 요청 | 결정 3(대표 사용승인일)·P22-1 토허 '대상 아님' 판정·P22-4 노후도 | 승인 뒤 | 열림 |
 
 ## 실거래 대조표 (HUMAN_TODO 46)
 

@@ -33,6 +33,15 @@
 - 점검: pytest 338 통과·2 건너뜀(SHP·생활인프라 CSV 없음 → 복사 후 재확인) / web vitest 156 통과(npm ci 직후 첫 실행 1회만 실패, 재현 안 됨) / `check_keys` 실패(키 없음 → `.env` 정리 후) / `check_secrets` 통과 / `sync_server_data --check` 통과 / `test_public_map_fresh` 통과
 - 기준 화면: msedge, `tmp/p22_baseline/` 12장(데스크톱·모바일 × 첫 화면·레이어 탭·사업 필지 528·실시간 필지 역삼동 823·한양7차·노선 402). 배경지도 키 없음으로 경계만 표시, 823 카드 unavailable
 - 외부 확인: 건축HUB HTTP 403, 브이월드 개발 키 INCORRECT_KEY, WMS GetLegendGraphic 미지원(INVALID_RANGE), 리모델링·재건축 연한 조문·국토부 토허구역 연장 여부 확인 불가
+- 2026-11-12 사람: `data_raw/11.공간정보` 복사, `git push -u origin feat/easy-map`, `.env` 정리(운영 키·`VITE_VWORLD_KEY`·`VWORLD_DOMAIN`), 공공데이터포털 활용신청 2건, Python 3.12 설치. 단계 정의·결정은 `docs/map/P22_PLAN.md`
+
+### P22-0 보완 — 완료 (2026-11-12)
+- `.venv`를 Python 3.12.10으로 다시 만듦(3.14 폴더 삭제), Playwright Chromium headless shell 1254 설치
+- `check_keys`: `.env` 그대로면 브이월드 토지 3종 INCORRECT_KEY, 프로세스 `VWORLD_DOMAIN=http://localhost:3000`이면 OK (HUMAN_TODO 68). 건축HUB·공동주택 기본 정보 미등록(HUMAN_TODO 73)
+- 공시지가 역삼동 823: 1990~2026 37개 연도, 연도 없이 1회 0.28초
+- 서울시 토지거래허가 공고 4건 수집 `data_raw/13.토지거래허가_서울시/` — 강남3구·용산 아파트는 제2025-2774호(강남구 14개 동, 2025-10-01 ~ 2026-12-31, 아파트만)
+- 점검: pytest 339·건너뜀 1 / web 156 (처음 2회 config 오류 뒤 통과) / check_secrets·sync_server_data·public_map_fresh 통과 / `ui_check_map` 8011 **188/188** / 기준 화면 `tmp/p22_baseline_keys/` 12장
+- 상세: `docs/map/P22_조사.md` §5·§6
 
 현재 단계(이전): **P20 완료 (2026-11-11)** — 강남구 지도 콘솔 첫 운영 배포 https://propedia-prototype.vercel.app (`main` = 9470f88, 태그 `v0.2-map`). P11~P20 끝. 성능 기준(Lighthouse 데스크톱 80)은 중앙값 79로 **미달 → P21** (docs/map/PLAN.md 'P21 성능', HUMAN_TODO 60)
 
