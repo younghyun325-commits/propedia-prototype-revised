@@ -1,5 +1,5 @@
 {
-  "source_sha256": "1114fd4673aa9977837add39ea41604f608a600e5b09198a5eb2c557bd05b0a3",
+  "source_sha256": "c780d326e071c847409ab45d7fa1cb008d5f3ff3199ad9467f4008da67605dcd",
   "source_files": 95,
   "rule": "web/scripts/build-info.mjs"
 }

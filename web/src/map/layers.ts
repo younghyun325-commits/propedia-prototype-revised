@@ -2,9 +2,10 @@
  * Propedia 검증 레이어 (docs/map/PLAN.md P13, '지도 레이어 모양'). 순수 함수 — Vitest로 검사한다.
  *
  * - 사업 구역: 면 32% + 외곽선 2px (--color-layer-project)
- * - 영향권 250m·500m: 면 8% + 점선 1.5px (같은 색, '표시 기준' — 영향의 크기가 아님). P14: 250·500을 따로 켜고 끈다
+ * - 영향권 250m·500m: 옅은 면 + 가는 점선 (같은 색, '표시 기준' — 영향의 크기가 아님). P14: 250·500을 따로 켜고 끈다
  * - 규제 구역: 45° 빗금 + 외곽선 #B07A00 (--color-layer-regulation-line). 앰버는 흰 바탕 대비가 낮아 빗금·진한 외곽선을 같이 쓴다
- * - 포함 판정 필지: 외곽선만. 포함·포함될 수 있음은 실선, 포함된 것으로 보임(likely)은 점선
+ * - 포함 판정 필지 (P22-1): 포함(확정) = 실선 + 채움, 확인 전(포함될 수 있음·포함된 것으로 보임) = 점선 + 채움 없음
+ * - 모양 값은 SHAPE 하나에서 지도 스타일과 범례(panel/LayerSwatch)가 같이 읽는다
  * 라벨은 HTML 마커로 그린다 (스타일에 글꼴(glyphs)이 없고 외부 CDN을 쓰지 않는다). 사람 확인 전(verified=0)이면 '확인 전'을 붙인다.
  * P14: 패널 토글은 setLayoutProperty('visibility'), 투명도·겹침 보기는 setPaintProperty(opacity 식)로 — 다시 그리지 않는다.
  */
@@ -46,10 +47,20 @@ export const DEFAULT_COLORS: LayerColors = {
   project: '#5d34a9', regulation: '#eda100', regulationLine: '#b07a00', ref: '#5b6270', apartment: '#e0567a',
 }
 
-export const OPACITY = { projectFill: 0.32, impactFill: 0.08 } as const
+export const OPACITY = { projectFill: 0.32, impactFill: 0.05 } as const
+export type Shape = { width: number; dash: readonly number[] | null; fillOpacity: number; lineOpacity: number }
+export const SHAPE = {
+  parcelConfirmed: { width: 1.5, dash: null, fillOpacity: 0.2, lineOpacity: 1 },
+  parcelUncertain: { width: 1.5, dash: [2, 1.5], fillOpacity: 0, lineOpacity: 1 },
+  impact: { width: 1, dash: [3, 2], fillOpacity: OPACITY.impactFill, lineOpacity: 0.7 },
+} as const satisfies Record<string, Shape>
+/** MapLibre line-dasharray는 선 굵기의 배수, SVG stroke-dasharray는 px */
+export function svgDash(s: Shape): string | undefined {
+  return s.dash ? s.dash.map((d) => d * s.width).join(' ') : undefined
+}
 /** 아파트 단지 (P17): 면 28% + 외곽선 */
 export const APARTMENT_OPACITY = { fill: 0.28, line: 0.9 } as const
-export const WIDTH = { project: 2, impact: 1.5, regulation: 2, parcel: 1.25 } as const
+export const WIDTH = { project: 2, impact: SHAPE.impact.width, regulation: 2, parcel: SHAPE.parcelConfirmed.width } as const
 export const HATCH_ID = 'propedia-hatch'
 export const UNVERIFIED = '확인 전'
 
@@ -110,10 +121,14 @@ export function hatchImage(hex: string, size = 12, lineWidth = 2, alpha = 0.85):
 export const OVERLAP_DIM = 0.25
 export const PARCEL_MIN_ZOOM = 14
 
-/** 필지 판정 likely(지도 대조, 사람 확인 전)면 점선, 아니면 실선 */
-export function likelyFilter(likely: boolean): unknown[] {
-  return [likely ? '==' : '!=', ['get', 'inclusion'], 'likely']
+/** 포함 확정 = 판정 included 또는 사람 확인(verified 1). 나머지(possible·likely)는 확인 전 */
+const CONFIRMED: unknown[] = ['any', ['==', ['get', 'inclusion'], 'included'], ['==', ['get', 'verified'], 1]]
+export function confirmedFilter(confirmed: boolean): unknown[] {
+  return confirmed ? CONFIRMED : ['!', CONFIRMED]
 }
+const linePaint = (color: string, s: Shape) => ({
+  'line-color': color, 'line-width': s.width, 'line-opacity': s.lineOpacity, ...(s.dash ? { 'line-dasharray': [...s.dash] } : {}),
+})
 
 const NONE = '__none__'
 /** 선택·검색 강조 필터: 값이 없으면 아무것도 맞지 않는 값 */
@@ -140,7 +155,7 @@ export function propediaLayers(c: LayerColors, h: HighlightColors = DEFAULT_HIGH
     { id: `propedia-impact${m}-fill`, type: 'fill', source: 'propedia-impact', filter: ['==', ['get', 'buffer_m'], m],
       paint: { 'fill-color': c.project, 'fill-opacity': OPACITY.impactFill } },
     { id: `propedia-impact${m}-line`, type: 'line', source: 'propedia-impact', filter: ['==', ['get', 'buffer_m'], m],
-      paint: { 'line-color': c.project, 'line-width': WIDTH.impact, 'line-dasharray': [3, 2], 'line-opacity': 0.8 } },
+      paint: linePaint(c.project, SHAPE.impact) },
   ]
   return [
     ...impact(500),
@@ -156,12 +171,13 @@ export function propediaLayers(c: LayerColors, h: HighlightColors = DEFAULT_HIGH
     // 필지는 외곽선만 보인다. 호버·클릭을 잡기 위한 투명 면을 따로 둔다
     { id: 'propedia-parcel-hit', type: 'fill', source: 'propedia-parcel', minzoom: PARCEL_MIN_ZOOM,
       paint: { 'fill-color': c.project, 'fill-opacity': 0 } },
+    { id: 'propedia-parcel-fill', type: 'fill', source: 'propedia-parcel', minzoom: PARCEL_MIN_ZOOM,
+      filter: confirmedFilter(true) as never,
+      paint: { 'fill-color': c.project, 'fill-opacity': SHAPE.parcelConfirmed.fillOpacity } },
     { id: 'propedia-parcel-line', type: 'line', source: 'propedia-parcel', minzoom: PARCEL_MIN_ZOOM,
-      filter: likelyFilter(false) as never,
-      paint: { 'line-color': c.project, 'line-width': WIDTH.parcel, 'line-opacity': 1 } },
-    { id: 'propedia-parcel-line-likely', type: 'line', source: 'propedia-parcel', minzoom: PARCEL_MIN_ZOOM,
-      filter: likelyFilter(true) as never,
-      paint: { 'line-color': c.project, 'line-width': WIDTH.parcel, 'line-dasharray': [2, 1.5], 'line-opacity': 1 } },
+      filter: confirmedFilter(true) as never, paint: linePaint(c.project, SHAPE.parcelConfirmed) },
+    { id: 'propedia-parcel-line-uncertain', type: 'line', source: 'propedia-parcel', minzoom: PARCEL_MIN_ZOOM,
+      filter: confirmedFilter(false) as never, paint: linePaint(c.project, SHAPE.parcelUncertain) },
     // 검색으로 찾은 필지 (pnu)
     { id: 'propedia-parcel-search', type: 'line', source: 'propedia-parcel', filter: idFilter('pnu', null) as never,
       paint: { 'line-color': h.search, 'line-width': 4 } },
@@ -203,21 +219,22 @@ export const PANEL_LAYERS: Record<PanelLayerId, { layers: string[]; paint: Paint
     layers: ['propedia-impact250-fill', 'propedia-impact250-line'],
     paint: [
       { layer: 'propedia-impact250-fill', prop: 'fill-opacity', base: OPACITY.impactFill },
-      { layer: 'propedia-impact250-line', prop: 'line-opacity', base: 0.8 },
+      { layer: 'propedia-impact250-line', prop: 'line-opacity', base: SHAPE.impact.lineOpacity },
     ],
   },
   impact500: {
     layers: ['propedia-impact500-fill', 'propedia-impact500-line'],
     paint: [
       { layer: 'propedia-impact500-fill', prop: 'fill-opacity', base: OPACITY.impactFill },
-      { layer: 'propedia-impact500-line', prop: 'line-opacity', base: 0.8 },
+      { layer: 'propedia-impact500-line', prop: 'line-opacity', base: SHAPE.impact.lineOpacity },
     ],
   },
   parcels: {
-    layers: ['propedia-parcel-hit', 'propedia-parcel-line', 'propedia-parcel-line-likely', 'propedia-parcel-selected'],
+    layers: ['propedia-parcel-hit', 'propedia-parcel-fill', 'propedia-parcel-line', 'propedia-parcel-line-uncertain', 'propedia-parcel-selected'],
     paint: [
+      { layer: 'propedia-parcel-fill', prop: 'fill-opacity', base: SHAPE.parcelConfirmed.fillOpacity },
       { layer: 'propedia-parcel-line', prop: 'line-opacity', base: 1 },
-      { layer: 'propedia-parcel-line-likely', prop: 'line-opacity', base: 1 },
+      { layer: 'propedia-parcel-line-uncertain', prop: 'line-opacity', base: 1 },
     ],
   },
   regulations: {
@@ -313,7 +330,8 @@ export const DATE_FILTER_LAYERS: Record<string, 'id' | 'project_id'> = {
   'propedia-project-fill': 'id', 'propedia-project-line': 'id', 'propedia-project-selected': 'id',
   'propedia-impact250-fill': 'project_id', 'propedia-impact250-line': 'project_id',
   'propedia-impact500-fill': 'project_id', 'propedia-impact500-line': 'project_id',
-  'propedia-parcel-hit': 'project_id', 'propedia-parcel-line': 'project_id', 'propedia-parcel-line-likely': 'project_id',
+  'propedia-parcel-hit': 'project_id', 'propedia-parcel-fill': 'project_id', 'propedia-parcel-line': 'project_id',
+  'propedia-parcel-line-uncertain': 'project_id',
   'propedia-parcel-search': 'project_id', 'propedia-parcel-selected': 'project_id',
 }
 

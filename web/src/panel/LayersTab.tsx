@@ -180,7 +180,12 @@ function LayerRow({ l }: { l: ManifestLayer }) {
           <span className="w-9 text-right tabular-nums">{state.opacity}%</span>
         </label>
       )}
-      {l.id === 'impact500' && <p className="mt-1 ml-6 text-xs text-ink-muted">{UI.layers.impactNote}</p>}
+      {l.id === 'impact500' && (
+        <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid="impact-legend">
+          {UI.layers.legendImpact}
+          <span className="block">{UI.layers.impactNote}</span>
+        </p>
+      )}
       {l.id === 'apartments' && l.status === 'ready' && (
         <p className="mt-1 ml-6 text-xs text-ink-muted" data-testid="apartment-legend-note">
           {l.note ?? UI.apartment.layerNote}
@@ -199,17 +204,23 @@ function LayerRow({ l }: { l: ManifestLayer }) {
       {l.id === 'pois' && l.status === 'ready' && <PoiCategoryRows l={l as InfraLayer} />}
       {l.id === 'parcels' && l.count_by_judgment && (
         <ul className="mt-1 ml-6 space-y-0.5 text-xs text-ink-muted" data-testid="parcel-legend">
-          <li className="flex items-center gap-1.5">
-            <LayerSwatch kind="parcel" />
-            <span className="flex-1">{UI.layers.legendSolid}</span>
-            <span className="tabular-nums">
-              {UI.layers.count(l.count_by_judgment.included + l.count_by_judgment.possible)}
+          <li data-testid="parcel-legend-confirmed">
+            <span className="flex items-center gap-1.5">
+              <LayerSwatch kind="parcel" />
+              <span className="flex-1">{UI.layers.legendSolid}</span>
+              <span className="tabular-nums">{UI.layers.count(l.count_by_judgment.included)}</span>
             </span>
+            <span className="block pl-[2.125rem]">{UI.layers.legendSolidNote}</span>
           </li>
-          <li className="flex items-center gap-1.5">
-            <LayerSwatch kind="parcel-likely" />
-            <span className="flex-1">{UI.layers.legendDashed}</span>
-            <span className="tabular-nums">{UI.layers.count(l.count_by_judgment.likely)}</span>
+          <li data-testid="parcel-legend-uncertain">
+            <span className="flex items-center gap-1.5">
+              <LayerSwatch kind="parcel-uncertain" />
+              <span className="flex-1">{UI.layers.legendDashed}</span>
+              <span className="tabular-nums">
+                {UI.layers.count(l.count_by_judgment.possible + l.count_by_judgment.likely)}
+              </span>
+            </span>
+            <span className="block pl-[2.125rem]">{UI.layers.legendDashedNote}</span>
           </li>
         </ul>
       )}

@@ -97,12 +97,12 @@ JS_OVERLAP = """() => { const m = window.__propediaMap;
   const out = {};
   for (const [src, layer, prop, likely] of [['propedia-regulation', 'propedia-regulation-fill', 'fill-opacity', null],
                                             ['propedia-parcel', 'propedia-parcel-line', 'line-opacity', false],
-                                            ['propedia-parcel', 'propedia-parcel-line-likely', 'line-opacity', true]]) {
+                                            ['propedia-parcel', 'propedia-parcel-line-uncertain', 'line-opacity', true]]) {
     const e = m.getPaintProperty(layer, prop);
     const seen = new Set(); const vals = [];
     for (const f of m.querySourceFeatures(src)) {
       if (seen.has(f.properties.id)) continue; seen.add(f.properties.id);
-      if (likely !== null && likely !== (f.properties.inclusion === 'likely')) continue;
+      if (likely !== null && likely !== !(f.properties.inclusion === 'included' || f.properties.verified === 1)) continue;
       vals.push([f.properties.id, ev(e, f.properties.impact_buffer_m)]) }
     out[layer] = vals }
   return out }"""
@@ -175,9 +175,9 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     check("[P14] 레이어 건수 = manifest", shown == want, f"{shown}")
     legend = page.inner_text("[data-testid=parcel-legend]")
     by = layers["parcels"]["count_by_judgment"]
-    check("[P14] 필지 범례 두 줄 + 판정별 건수 (manifest)",
-          "실선" in legend and "점선" in legend and f"{by['likely']}건" in legend
-          and f"{by['included'] + by['possible']}건" in legend, legend.replace("\n", " / "))
+    check("[P14·P22-1] 필지 범례 두 줄 + 판정별 건수 (확정 = included, 확인 전 = possible + likely)",
+          "실선" in legend and "점선" in legend and f"{by['possible'] + by['likely']}건" in legend
+          and f"{by['included']}건" in legend, legend.replace("\n", " / "))
     check("[P14] D5 행: 비활성 + '경계 확인 전'",
           page.locator("[data-testid=layer-toggle-regulation-d5]").is_disabled()
           and "경계 확인 전" in page.inner_text("[data-testid=layer-row-regulation-d5]"))
@@ -269,8 +269,8 @@ def p14_checks(page, url: str, check, shot: bool) -> None:
     page.evaluate(JS_IDLE)
     ov2 = page.evaluate(JS_OVERLAP)
     reg = dict(ov["propedia-regulation-fill"])
-    par = dict(ov["propedia-parcel-line"] + ov["propedia-parcel-line-likely"]
-               + ov2["propedia-parcel-line"] + ov2["propedia-parcel-line-likely"])
+    par = dict(ov["propedia-parcel-line"] + ov["propedia-parcel-line-uncertain"]
+               + ov2["propedia-parcel-line"] + ov2["propedia-parcel-line-uncertain"])
     check("[P14] 겹침 보기: 영향권 밖(D10) 25%, 영향권 안 필지는 그대로(전체)",
           reg.get("regulation:D10") == 0.25 and bool(par) and all(v == 1 for v in par.values())
           and len(par) == layers["parcels"]["count"] and _q(page, "ov") == "1",
@@ -2049,7 +2049,8 @@ def main() -> int:
         layers = page.get_attribute("[data-testid=map]", "data-layers") or ""
         need_p = ["propedia-impact500-fill", "propedia-impact500-line", "propedia-impact250-fill",
                   "propedia-impact250-line", "propedia-regulation-fill", "propedia-regulation-line",
-                  "propedia-project-fill", "propedia-project-line", "propedia-parcel-line", "propedia-parcel-line-likely"]
+                  "propedia-project-fill", "propedia-project-line", "propedia-parcel-fill", "propedia-parcel-line",
+                  "propedia-parcel-line-uncertain"]
         check("Propedia 레이어 4종이 스타일에 있음", all(n in layers.split(",") for n in need_p),
               ", ".join(n for n in need_p if n not in layers.split(",")) or f"{len(need_p)}개 레이어")
         order = layers.split(",")

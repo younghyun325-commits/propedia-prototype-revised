@@ -1,5 +1,7 @@
 /** 레이어 색 칩: 지도 스타일과 같은 모양 (면·선·빗금·점선). 색은 tokens.css 변수만. */
-export type SwatchKind = 'project' | 'impact' | 'parcel' | 'parcel-likely' | 'regulation' | 'reference' | 'apartment' | 'pending' | 'symbol' | 'raster'
+import { SHAPE, svgDash } from '../map/layers'
+
+export type SwatchKind = 'project' | 'impact' | 'parcel' | 'parcel-uncertain' | 'regulation' | 'reference' | 'apartment' | 'pending' | 'symbol' | 'raster'
 
 const PROJECT = 'var(--color-layer-project)'
 const REG = 'var(--color-layer-regulation)'
@@ -20,19 +22,22 @@ export function LayerSwatch({ kind, opacity = 1 }: { kind: SwatchKind; opacity?:
     case 'impact':
       return (
         <svg {...common}>
-          <rect x="1" y="1" width="26" height="14" rx="2" fill={PROJECT} fillOpacity="0.08" stroke={PROJECT} strokeWidth="1.5" strokeDasharray="4 3" />
+          <ellipse cx="14" cy="8" rx="12.5" ry="6.5" fill={PROJECT} fillOpacity={SHAPE.impact.fillOpacity}
+            stroke={PROJECT} strokeOpacity={SHAPE.impact.lineOpacity} strokeWidth={SHAPE.impact.width} strokeDasharray={svgDash(SHAPE.impact)} />
         </svg>
       )
     case 'parcel':
       return (
         <svg {...common}>
-          <rect x="2" y="2" width="24" height="12" fill="none" stroke={PROJECT} strokeWidth="1.5" />
+          <rect x="2" y="2" width="24" height="12" fill={PROJECT} fillOpacity={SHAPE.parcelConfirmed.fillOpacity}
+            stroke={PROJECT} strokeWidth={SHAPE.parcelConfirmed.width} />
         </svg>
       )
-    case 'parcel-likely':
+    case 'parcel-uncertain':
       return (
         <svg {...common}>
-          <rect x="2" y="2" width="24" height="12" fill="none" stroke={PROJECT} strokeWidth="1.5" strokeDasharray="3 2" />
+          <rect x="2" y="2" width="24" height="12" fill="none" stroke={PROJECT} strokeWidth={SHAPE.parcelUncertain.width}
+            strokeDasharray={svgDash(SHAPE.parcelUncertain)} />
         </svg>
       )
     case 'regulation':

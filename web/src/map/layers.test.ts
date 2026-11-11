@@ -7,7 +7,7 @@ import manifestRaw from '../../../public/data/layers/manifest.json?raw'
 import {
   apartmentLayers,
   DEFAULT_COLORS, HATCH_ID, OPACITY, OVERLAP_DIM, OVERLAP_TARGETS, PANEL_LAYERS, UNVERIFIED, WIDTH, hatchImage, idFilter,
-  labelText, likelyFilter, opacityExpr, paintPlan, propediaLayers, readLayerColors,
+  labelText, confirmedFilter, opacityExpr, paintPlan, propediaLayers, readLayerColors, SHAPE, svgDash,
   type PropediaFC,
 } from './layers'
 import { REF_GEO_IDS, REF_WMS_IDS, refGeoLayers, refWmsLayer } from './reference'
@@ -26,25 +26,38 @@ describe('Propedia 레이어 모양 (PLAN.md 지도 레이어 모양)', () => {
     expect(paint('propedia-project-fill')['fill-opacity']).toBe(0.32)
     expect(paint('propedia-project-line')['line-width']).toBe(2)
   })
-  it('영향권: 면 8% + 점선 1.5px', () => {
+  it('영향권: 옅은 면 + 가는 점선 (SHAPE.impact)', () => {
     for (const m of [250, 500]) {
-      expect(paint(`propedia-impact${m}-fill`)['fill-opacity']).toBe(0.08)
+      expect(paint(`propedia-impact${m}-fill`)['fill-opacity']).toBe(SHAPE.impact.fillOpacity)
+      expect(SHAPE.impact.fillOpacity).toBeLessThan(0.08)
+      expect(SHAPE.impact.width).toBeLessThan(SHAPE.parcelUncertain.width)
+      expect(paint(`propedia-impact${m}-line`)['line-dasharray']).toEqual([...SHAPE.impact.dash])
       expect(paint(`propedia-impact${m}-line`)['line-width']).toBe(WIDTH.impact)
       expect(paint(`propedia-impact${m}-line`)['line-dasharray']).toBeTruthy()
       expect((byId[`propedia-impact${m}-fill`] as { filter: unknown }).filter).toEqual(['==', ['get', 'buffer_m'], m])
     }
-    expect(WIDTH.impact).toBe(1.5)
+    expect(WIDTH.impact).toBe(SHAPE.impact.width)
   })
   it('규제: 빗금 + 외곽선 #B07A00', () => {
     expect(paint('propedia-regulation-fill')['fill-pattern']).toBe(HATCH_ID)
     expect(String(paint('propedia-regulation-line')['line-color']).toLowerCase()).toBe('#b07a00')
   })
-  it('필지: 외곽선만 (보이는 면 없음 — 호버·클릭용 면은 투명), likely는 점선', () => {
-    const parcel = layers.filter((l) => l.id.startsWith('propedia-parcel'))
-    expect(parcel.filter((l) => l.id !== 'propedia-parcel-hit').every((l) => l.type === 'line')).toBe(true)
+  it('필지 (P22-1): 포함(확정)은 실선 + 채움, 확인 전은 점선 + 채움 없음', () => {
     expect(paint('propedia-parcel-hit')['fill-opacity']).toBe(0)
-    expect(paint('propedia-parcel-line-likely')['line-dasharray']).toBeTruthy()
+    expect(paint('propedia-parcel-fill')['fill-opacity']).toBe(SHAPE.parcelConfirmed.fillOpacity)
+    expect(SHAPE.parcelConfirmed.fillOpacity).toBeGreaterThan(0)
+    expect(SHAPE.parcelUncertain.fillOpacity).toBe(0)
+    expect((byId['propedia-parcel-fill'] as { filter: unknown }).filter).toEqual(confirmedFilter(true))
     expect(paint('propedia-parcel-line')['line-dasharray']).toBeUndefined()
+    expect(paint('propedia-parcel-line-uncertain')['line-dasharray']).toEqual([...SHAPE.parcelUncertain.dash])
+    expect(layers.filter((l) => l.id.startsWith('propedia-parcel-fill')).length).toBe(1)
+  })
+  it('범례 칩과 지도는 같은 SHAPE 값 (SVG 점선 = 굵기 × 배수)', () => {
+    expect(svgDash(SHAPE.parcelConfirmed)).toBeUndefined()
+    expect(svgDash(SHAPE.parcelUncertain)).toBe('3 2.25')
+    expect(svgDash(SHAPE.impact)).toBe('3 2')
+    expect(WIDTH.parcel).toBe(SHAPE.parcelConfirmed.width)
+    expect(WIDTH.impact).toBe(SHAPE.impact.width)
   })
   it('CSS 변수 색을 읽고, 없으면 기본값', () => {
     const fake = { getPropertyValue: (n: string) => (n === '--color-layer-project' ? ' #123456 ' : '') }
@@ -109,16 +122,17 @@ describe('P14 겹침 보기·점선·강조 식', () => {
     ])
     expect(OVERLAP_TARGETS).toContain('parcels')
     expect(OVERLAP_TARGETS).toContain('regulations')
-    const [, , v] = paintPlan('parcels', 100, true)[0]
-    expect(Array.isArray(v)).toBe(true)
-    expect(paintPlan('parcels', 100, false)[0][2]).toBe(1)
+    const line = (on: boolean) => paintPlan('parcels', 100, on).find(([l]) => l === 'propedia-parcel-line')!
+    expect(Array.isArray(line(true)[2])).toBe(true)
+    expect(line(false)[2]).toBe(1)
   })
-  it('likely 점선 식: 같은 소스를 판정으로 나눔', () => {
-    expect(likelyFilter(true)).toEqual(['==', ['get', 'inclusion'], 'likely'])
-    expect(likelyFilter(false)).toEqual(['!=', ['get', 'inclusion'], 'likely'])
+  it('확정·확인 전 식: 같은 소스를 판정으로 나눔 (included 또는 verified 1 = 확정)', () => {
+    const conf = confirmedFilter(true)
+    expect(conf).toEqual(['any', ['==', ['get', 'inclusion'], 'included'], ['==', ['get', 'verified'], 1]])
+    expect(confirmedFilter(false)).toEqual(['!', conf])
     const layers = propediaLayers(DEFAULT_COLORS)
-    const dashed = layers.find((l) => l.id === 'propedia-parcel-line-likely') as { filter: unknown; paint: Record<string, unknown> }
-    expect(dashed.filter).toEqual(likelyFilter(true))
+    const dashed = layers.find((l) => l.id === 'propedia-parcel-line-uncertain') as { filter: unknown; paint: Record<string, unknown> }
+    expect(dashed.filter).toEqual(confirmedFilter(false))
     expect(dashed.paint['line-dasharray']).toBeTruthy()
   })
   it('선택·검색 강조: 값이 없으면 맞는 도형 없음', () => {

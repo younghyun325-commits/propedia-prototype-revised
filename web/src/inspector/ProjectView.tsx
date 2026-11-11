@@ -5,6 +5,7 @@
 import { useState } from 'react'
 import type { ProjectFeature } from '../api/feature'
 import { UI } from '../copy/ui'
+import { LayerSwatch } from '../panel/LayerSwatch'
 import { useMapStore } from '../state/useMapStore'
 import { EvidenceLine } from '../ui/EvidenceLine'
 import { Stepper } from '../ui/Stepper'
@@ -125,8 +126,8 @@ function Parcels({ f }: { f: ProjectFeature }) {
     <div className="space-y-2">
       <p className="text-[11px] text-ink-muted">{UI.project.parcelsHint}</p>
       <p className="flex gap-3 text-[11px] text-ink-muted">
-        <span className="flex items-center gap-1"><span className="inline-block w-4 border-t-2 border-brand-indigo" aria-hidden="true" />{UI.project.legendSolid}</span>
-        <span className="flex items-center gap-1"><span className="inline-block w-4 border-t-2 border-dashed border-brand-indigo" aria-hidden="true" />{UI.project.legendDashed}</span>
+        <span className="flex items-center gap-1"><LayerSwatch kind="parcel" />{UI.project.legendSolid}</span>
+        <span className="flex items-center gap-1"><LayerSwatch kind="parcel-uncertain" />{UI.project.legendDashed}</span>
       </p>
       <ul className="space-y-1" data-testid="project-parcels">
         {rows.map((r) => (
